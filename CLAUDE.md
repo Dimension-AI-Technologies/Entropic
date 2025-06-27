@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Repository Overview
 
 This is a collection of utility scripts organized by functionality:
+- **CommitAll/**: Batch Git repository management with rich terminal output
 - **git-analysis/**: Tools for analyzing GitHub repositories, commits, and large deletions
 - **mcp/**: Model Context Protocol (MCP) server installation and management
 - **network/**: Network configuration scripts (e.g., IPv6 management)
@@ -12,6 +13,32 @@ This is a collection of utility scripts organized by functionality:
 - **wsl-setup/**: PowerShell scripts for setting up WSL2 development environment
 
 ## Common Commands
+
+### CommitAll - Batch Repository Management
+
+Check status of all repositories:
+```bash
+cd CommitAll
+./commit_all_repos.py --status
+```
+
+Dry run (preview changes):
+```bash
+cd CommitAll
+./commit_all_repos.py
+```
+
+Execute commits and pushes:
+```bash
+cd CommitAll
+./commit_all_repos.py --live
+```
+
+Auto-approve all prompts (YOLO mode):
+```bash
+cd CommitAll
+./commit_all_repos.py --live --yolo
+```
 
 ### Git Analysis Scripts
 
@@ -67,6 +94,7 @@ The modular PowerShell script:
 ## Script Dependencies
 
 - **Python scripts**: Require Python 3 with asyncio support
+- **CommitAll**: Requires `rich` library (`pip install -r CommitAll/requirements.txt`)
 - **Shell scripts**: Bash-compatible shell
 - **Git analysis tools**: Require `gh` (GitHub CLI) to be installed and authenticated
 - **MCP scripts**: Require `npx` and Node.js environment
@@ -78,6 +106,13 @@ The modular PowerShell script:
 - `LINEAR_API_KEY`: Optional for Linear MCP server authentication
 
 ## Architecture Notes
+
+### CommitAll Architecture
+- **Single executable**: `commit_all_repos.py` with rich terminal interface
+- **Safety-first design**: Dry-run mode by default, organization whitelist for pushes
+- **Async operations**: Uses subprocess for Git operations with proper error handling
+- **Rich UI**: Leverages rich library for tables and progress indicators
+- **Logging**: Automatic timestamped logging to `logs/` directory
 
 ### Git Analysis Tools
 The git analysis scripts come in multiple variants:
