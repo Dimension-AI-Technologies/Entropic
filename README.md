@@ -52,12 +52,17 @@ Install MCP servers for Claude Code:
 
 ### WSL Setup (`wsl-setup/`)
 
-- **Install-WSL2-DevEnvironment.ps1** - Complete PowerShell script for setting up WSL2 development environment
-  - Installs Windows Terminal, WSL2, Ubuntu
-  - Disables IPv6 for Claude Code compatibility
-  - Installs Node.js via NVM
-  - Installs Claude Code CLI and Gemini CLI
-  - Handles partial installations and error recovery
+- **Install-WSL2-DevEnvironment.ps1** - Modular PowerShell script for complete WSL2 development environment
+  - Main orchestration script that uses individual modules
+  - Supports both full installation and individual component installation
+  - Includes parameter support: `-Module <name>` and `-Help`
+- **modules/** - Modular components for WSL2 setup
+  - **WSL-Utilities.ps1** - Common utilities and helper functions
+  - **Install-WindowsTerminal.ps1** - Windows Terminal installation
+  - **Install-WSL2Ubuntu.ps1** - WSL2 and Ubuntu setup
+  - **Configure-IPv6.ps1** - IPv6 disabling for Claude Code compatibility
+  - **Install-NodeJS.ps1** - Node.js installation via NVM
+  - **Install-CLITools.ps1** - Claude Code and Gemini CLI installation
 
 ### Git Analysis (`git-analysis/`)
 

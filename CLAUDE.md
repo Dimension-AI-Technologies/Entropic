@@ -49,12 +49,20 @@ Complete WSL2 development environment setup:
 .\wsl-setup\Install-WSL2-DevEnvironment.ps1
 ```
 
-This PowerShell script:
-- Auto-elevates to Administrator
-- Installs Windows Terminal, WSL2, and Ubuntu
-- Disables IPv6 (required for Claude Code)
-- Sets up Node.js via NVM
-- Installs Claude Code and Gemini CLI
+Individual module installation:
+```powershell
+.\wsl-setup\Install-WSL2-DevEnvironment.ps1 -Module Terminal
+.\wsl-setup\Install-WSL2-DevEnvironment.ps1 -Module WSL2
+.\wsl-setup\Install-WSL2-DevEnvironment.ps1 -Module IPv6
+.\wsl-setup\Install-WSL2-DevEnvironment.ps1 -Module NodeJS
+.\wsl-setup\Install-WSL2-DevEnvironment.ps1 -Module CLITools
+```
+
+The modular PowerShell script:
+- Uses separate modules for each component (see `wsl-setup/modules/`)
+- Auto-elevates to Administrator when needed
+- Supports both full and component-specific installation
+- Includes error recovery and status checking
 
 ## Script Dependencies
 
