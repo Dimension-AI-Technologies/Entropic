@@ -20,13 +20,53 @@ DRY_RUN=false
 TEST_ONLY=false
 INSTALL_MODE=false
 
-# MCP Server configurations
-declare -A MCP_SERVERS
-MCP_SERVERS=(
-    ["sequential-thinking"]="local:npx -y @modelcontextprotocol/server-sequential-thinking:Help me think through a simple decision: tea or coffee?"
-    ["linear"]="sse:https://mcp.linear.app/sse:List my Linear workspaces"
-    ["context7"]="sse:https://mcp.context7.com/sse:What is React? use context7"
-)
+# Platform detection and timeout function setup
+TIMEOUT_CMD=""
+if command -v timeout &> /dev/null; then
+    TIMEOUT_CMD="timeout"
+elif command -v gtimeout &> /dev/null; then
+    TIMEOUT_CMD="gtimeout"
+else
+    # Define a bash-based timeout function for macOS/systems without timeout
+    run_with_timeout() {
+        local timeout_duration="$1"
+        shift
+        local cmd="$*"
+        
+        # Run command in background and get its PID
+        eval "$cmd" &
+        local cmd_pid=$!
+        
+        # Start a background process to kill the command after timeout
+        (
+            sleep "$timeout_duration"
+            if kill -0 "$cmd_pid" 2>/dev/null; then
+                kill "$cmd_pid" 2>/dev/null
+                sleep 1
+                kill -9 "$cmd_pid" 2>/dev/null
+            fi
+        ) &
+        local timeout_pid=$!
+        
+        # Wait for the command to complete
+        if wait "$cmd_pid" 2>/dev/null; then
+            # Command completed successfully, kill the timeout process
+            kill "$timeout_pid" 2>/dev/null
+            return 0
+        else
+            # Command failed or was killed
+            kill "$timeout_pid" 2>/dev/null
+            return 1
+        fi
+    }
+    TIMEOUT_CMD="run_with_timeout"
+fi
+
+# MCP Server configurations using parallel arrays (bash 3.2 compatible)
+MCP_SERVER_NAMES=("sequential-thinking" "linear" "context7")
+MCP_SERVER_TRANSPORTS=("local" "sse" "sse")
+MCP_SERVER_COMMANDS=("npx -y @modelcontextprotocol/server-sequential-thinking" "https://mcp.linear.app/sse" "https://mcp.context7.com/sse")
+MCP_SERVER_TEST_PROMPTS=("Help me think through a simple decision: tea or coffee?" "List my Linear workspaces" "What is React? use context7")
 
 log_dry_run() {
     echo -e "${PURPLE}[DRY-RUN]${NC} $1"
@@ -185,12 +225,33 @@ add_issue() {
     ISSUES_FOUND+=("$1")
 }
 
+# Function to get server index by name
+get_server_index() {
+    local server_name="$1"
+    local i
+    for i in "${!MCP_SERVER_NAMES[@]}"; do
+        if [[ "${MCP_SERVER_NAMES[$i]}" == "$server_name" ]]; then
+            echo "$i"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # Function to parse server configuration
 parse_server_config() {
     local server_name="$1"
-    local config="${MCP_SERVERS[$server_name]}"
+    local index
+    index=$(get_server_index "$server_name")
     
-    IFS=':' read -r transport command test_prompt <<< "$config"
+    if [[ -z "$index" ]]; then
+        log_error "Server $server_name not found in configuration"
+        return 1
+    fi
+    
+    local transport="${MCP_SERVER_TRANSPORTS[$index]}"
+    local command="${MCP_SERVER_COMMANDS[$index]}"
+    local test_prompt="${MCP_SERVER_TEST_PROMPTS[$index]}"
     
     echo "$transport|$command|$test_prompt"
 }
@@ -386,8 +447,9 @@ install_mcp_servers() {
     
     log_section "Installing MCP Servers"
     
-    for server_name in "${!MCP_SERVERS[@]}"; do
-        install_mcp_server "$server_name"
+    local i
+    for i in "${!MCP_SERVER_NAMES[@]}"; do
+        install_mcp_server "${MCP_SERVER_NAMES[$i]}"
     done
 }
 
@@ -431,8 +493,10 @@ verify_installations() {
         log_success "MCP server list retrieved successfully"
         
         # Verify each server
-        for server_name in "${!MCP_SERVERS[@]}"; do
-            verify_server_installation "$server_name"
+        # Verify each server
+        local i
+        for i in "${!MCP_SERVER_NAMES[@]}"; do
+            verify_server_installation "${MCP_SERVER_NAMES[$i]}"
         done
     else
         log_error "Failed to list MCP servers"
@@ -442,7 +506,9 @@ verify_installations() {
     
     # Get detailed info for each server
     log_info "Getting detailed server information..."
-    for server_name in "${!MCP_SERVERS[@]}"; do
+    local i
+    for i in "${!MCP_SERVER_NAMES[@]}"; do
+        local server_name="${MCP_SERVER_NAMES[$i]}"
         echo ""
         log_info "Details for $server_name:"
         if claude mcp get "$server_name" 2>/dev/null; then
@@ -521,7 +587,9 @@ test_network_connectivity() {
     log_section "Testing Network Connectivity"
     
     if command -v curl &> /dev/null; then
-        for server_name in "${!MCP_SERVERS[@]}"; do
+        local i
+        for i in "${!MCP_SERVER_NAMES[@]}"; do
+            local server_name="${MCP_SERVER_NAMES[$i]}"
             local config_data
             config_data=$(parse_server_config "$server_name")
             
@@ -544,12 +612,12 @@ test_local_server() {
     if command -v npx &> /dev/null; then
         if [[ "$DRY_RUN" == true ]]; then
             log_dry_run "Would test sequential-thinking package availability"
-            log_dry_run "Command: timeout 30 npx -y @modelcontextprotocol/server-sequential-thinking --help"
+            log_dry_run "Command: $TIMEOUT_CMD 30 npx -y @modelcontextprotocol/server-sequential-thinking --help"
             return 0
         fi
         
         log_info "Testing sequential-thinking package availability..."
-        if timeout 30 npx -y @modelcontextprotocol/server-sequential-thinking --help > /tmp/sequential_test.txt 2>&1; then
+        if $TIMEOUT_CMD 30 npx -y @modelcontextprotocol/server-sequential-thinking --help > /tmp/sequential_test.txt 2>&1; then
             log_success "Sequential-thinking server package is accessible"
             log_info "Package help output:"
             head -20 /tmp/sequential_test.txt
@@ -578,13 +646,13 @@ test_single_mcp_server() {
     
     if [[ "$DRY_RUN" == true ]]; then
         log_dry_run "Would test $server_name server with prompt: '$test_prompt'"
-        log_dry_run "Command: timeout 60 claude \"$test_prompt\""
+        log_dry_run "Command: $TIMEOUT_CMD 60 claude \"$test_prompt\""
         return 0
     fi
     
     local output_file="/tmp/${server_name}_output.txt"
     
-    if timeout 60 claude "$test_prompt" > "$output_file" 2>&1; then
+    if $TIMEOUT_CMD 60 claude "$test_prompt" > "$output_file" 2>&1; then
         log_success "$server_name test completed"
         log_info "Response preview:"
         head -10 "$output_file"
@@ -643,7 +711,9 @@ test_mcp_functionality() {
     
     if [[ "$DRY_RUN" == true ]]; then
         log_dry_run "In normal mode, would test functionality of all MCP servers:"
-        for server_name in "${!MCP_SERVERS[@]}"; do
+        local i
+        for i in "${!MCP_SERVER_NAMES[@]}"; do
+            local server_name="${MCP_SERVER_NAMES[$i]}"
             local config_data
             config_data=$(parse_server_config "$server_name")
             IFS='|' read -r transport command test_prompt <<< "$config_data"
@@ -654,12 +724,14 @@ test_mcp_functionality() {
     fi
     
     # Test each server
-    for server_name in "${!MCP_SERVERS[@]}"; do
-        test_single_mcp_server "$server_name"
+    # Test each server
+    local i
+    for i in "${!MCP_SERVER_NAMES[@]}"; do
+        test_single_mcp_server "${MCP_SERVER_NAMES[$i]}"
     done
     
     log_info "Testing with debug mode to check MCP server connections..."
-    if timeout 30 claude --debug --mcp-debug "Test all MCP servers" > /tmp/debug_output.txt 2>&1; then
+    if $TIMEOUT_CMD 30 claude --debug --mcp-debug "Test all MCP servers" > /tmp/debug_output.txt 2>&1; then
         # Parse debug output for specific issues
         if grep -i "401\|unauthorized" /tmp/debug_output.txt > /dev/null; then
             log_warning "Authentication issues found in debug output"
@@ -757,8 +829,10 @@ cleanup() {
     rm -f /tmp/mcp_list.txt /tmp/sequential_test.txt /tmp/debug_output.txt /tmp/existing_servers.txt
     
     # Clean up dynamic output files
-    for server_name in "${!MCP_SERVERS[@]}"; do
-        rm -f "/tmp/${server_name}_output.txt"
+    # Clean up dynamic output files
+    local i
+    for i in "${!MCP_SERVER_NAMES[@]}"; do
+        rm -f "/tmp/${MCP_SERVER_NAMES[$i]}_output.txt"
     done
 }
 

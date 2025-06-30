@@ -1,12 +1,11 @@
 # Scripts Collection
 
-A collection of utility scripts for GitHub analysis, MCP server management, batch Git operations, and system configuration.
+A collection of utility scripts for GitHub analysis, MCP server management, and system configuration.
 
 ## Directory Structure
 
 ```
 scripts/
-├── CommitAll/        # Batch Git repository management with rich UI
 ├── git-analysis/     # GitHub repository and commit analysis tools
 ├── mcp/             # Model Context Protocol server management
 ├── network/         # Network configuration scripts
@@ -22,24 +21,6 @@ scripts/
 - **Python 3** with asyncio support (for Python scripts)
 - **GitHub CLI** (`gh`) - installed and authenticated
 - **Node.js** and `npx` (for MCP scripts)
-
-### Batch Git Operations
-
-Manage multiple repositories at once with rich terminal output:
-
-```bash
-# Check status of all repositories
-cd CommitAll && ./commit_all_repos.py --status
-
-# Preview changes (dry run)
-cd CommitAll && ./commit_all_repos.py
-
-# Execute commits and pushes
-cd CommitAll && ./commit_all_repos.py --live
-
-# Auto-approve mode for automation
-cd CommitAll && ./commit_all_repos.py --live --yolo
-```
 
 ### GitHub Analysis
 
@@ -69,16 +50,6 @@ Install MCP servers for Claude Code:
 
 ## Script Categories
 
-### Batch Git Operations (`CommitAll/`)
-
-- **commit_all_repos.py** - Interactive batch Git repository manager
-  - Rich terminal interface with colorful tables and progress indicators
-  - Safety-first design with dry-run mode by default
-  - Organization whitelist for push operations
-  - Automatic repository discovery and status checking
-  - Smart pull operations for repos that are behind
-  - Comprehensive logging to timestamped files in `logs/` directory
-  - Supports both interactive and automated (YOLO) modes
 
 ### WSL Setup (`wsl-setup/`)
 
@@ -104,7 +75,10 @@ Install MCP servers for Claude Code:
 
 ### MCP Management (`mcp/`)
 
-- **install_mcp_servers.sh** - Install/test MCP servers (brave-search, linear, markdown)
+- **install_mcp_servers.sh** - Install/test MCP servers (sequential-thinking, linear, context7)
+  - bash 3.2 compatible with cross-platform timeout handling
+  - Multiple operation modes: install, test-only, dry-run
+  - Comprehensive connectivity and functionality testing
 - **context7-launcher.sh** - Launch Context7 MCP server with proper environment
 
 ### Network Configuration (`network/`)

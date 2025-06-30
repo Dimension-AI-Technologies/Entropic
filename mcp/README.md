@@ -45,11 +45,14 @@ Launch Context7 MCP server with proper environment setup.
 - **Node.js** and `npx` environment
 - **Claude Code CLI** for MCP server integration
 - **LINEAR_API_KEY** environment variable (optional, for Linear server)
+- **bash 3.2+** (compatible with macOS default bash)
 
 ## Features
 
-- Automatic backup and restoration of existing MCP configurations
+- **bash 3.2 compatible** - Works on macOS default bash without requiring newer versions
+- **Cross-platform timeout handling** - Automatically detects and uses appropriate timeout commands
 - Comprehensive testing of server connectivity and functionality
 - Color-coded output for easy status identification
 - Error tracking and reporting
 - Support for both local and SSE-based MCP servers
+- Multiple operation modes (install, test-only, dry-run)
