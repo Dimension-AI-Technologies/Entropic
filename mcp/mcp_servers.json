@@ -1,0 +1,43 @@
+{
+  "servers": {
+    "sequential-thinking": {
+      "name": "sequential-thinking",
+      "description": "Dynamic problem-solving through sequential thought processes",
+      "transport": "local",
+      "command": "npx -y @modelcontextprotocol/server-sequential-thinking",
+      "test_prompt": "Help me think through a simple decision: tea or coffee?",
+      "validation_pattern": "step|think|reasoning|decision",
+      "requires_auth": false,
+      "category": "reasoning",
+      "homepage": "https://github.com/modelcontextprotocol/server-sequential-thinking"
+    },
+    "linear": {
+      "name": "linear",
+      "description": "Linear workspace integration for issue tracking and project management",
+      "transport": "sse",
+      "command": "https://mcp.linear.app/sse",
+      "test_prompt": "List my Linear workspaces",
+      "validation_pattern": "401|unauthorized|authentication|workspace",
+      "requires_auth": true,
+      "auth_instructions": "1. Go to https://linear.app\n2. Settings → API → Personal API keys\n3. Create a new key and set: export LINEAR_API_KEY='your_key'",
+      "category": "productivity",
+      "homepage": "https://linear.app"
+    },
+    "context7": {
+      "name": "context7",
+      "description": "Context7 web search and knowledge retrieval server",
+      "transport": "sse",
+      "command": "https://mcp.context7.com/sse",
+      "test_prompt": "What is React? use context7",
+      "validation_pattern": "context7|documentation|library",
+      "requires_auth": false,
+      "category": "knowledge",
+      "homepage": "https://context7.com"
+    }
+  },
+  "categories": {
+    "reasoning": "Reasoning and thinking tools",
+    "productivity": "Productivity and project management",
+    "knowledge": "Knowledge retrieval and search"
+  }
+}
