@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/your-org/polyscript/schema/polyscript-v1.0.json",
+  "title": "PolyScript v1.0 Output Format",
+  "description": "Standard JSON output format for PolyScript-compliant CLI tools",
+  "type": "object",
+  "required": ["polyscript", "mode", "tool", "status", "data"],
+  "properties": {
+    "polyscript": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "PolyScript specification version"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["status", "test", "sandbox", "live"],
+      "description": "Execution mode that produced this output"
+    },
+    "tool": {
+      "type": "string",
+      "description": "Name of the tool that generated this output"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["success", "error"],
+      "description": "Overall execution status"
+    },
+    "data": {
+      "type": "object",
+      "description": "Mode-specific output data"
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Error messages, if any"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Warning messages, if any"
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Informational messages (only included with --verbose)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when output was generated"
+    },
+    "duration_ms": {
+      "type": "number",
+      "description": "Execution duration in milliseconds"
+    }
+  },
+  "additionalProperties": false
+}
