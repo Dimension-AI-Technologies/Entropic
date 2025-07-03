@@ -6,45 +6,54 @@ If you're new to PolyScript, this is your starting point. This guide will get yo
 
 ## What is PolyScript?
 
-PolyScript eliminates CLI boilerplate. Instead of writing hundreds of lines of argument parsing, error handling, and output formatting, you write **only business logic**.
+PolyScript eliminates CLI boilerplate through **CRUD Operations × Modal Execution**. Write four methods (Create, Read, Update, Delete), and the framework automatically provides 12 different behaviors through three execution modes (simulate, sandbox, live).
 
 **Traditional CLI Tool** (100+ lines):
 ```python
 # Lots of argparse setup, error handling, JSON formatting...
 parser = argparse.ArgumentParser()
-parser.add_argument("--mode", choices=["status", "test", "live"])
-# ... 50+ more lines of boilerplate
+subparsers = parser.add_subparsers()
+create_parser = subparsers.add_parser('create')
+create_parser.add_argument('--mode', choices=['simulate', 'sandbox', 'live'])
+# ... 50+ more lines of boilerplate for each CRUD operation
 ```
 
-**PolyScript Tool** (3 lines):
+**PolyScript Tool** (10 lines):
 ```python
 @polyscript_tool
 class BackupTool:
-    def status(self): return {"operational": True}
-    def live(self): return {"backup_completed": True}
+    def create(self, resource, options, context):
+        return {"created": f"backup-{resource}"}
+    def read(self, resource, options, context):
+        return {"status": "ready", "size": "1.2GB"}
+    def update(self, resource, options, context):
+        return {"updated": resource}
+    def delete(self, resource, options, context):
+        return {"deleted": resource}
+
 BackupTool.run()
 ```
 
-Both provide identical CLI interfaces, but PolyScript handles everything automatically.
+Both provide identical CLI interfaces with 12 behaviors, but PolyScript handles everything automatically.
 
 ## Quick Start
 
 ### Step 1: Choose Your Language
 
-Pick from our 9 comprehensive frameworks (7 ready, 2 coming):
+Pick from our 9 comprehensive frameworks:
 
 **Production Ready:**
 - **[Python](frameworks/python/)** - General scripting, huge ecosystem
 - **[C#](frameworks/csharp/)** - Enterprise Windows/.NET development
+- **[F#](frameworks/fsharp/)** - Functional-first .NET programming
+- **[Rust](frameworks/rust/)** - Systems programming, memory safety
 - **[Go](frameworks/go/)** - DevOps tools, single binaries
 - **[Node.js](frameworks/nodejs/)** - JavaScript ecosystem, web developers
-- **[Rust](frameworks/rust/)** - Systems programming, memory safety
-- **[F#](frameworks/fsharp/)** - Functional-first .NET programming
 - **[Ruby](frameworks/ruby/)** - Elegant scripting, Rails culture
-
-**Coming Soon:**
-- **[PowerShell](frameworks/powershell/)** - Windows admin, cross-platform automation
 - **[Haskell](frameworks/haskell/)** - Pure functional, type-safe programming
+
+**Experimental:**
+- **[PowerShell](frameworks/experimental/)** - Windows admin, cross-platform automation
 
 **Why these 9?** Complete coverage of all paradigms, ecosystems, and use cases without redundancy.
 
@@ -64,47 +73,70 @@ Edit `my_tool.py` and replace the backup logic with your tool's logic:
 ```python
 @polyscript_tool
 class MyTool:
-    def status(self):
-        # Show current state - always safe, read-only
-        return {"ready": True, "version": "1.0.0"}
+    def create(self, resource, options, context):
+        # Create new resources
+        context.log(f"Creating {resource}...")
+        return {"created": resource, "id": "12345"}
     
-    def test(self):
-        # Simulate operations - no changes made
-        return {"would_process": ["file1", "file2"], "items_to_process": 2}
+    def read(self, resource, options, context):
+        # Query existing resources
+        return {"resource": resource, "status": "active"}
     
-    def sandbox(self):
-        # Test dependencies and environment
-        return {"dependencies": "ok", "permissions": "ok"}
+    def update(self, resource, options, context):
+        # Modify resources
+        context.log(f"Updating {resource}...")
+        return {"updated": resource, "changes": options}
     
-    def live(self):
-        # Actually do the work
-        return {"processed": 100, "status": "completed"}
+    def delete(self, resource, options, context):
+        # Remove resources
+        context.log(f"Deleting {resource}...")
+        return {"deleted": resource}
 ```
 
 ### Step 4: Run Your Tool
 
 ```bash
-# Your tool now has a complete CLI interface
-python my_tool.py status          # Show current state
-python my_tool.py test --verbose  # Simulate operations
-python my_tool.py sandbox --json  # Test environment
-python my_tool.py live --force    # Execute operations
+# Your tool now has 12 different behaviors from 4 methods
+python my_tool.py create item --mode simulate  # Would create
+python my_tool.py create item --mode sandbox   # Test creation
+python my_tool.py create item                  # Actually create
+
+python my_tool.py read item                    # Query item
+python my_tool.py list                         # List all items
+
+python my_tool.py update item --key value      # Modify item
+python my_tool.py delete item --force          # Remove item
 ```
 
-## The Four Modes
+## The CRUD × Modes Matrix
 
-Every PolyScript tool has exactly four modes:
+Write 4 operations, get 12 behaviors:
 
-| Mode | Purpose | When to Use |
-|------|---------|-------------|
-| **`status`** | Show current state | Default mode, always safe |
-| **`test`** | Simulate operations | Before running `live` mode |
-| **`sandbox`** | Test environment | Check if tool will work |
-| **`live`** | Execute operations | When you want actual changes |
+### CRUD Operations (You Write These)
+1. **`create`** - Add new resources
+2. **`read`** - Query existing resources  
+3. **`update`** - Modify resources
+4. **`delete`** - Remove resources
+
+### Execution Modes (Framework Provides These)
+1. **`simulate`** - Show what would happen (dry-run)
+2. **`sandbox`** - Test prerequisites and validation
+3. **`live`** - Execute actual operations (default)
+
+### The Magic: 4 × 3 = 12
+```
+         | Simulate | Sandbox | Live
+---------|----------|---------|------
+Create   |    ✓     |    ✓    |  ✓
+Read     |    -     |    ✓    |  ✓
+Update   |    ✓     |    ✓    |  ✓  
+Delete   |    ✓     |    ✓    |  ✓
+```
 
 ## Standard Flags
 
 All PolyScript tools support:
+- **`--mode`** - Execution mode (simulate, sandbox, live)
 - **`--json`** - Machine-readable output for automation
 - **`--verbose`** - Detailed logging and debug info
 - **`--force`** - Skip confirmation prompts
@@ -126,7 +158,7 @@ You focus on **your tool's unique functionality**.
 
 ### New Users
 1. **[User Guide](UserGuide.md)** - Complete user documentation
-2. **[Examples](examples/)** - See the backup tool in all 7 languages
+2. **[Examples](examples/)** - See the backup tool in all 9 languages
 
 ### Developers  
 1. **[Technical Guide](TechnicalGuide.md)** - Framework internals and specifications

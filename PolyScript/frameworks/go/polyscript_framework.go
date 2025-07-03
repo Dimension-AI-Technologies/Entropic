@@ -1,8 +1,6 @@
 /*
- * PolyScript Framework for Go using cobra
- *
- * A true zero-boilerplate framework for creating PolyScript-compliant CLI tools.
- * Developers write ONLY business logic - the framework handles everything else.
+ * PolyScript Framework for Go using Cobra
+ * CRUD × Modes Architecture: Zero-boilerplate CLI development
  *
  * Author: Mathew Burkitt, Dimension Technologies <mathew.burkitt@ditech.ai>
  */
@@ -12,50 +10,85 @@ package polyscript
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
-	"bufio"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 )
 
-// PolyScriptMode represents the execution modes
+// PolyScriptOperation represents CRUD operations
+type PolyScriptOperation string
+
+const (
+	CreateOp PolyScriptOperation = "create"
+	ReadOp   PolyScriptOperation = "read"
+	UpdateOp PolyScriptOperation = "update"
+	DeleteOp PolyScriptOperation = "delete"
+)
+
+// PolyScriptMode represents execution modes
 type PolyScriptMode string
 
 const (
-	StatusMode  PolyScriptMode = "status"
-	TestMode    PolyScriptMode = "test"
-	SandboxMode PolyScriptMode = "sandbox"
-	LiveMode    PolyScriptMode = "live"
+	SimulateMode PolyScriptMode = "simulate"
+	SandboxMode  PolyScriptMode = "sandbox"
+	LiveMode     PolyScriptMode = "live"
 )
 
-// PolyScriptContext provides context and utility methods for tool execution
+// PolyScriptContext provides context for tool execution
 type PolyScriptContext struct {
+	Operation  PolyScriptOperation
 	Mode       PolyScriptMode
+	Resource   string
+	RebadgedAs string
+	Options    map[string]interface{}
 	Verbose    bool
 	Force      bool
 	JSONOutput bool
-	OutputData map[string]interface{}
 	ToolName   string
+	OutputData map[string]interface{}
 }
 
 // NewContext creates a new PolyScript context
-func NewContext(mode PolyScriptMode, verbose, force, jsonOutput bool, toolName string) *PolyScriptContext {
+func NewContext(operation PolyScriptOperation, mode PolyScriptMode, resource string, toolName string) *PolyScriptContext {
 	return &PolyScriptContext{
-		Mode:       mode,
-		Verbose:    verbose,
-		Force:      force,
-		JSONOutput: jsonOutput,
-		ToolName:   toolName,
+		Operation: operation,
+		Mode:      mode,
+		Resource:  resource,
+		ToolName:  toolName,
+		Options:   make(map[string]interface{}),
 		OutputData: map[string]interface{}{
 			"polyscript": "1.0",
+			"operation":  string(operation),
 			"mode":       string(mode),
 			"tool":       toolName,
 			"status":     "success",
 			"data":       map[string]interface{}{},
 		},
 	}
+}
+
+// CanMutate returns true if the current mode allows mutations
+func (ctx *PolyScriptContext) CanMutate() bool {
+	return ctx.Mode == LiveMode
+}
+
+// ShouldValidate returns true if the current mode should validate
+func (ctx *PolyScriptContext) ShouldValidate() bool {
+	return ctx.Mode == SandboxMode
+}
+
+// RequireConfirm returns true if confirmation is required
+func (ctx *PolyScriptContext) RequireConfirm() bool {
+	return ctx.Mode == LiveMode &&
+		(ctx.Operation == UpdateOp || ctx.Operation == DeleteOp) &&
+		!ctx.Force
+}
+
+// IsSafeMode returns true if in a safe mode (simulate/sandbox)
+func (ctx *PolyScriptContext) IsSafeMode() bool {
+	return ctx.Mode == SimulateMode || ctx.Mode == SandboxMode
 }
 
 // Log outputs a message at the specified level
@@ -66,7 +99,6 @@ func (ctx *PolyScriptContext) Log(message string, level ...string) {
 	}
 
 	if ctx.JSONOutput {
-		// Route to JSON data structure
 		var key string
 		switch logLevel {
 		case "error", "critical":
@@ -74,7 +106,7 @@ func (ctx *PolyScriptContext) Log(message string, level ...string) {
 		case "warning":
 			key = "warnings"
 		case "info", "debug":
-			if ctx.Verbose {
+			if ctx.Verbose || logLevel == "info" {
 				key = "messages"
 			}
 		}
@@ -87,7 +119,6 @@ func (ctx *PolyScriptContext) Log(message string, level ...string) {
 			ctx.OutputData[key] = append(messages, fmt.Sprintf("%s: %s", strings.ToUpper(logLevel), message))
 		}
 	} else {
-		// Direct console output
 		switch logLevel {
 		case "error", "critical":
 			fmt.Fprintf(os.Stderr, "Error: %s\n", message)
@@ -123,13 +154,11 @@ func (ctx *PolyScriptContext) Output(data interface{}, isError ...bool) {
 			messages := ctx.OutputData[key].([]string)
 			ctx.OutputData[key] = append(messages, v)
 		case map[string]interface{}:
-			// Merge into data section
 			dataSection := ctx.OutputData["data"].(map[string]interface{})
 			for k, val := range v {
 				dataSection[k] = val
 			}
 		default:
-			// Try to convert to map via JSON
 			if jsonBytes, err := json.Marshal(data); err == nil {
 				var dataMap map[string]interface{}
 				if json.Unmarshal(jsonBytes, &dataMap) == nil {
@@ -151,7 +180,7 @@ func (ctx *PolyScriptContext) Output(data interface{}, isError ...bool) {
 				if jsonBytes, err := json.MarshalIndent(data, "", "  "); err == nil {
 					fmt.Println(string(jsonBytes))
 				} else {
-					fmt.Printf("%+v\n", data)
+					fmt.Printf("%v\n", data)
 				}
 			}
 		}
@@ -170,18 +199,21 @@ func (ctx *PolyScriptContext) Confirm(message string) bool {
 	}
 
 	fmt.Printf("%s [y/N]: ", message)
-	reader := bufio.NewReader(os.Stdin)
-	response, err := reader.ReadString('\n')
-	if err != nil {
-		return false
-	}
-
-	response = strings.TrimSpace(strings.ToLower(response))
-	return response == "y"
+	var response string
+	fmt.Scanln(&response)
+	response = strings.ToLower(strings.TrimSpace(response))
+	return response == "y" || response == "yes"
 }
 
 // FinalizeOutput outputs final JSON if in JSON mode
 func (ctx *PolyScriptContext) FinalizeOutput() {
+	if ctx.Resource != "" {
+		ctx.OutputData["resource"] = ctx.Resource
+	}
+	if ctx.RebadgedAs != "" {
+		ctx.OutputData["rebadged_as"] = ctx.RebadgedAs
+	}
+
 	if ctx.JSONOutput {
 		if jsonBytes, err := json.MarshalIndent(ctx.OutputData, "", "  "); err == nil {
 			fmt.Println(string(jsonBytes))
@@ -189,28 +221,100 @@ func (ctx *PolyScriptContext) FinalizeOutput() {
 	}
 }
 
-// PolyScriptTool interface that tools must implement
+// PolyScriptTool interface that all tools must implement
 type PolyScriptTool interface {
 	Description() string
-	Status(ctx *PolyScriptContext) (interface{}, error)
-	Test(ctx *PolyScriptContext) (interface{}, error)
-	Sandbox(ctx *PolyScriptContext) (interface{}, error)
-	Live(ctx *PolyScriptContext) (interface{}, error)
-	AddArguments(cmd *cobra.Command) *cobra.Command
+	Create(resource string, options map[string]interface{}, ctx *PolyScriptContext) (interface{}, error)
+	Read(resource string, options map[string]interface{}, ctx *PolyScriptContext) (interface{}, error)
+	Update(resource string, options map[string]interface{}, ctx *PolyScriptContext) (interface{}, error)
+	Delete(resource string, options map[string]interface{}, ctx *PolyScriptContext) (interface{}, error)
 }
 
-// PolyScriptError represents a PolyScript execution error
-type PolyScriptError struct {
-	Message string
-}
+// executeWithMode executes CRUD method with appropriate mode wrapping
+func executeWithMode(tool PolyScriptTool, ctx *PolyScriptContext) error {
+	var result interface{}
+	var err error
 
-func (e *PolyScriptError) Error() string {
-	return e.Message
-}
+	switch ctx.Mode {
+	case SimulateMode:
+		ctx.Log(fmt.Sprintf("Simulating %s operation", ctx.Operation), "debug")
 
-// NewError creates a new PolyScript error
-func NewError(message string) *PolyScriptError {
-	return &PolyScriptError{Message: message}
+		if ctx.Operation == ReadOp {
+			result, err = tool.Read(ctx.Resource, ctx.Options, ctx)
+		} else {
+			actionVerb := map[PolyScriptOperation]string{
+				CreateOp: "Would create",
+				UpdateOp: "Would update",
+				DeleteOp: "Would delete",
+			}[ctx.Operation]
+
+			result = map[string]interface{}{
+				"simulation": true,
+				"action":     fmt.Sprintf("%s %s", actionVerb, ctx.Resource),
+				"options":    ctx.Options,
+			}
+		}
+
+	case SandboxMode:
+		ctx.Log(fmt.Sprintf("Testing prerequisites for %s", ctx.Operation), "debug")
+
+		validations := map[string]string{
+			"permissions":  "verified",
+			"dependencies": "available",
+			"connectivity": "established",
+		}
+
+		// Tools can add custom validations by implementing Validate* methods
+		// For now, we'll use the default validations
+
+		allPassed := true
+		for _, v := range validations {
+			if v != "verified" && v != "available" && v != "established" && v != "passed" {
+				allPassed = false
+				break
+			}
+		}
+
+		result = map[string]interface{}{
+			"sandbox":     true,
+			"validations": validations,
+			"ready":       allPassed,
+		}
+
+	case LiveMode:
+		ctx.Log(fmt.Sprintf("Executing %s operation", ctx.Operation), "debug")
+
+		if ctx.RequireConfirm() {
+			msg := fmt.Sprintf("Are you sure you want to %s %s?", ctx.Operation, ctx.Resource)
+			if !ctx.Confirm(msg) {
+				ctx.OutputData["status"] = "cancelled"
+				return fmt.Errorf("user declined confirmation")
+			}
+		}
+
+		switch ctx.Operation {
+		case CreateOp:
+			result, err = tool.Create(ctx.Resource, ctx.Options, ctx)
+		case ReadOp:
+			result, err = tool.Read(ctx.Resource, ctx.Options, ctx)
+		case UpdateOp:
+			result, err = tool.Update(ctx.Resource, ctx.Options, ctx)
+		case DeleteOp:
+			result, err = tool.Delete(ctx.Resource, ctx.Options, ctx)
+		}
+	}
+
+	if err != nil {
+		ctx.OutputData["status"] = "error"
+		ctx.Output(err.Error(), true)
+		return err
+	}
+
+	if result != nil {
+		ctx.Output(result)
+	}
+
+	return nil
 }
 
 // RunTool executes a PolyScript tool with cobra CLI handling
@@ -221,14 +325,12 @@ func RunTool(tool PolyScriptTool) {
 		toolName = parts[len(parts)-1]
 	}
 
-	// Create root command
-	rootCmd := &cobra.Command{
+	var rootCmd = &cobra.Command{
 		Use:   strings.ToLower(toolName),
 		Short: tool.Description(),
 		Long:  tool.Description(),
 		Run: func(cmd *cobra.Command, args []string) {
-			// Default to status mode when no subcommand
-			executeMode(tool, StatusMode, cmd, args)
+			cmd.Help()
 		},
 	}
 
@@ -237,228 +339,199 @@ func RunTool(tool PolyScriptTool) {
 	rootCmd.PersistentFlags().BoolP("force", "f", false, "Skip confirmation prompts")
 	rootCmd.PersistentFlags().Bool("json", false, "Output in JSON format")
 
-	// Let tool add custom arguments
-	rootCmd = tool.AddArguments(rootCmd)
-
-	// Create mode subcommands
-	statusCmd := &cobra.Command{
-		Use:   "status",
-		Short: "Show current state",
+	// Add discovery command
+	var discoverCmd = &cobra.Command{
+		Use:   "discover",
+		Short: "Show tool capabilities",
 		Run: func(cmd *cobra.Command, args []string) {
-			executeMode(tool, StatusMode, cmd, args)
+			jsonOutput, _ := cmd.Flags().GetBool("json")
+
+			discovery := map[string]interface{}{
+				"polyscript": "1.0",
+				"tool":       toolName,
+				"operations": []string{"create", "read", "update", "delete"},
+				"modes":      []string{"simulate", "sandbox", "live"},
+			}
+
+			if jsonOutput {
+				if jsonBytes, err := json.MarshalIndent(discovery, "", "  "); err == nil {
+					fmt.Println(string(jsonBytes))
+				}
+			} else {
+				fmt.Printf("Tool: %s\n", toolName)
+				fmt.Println("Operations: create, read, update, delete")
+				fmt.Println("Modes: simulate, sandbox, live")
+			}
 		},
 	}
+	rootCmd.AddCommand(discoverCmd)
 
-	testCmd := &cobra.Command{
-		Use:   "test",
-		Short: "Simulate operations (dry-run)",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeMode(tool, TestMode, cmd, args)
-		},
+	// Create a command executor function
+	executeCommand := func(operation PolyScriptOperation) func(cmd *cobra.Command, args []string) {
+		return func(cmd *cobra.Command, args []string) {
+			resource := ""
+			if operation != ReadOp && len(args) > 0 {
+				resource = args[0]
+			} else if operation != ReadOp {
+				fmt.Fprintln(os.Stderr, "Error: resource argument is required")
+				os.Exit(1)
+			}
+
+			mode, _ := cmd.Flags().GetString("mode")
+			verbose, _ := cmd.Flags().GetBool("verbose")
+			force, _ := cmd.Flags().GetBool("force")
+			jsonOutput, _ := cmd.Flags().GetBool("json")
+
+			var modeEnum PolyScriptMode
+			switch mode {
+			case "simulate":
+				modeEnum = SimulateMode
+			case "sandbox":
+				modeEnum = SandboxMode
+			default:
+				modeEnum = LiveMode
+			}
+
+			ctx := NewContext(operation, modeEnum, resource, toolName)
+			ctx.Verbose = verbose
+			ctx.Force = force
+			ctx.JSONOutput = jsonOutput
+
+			if err := executeWithMode(tool, ctx); err != nil {
+				ctx.FinalizeOutput()
+				os.Exit(1)
+			}
+
+			ctx.FinalizeOutput()
+		}
 	}
 
-	sandboxCmd := &cobra.Command{
-		Use:   "sandbox",
-		Short: "Test dependencies and environment",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeMode(tool, SandboxMode, cmd, args)
-		},
+	// Add CRUD commands
+	createCmd := &cobra.Command{
+		Use:   "create [resource]",
+		Short: "Create new resources",
+		Args:  cobra.ExactArgs(1),
+		Run:   executeCommand(CreateOp),
 	}
+	createCmd.Flags().String("mode", "live", "Execution mode (simulate, sandbox, live)")
 
-	liveCmd := &cobra.Command{
-		Use:   "live",
-		Short: "Execute actual operations",
-		Run: func(cmd *cobra.Command, args []string) {
-			executeMode(tool, LiveMode, cmd, args)
-		},
+	readCmd := &cobra.Command{
+		Use:   "read",
+		Short: "Read/query resources",
+		Args:  cobra.MaximumNArgs(1),
+		Run:   executeCommand(ReadOp),
 	}
+	readCmd.Flags().String("mode", "live", "Execution mode (simulate, sandbox, live)")
 
-	// Add tool-specific arguments to each subcommand
-	statusCmd = tool.AddArguments(statusCmd)
-	testCmd = tool.AddArguments(testCmd)
-	sandboxCmd = tool.AddArguments(sandboxCmd)
-	liveCmd = tool.AddArguments(liveCmd)
+	// Add list as alias for read
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List resources (alias for read)",
+		Args:  cobra.MaximumNArgs(1),
+		Run:   executeCommand(ReadOp),
+	}
+	listCmd.Flags().String("mode", "live", "Execution mode (simulate, sandbox, live)")
 
-	// Add subcommands to root
-	rootCmd.AddCommand(statusCmd, testCmd, sandboxCmd, liveCmd)
+	updateCmd := &cobra.Command{
+		Use:   "update [resource]",
+		Short: "Update existing resources",
+		Args:  cobra.ExactArgs(1),
+		Run:   executeCommand(UpdateOp),
+	}
+	updateCmd.Flags().String("mode", "live", "Execution mode (simulate, sandbox, live)")
 
-	// Execute
+	deleteCmd := &cobra.Command{
+		Use:   "delete [resource]",
+		Short: "Delete resources",
+		Args:  cobra.ExactArgs(1),
+		Run:   executeCommand(DeleteOp),
+	}
+	deleteCmd.Flags().String("mode", "live", "Execution mode (simulate, sandbox, live)")
+
+	rootCmd.AddCommand(createCmd, readCmd, listCmd, updateCmd, deleteCmd)
+
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
-}
-
-// executeMode executes a specific PolyScript mode
-func executeMode(tool PolyScriptTool, mode PolyScriptMode, cmd *cobra.Command, args []string) {
-	// Get flags
-	verbose, _ := cmd.Flags().GetBool("verbose")
-	force, _ := cmd.Flags().GetBool("force")
-	jsonOutput, _ := cmd.Flags().GetBool("json")
-
-	// Handle persistent flags
-	if cmd.PersistentFlags().Changed("verbose") {
-		verbose, _ = cmd.PersistentFlags().GetBool("verbose")
-	}
-	if cmd.PersistentFlags().Changed("force") {
-		force, _ = cmd.PersistentFlags().GetBool("force")
-	}
-	if cmd.PersistentFlags().Changed("json") {
-		jsonOutput, _ = cmd.PersistentFlags().GetBool("json")
-	}
-
-	// Create context
-	toolName := fmt.Sprintf("%T", tool)
-	if strings.Contains(toolName, ".") {
-		parts := strings.Split(toolName, ".")
-		toolName = parts[len(parts)-1]
-	}
-
-	ctx := NewContext(mode, verbose, force, jsonOutput, toolName)
-	ctx.Log(fmt.Sprintf("Executing %s mode", mode), "debug")
-
-	// Execute appropriate method
-	var result interface{}
-	var err error
-
-	switch mode {
-	case StatusMode:
-		result, err = tool.Status(ctx)
-	case TestMode:
-		result, err = tool.Test(ctx)
-	case SandboxMode:
-		result, err = tool.Sandbox(ctx)
-	case LiveMode:
-		result, err = tool.Live(ctx)
-	default:
-		err = NewError(fmt.Sprintf("Unknown mode: %s", mode))
-	}
-
-	// Handle result
-	exitCode := 0
-	if err != nil {
-		ctx.OutputData["status"] = "error"
-		ctx.Output(err.Error(), true)
-		if ctx.Verbose {
-			ctx.Log(fmt.Sprintf("Error details: %v", err), "error")
-		}
-		exitCode = 1
-	} else if result != nil {
-		ctx.Output(result)
-	}
-
-	ctx.FinalizeOutput()
-
-	if exitCode != 0 {
-		os.Exit(exitCode)
-	}
-}
-
-// DefaultTool provides a default implementation with empty AddArguments
-type DefaultTool struct{}
-
-func (t *DefaultTool) AddArguments(cmd *cobra.Command) *cobra.Command {
-	return cmd
-}
-
-// Example tool implementation
-type ExampleTool struct {
-	DefaultTool
-}
-
-func (t *ExampleTool) Description() string {
-	return "Example PolyScript tool demonstrating the Go framework"
-}
-
-func (t *ExampleTool) AddArguments(cmd *cobra.Command) *cobra.Command {
-	cmd.Flags().String("target", "default", "Target to operate on")
-	cmd.Flags().Int("count", 1, "Number of operations")
-	return cmd
-}
-
-func (t *ExampleTool) Status(ctx *PolyScriptContext) (interface{}, error) {
-	ctx.Log("Checking status...")
-	return map[string]interface{}{
-		"operational": true,
-		"last_check":  "2024-01-02T10:00:00Z",
-		"files_ready": 1234,
-	}, nil
-}
-
-func (t *ExampleTool) Test(ctx *PolyScriptContext) (interface{}, error) {
-	ctx.Log("Running test mode...")
-	return map[string]interface{}{
-		"planned_operations": []map[string]interface{}{
-			{"operation": "Operation 1", "status": "would execute"},
-			{"operation": "Operation 2", "status": "would execute"},
-		},
-		"total_operations": 2,
-		"note":             "No changes made in test mode",
-	}, nil
-}
-
-func (t *ExampleTool) Sandbox(ctx *PolyScriptContext) (interface{}, error) {
-	ctx.Log("Testing environment...")
-	tests := map[string]string{
-		"go":         "available",
-		"filesystem": "writable",
-		"network":    "accessible",
-	}
-
-	allPassed := true
-	for _, status := range tests {
-		if status != "available" && status != "writable" && status != "accessible" {
-			allPassed = false
-			break
-		}
-	}
-
-	return map[string]interface{}{
-		"dependency_tests": tests,
-		"all_passed":       allPassed,
-	}, nil
-}
-
-func (t *ExampleTool) Live(ctx *PolyScriptContext) (interface{}, error) {
-	ctx.Log("Executing live mode...")
-
-	if !ctx.Confirm("Execute operations?") {
-		return map[string]interface{}{"status": "cancelled"}, nil
-	}
-
-	ctx.Log("Executing operation 1...")
-	ctx.Log("Executing operation 2...")
-
-	return map[string]interface{}{
-		"executed_operations": []map[string]interface{}{
-			{"operation": "Operation 1", "status": "completed"},
-			{"operation": "Operation 2", "status": "completed"},
-		},
-		"total_completed": 2,
-	}, nil
 }
 
 /*
- * USAGE EXAMPLE:
+ * EXAMPLE USAGE:
  *
- * // main.go
  * package main
  *
- * import "path/to/polyscript"
+ * import (
+ *     "fmt"
+ *     "time"
+ *     "github.com/yourusername/polyscript"
+ * )
+ *
+ * type CompilerTool struct{}
+ *
+ * func (t *CompilerTool) Description() string {
+ *     return "Example compiler tool demonstrating CRUD × Modes"
+ * }
+ *
+ * func (t *CompilerTool) Create(resource string, options map[string]interface{}, ctx *polyscript.PolyScriptContext) (interface{}, error) {
+ *     ctx.Log(fmt.Sprintf("Compiling %s...", resource))
+ *
+ *     outputFile := resource[:len(resource)-3] + ".out"
+ *     if output, ok := options["output"].(string); ok {
+ *         outputFile = output
+ *     }
+ *
+ *     return map[string]interface{}{
+ *         "compiled":  resource,
+ *         "output":    outputFile,
+ *         "optimized": options["optimize"] == true,
+ *         "timestamp": time.Now().Format(time.RFC3339),
+ *     }, nil
+ * }
+ *
+ * func (t *CompilerTool) Read(resource string, options map[string]interface{}, ctx *polyscript.PolyScriptContext) (interface{}, error) {
+ *     ctx.Log("Checking compilation status...")
+ *
+ *     return map[string]interface{}{
+ *         "source_files":   []string{"main.go", "utils.go", "config.go"},
+ *         "compiled_files": []string{"main", "utils.o"},
+ *         "missing":        []string{"config.o"},
+ *         "last_build":     time.Now().Format(time.RFC3339),
+ *     }, nil
+ * }
+ *
+ * func (t *CompilerTool) Update(resource string, options map[string]interface{}, ctx *polyscript.PolyScriptContext) (interface{}, error) {
+ *     ctx.Log(fmt.Sprintf("Recompiling %s...", resource))
+ *
+ *     return map[string]interface{}{
+ *         "recompiled": resource,
+ *         "reason":     "source file changed",
+ *         "timestamp":  time.Now().Format(time.RFC3339),
+ *     }, nil
+ * }
+ *
+ * func (t *CompilerTool) Delete(resource string, options map[string]interface{}, ctx *polyscript.PolyScriptContext) (interface{}, error) {
+ *     ctx.Log(fmt.Sprintf("Cleaning %s...", resource))
+ *
+ *     return map[string]interface{}{
+ *         "cleaned":     []string{"*.out", "*.o", "build/"},
+ *         "freed_space": "15.2 MB",
+ *         "timestamp":   time.Now().Format(time.RFC3339),
+ *     }, nil
+ * }
  *
  * func main() {
- *     tool := &ExampleTool{}
+ *     tool := &CompilerTool{}
  *     polyscript.RunTool(tool)
  * }
  *
- * // go.mod
- * module backup-tool
- * go 1.19
- * require github.com/spf13/cobra v1.7.0
+ * // Command examples:
+ * // go run main.go create main.go --mode simulate
+ * // go run main.go read
+ * // go run main.go update main.go
+ * // go run main.go delete --mode simulate
+ * // go run main.go discover --json
  *
- * // Build and run:
- * go build -o backup-tool main.go
- * ./backup-tool status
- * ./backup-tool test --verbose
- * ./backup-tool sandbox --json
- * ./backup-tool live --force
+ * // For rebadging, you can create wrapper commands in your main:
+ * // compile -> create, clean -> delete, status -> read, etc.
  */

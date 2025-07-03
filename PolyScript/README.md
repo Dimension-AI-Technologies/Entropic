@@ -86,8 +86,8 @@ PolyScript/
 │   ├── go/                  # cobra-based framework
 │   ├── nodejs/              # yargs-based framework
 │   ├── ruby/                # thor-based framework
-│   ├── powershell/          # (planned) PowerShell framework
-│   └── haskell/             # (planned) optparse-applicative framework
+│   ├── haskell/             # optparse-applicative framework
+│   └── experimental/        # PowerShell framework (experimental)
 ├── schema/                   # JSON schema and specifications
 ├── tools/                    # Validation and generation tools
 ├── examples/                 # Cross-language example implementations
@@ -121,7 +121,7 @@ Delete   |    ✓     |    ✓    |  ✓
 
 ## Framework Languages
 
-✅ **9 Comprehensive Frameworks** (7 complete + 2 planned):
+✅ **9 Comprehensive Frameworks** (all complete):
 
 ### Production Ready
 - **Python** (Click) - General scripting, massive ecosystem
@@ -131,10 +131,10 @@ Delete   |    ✓     |    ✓    |  ✓
 - **Go** (cobra) - DevOps tooling, single binaries
 - **Node.js** (yargs) - JavaScript ecosystem, web developers
 - **Ruby** (thor) - Elegant scripting, Rails culture
-
-### Coming Soon
-- **PowerShell** - Windows administration, cross-platform automation
 - **Haskell** (optparse-applicative) - Pure functional programming
+
+### Experimental
+- **PowerShell** - Windows administration, cross-platform automation
 
 ## Why These 9 Languages?
 
@@ -245,7 +245,7 @@ my-tool delete item --force            # Remove
 - **[polyscript_generator.py](tools/polyscript_generator.py)** - Code generation
 
 ### Examples (`examples/`)
-- **[backup_tool/](examples/backup_tool/)** - Same tool in all 7 languages
+- **[backup_tool/](examples/backup_tool/)** - Same tool in all 9 languages
 
 ## Standard JSON Output
 

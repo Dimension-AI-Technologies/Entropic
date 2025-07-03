@@ -29,7 +29,7 @@ PolyScript is a behavioral standard that makes CLI tools consistent and predicta
 
 ### Why 9 Framework Languages?
 
-PolyScript supports 9 carefully selected languages (7 complete, 2 planned) that provide **comprehensive coverage without redundancy**:
+PolyScript supports 9 carefully selected languages that provide **comprehensive coverage without redundancy**:
 
 **✅ All Major Paradigms Covered**
 - **Imperative**: Python, PowerShell, Ruby
