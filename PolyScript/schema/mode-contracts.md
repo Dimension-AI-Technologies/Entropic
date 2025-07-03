@@ -12,7 +12,7 @@ This document defines the behavioral contracts for the four PolyScript execution
 - MUST be read-only (no side effects)
 - MUST return current operational state
 - SHOULD include version/configuration information
-- SHOULD be fast (< 1 second typical)
+- SHOULD return quickly (performance depends on implementation)
 - MUST NOT require user interaction
 
 **Typical Output**:
@@ -40,7 +40,7 @@ This document defines the behavioral contracts for the four PolyScript execution
   "planned_operations": [
     {"operation": "backup", "files": 100, "size_mb": 250}
   ],
-  "estimated_duration": "30s",
+  "estimated_operations": 100,
   "note": "No changes made in test mode"
 }
 ```
@@ -81,7 +81,7 @@ This document defines the behavioral contracts for the four PolyScript execution
   "operation": "backup_completed",
   "files_processed": 100,
   "bytes_transferred": 262144000,
-  "duration_ms": 30000
+  "completed": true
 }
 ```
 

@@ -1,8 +1,6 @@
 /*
  * PolyScript Framework for C# using Spectre.Console
- * 
- * A true zero-boilerplate framework for creating PolyScript-compliant CLI tools.
- * Developers write ONLY business logic - the framework handles everything else.
+ * CRUD × Modes Architecture: Zero-boilerplate CLI development
  * 
  * Author: Mathew Burkitt, Dimension Technologies <mathew.burkitt@ditech.ai>
  */
@@ -10,6 +8,8 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -19,12 +19,22 @@ using Spectre.Console.Cli;
 namespace PolyScript.Framework
 {
     /// <summary>
+    /// PolyScript CRUD operations
+    /// </summary>
+    public enum PolyScriptOperation
+    {
+        Create,
+        Read,
+        Update,
+        Delete
+    }
+
+    /// <summary>
     /// PolyScript execution modes
     /// </summary>
     public enum PolyScriptMode
     {
-        Status,
-        Test,
+        Simulate,
         Sandbox,
         Live
     }
@@ -34,7 +44,11 @@ namespace PolyScript.Framework
     /// </summary>
     public class PolyScriptContext
     {
+        public PolyScriptOperation Operation { get; set; }
         public PolyScriptMode Mode { get; set; }
+        public string Resource { get; set; }
+        public string RebadgedAs { get; set; }
+        public Dictionary<string, object> Options { get; set; }
         public bool Verbose { get; set; }
         public bool Force { get; set; }
         public bool JsonOutput { get; set; }
@@ -43,6 +57,7 @@ namespace PolyScript.Framework
 
         public PolyScriptContext()
         {
+            Options = new Dictionary<string, object>();
             OutputData = new Dictionary<string, object>
             {
                 ["polyscript"] = "1.0",
@@ -52,11 +67,16 @@ namespace PolyScript.Framework
             Console = AnsiConsole.Console;
         }
 
+        public bool CanMutate() => Mode == PolyScriptMode.Live;
+        public bool ShouldValidate() => Mode == PolyScriptMode.Sandbox;
+        public bool RequireConfirm() => Mode == PolyScriptMode.Live && 
+            (Operation == PolyScriptOperation.Update || Operation == PolyScriptOperation.Delete) && !Force;
+        public bool IsSafeMode() => Mode != PolyScriptMode.Live;
+
         public void Log(string message, string level = "info")
         {
             if (JsonOutput)
             {
-                // Route to JSON data structure
                 var key = level switch
                 {
                     "error" or "critical" => "errors",
@@ -74,7 +94,6 @@ namespace PolyScript.Framework
             }
             else
             {
-                // Direct console output
                 var color = level switch
                 {
                     "error" or "critical" => Color.Red,
@@ -106,10 +125,9 @@ namespace PolyScript.Framework
                 }
                 else
                 {
-                    // Merge object properties into data section
                     var dataDict = (Dictionary<string, object>)OutputData["data"];
-                    var properties = JsonSerializer.Deserialize<Dictionary<string, object>>(
-                        JsonSerializer.Serialize(data));
+                    var json = JsonSerializer.Serialize(data);
+                    var properties = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
                     
                     foreach (var prop in properties)
                         dataDict[prop.Key] = prop.Value;
@@ -142,6 +160,15 @@ namespace PolyScript.Framework
 
         public void FinalizeOutput()
         {
+            OutputData["operation"] = Operation.ToString().ToLower();
+            OutputData["mode"] = Mode.ToString().ToLower();
+            
+            if (!string.IsNullOrEmpty(Resource))
+                OutputData["resource"] = Resource;
+            
+            if (!string.IsNullOrEmpty(RebadgedAs))
+                OutputData["rebadged_as"] = RebadgedAs;
+
             if (JsonOutput)
             {
                 var json = JsonSerializer.Serialize(OutputData, new JsonSerializerOptions { WriteIndented = true });
@@ -151,23 +178,46 @@ namespace PolyScript.Framework
     }
 
     /// <summary>
-    /// Interface that PolyScript tools must implement
+    /// Interface that PolyScript CRUD tools must implement
     /// </summary>
     public interface IPolyScriptTool
     {
         string Description { get; }
-        object Status(PolyScriptContext context);
-        object Test(PolyScriptContext context);
-        object Sandbox(PolyScriptContext context);
-        object Live(PolyScriptContext context);
+        object Create(string resource, Dictionary<string, object> options, PolyScriptContext context);
+        object Read(string resource, Dictionary<string, object> options, PolyScriptContext context);
+        object Update(string resource, Dictionary<string, object> options, PolyScriptContext context);
+        object Delete(string resource, Dictionary<string, object> options, PolyScriptContext context);
     }
 
+
     /// <summary>
-    /// Attribute to mark a class as a PolyScript tool
+    /// Attribute to mark a class as a PolyScript tool and optionally define rebadging
     /// </summary>
     [AttributeUsage(AttributeTargets.Class)]
     public class PolyScriptToolAttribute : Attribute
     {
+        public Dictionary<string, string> Rebadge { get; set; }
+
+        public PolyScriptToolAttribute()
+        {
+            Rebadge = new Dictionary<string, string>();
+        }
+    }
+
+    /// <summary>
+    /// Attribute for rebadging operations
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+    public class RebadgeAttribute : Attribute
+    {
+        public string Alias { get; set; }
+        public string Mapping { get; set; }
+
+        public RebadgeAttribute(string alias, string mapping)
+        {
+            Alias = alias;
+            Mapping = mapping;
+        }
     }
 
     /// <summary>
@@ -175,6 +225,14 @@ namespace PolyScript.Framework
     /// </summary>
     public class PolyScriptSettings : CommandSettings
     {
+        [Description("Resource to operate on")]
+        [CommandArgument(0, "[resource]")]
+        public string Resource { get; set; }
+
+        [Description("Execution mode")]
+        [CommandOption("--mode")]
+        public PolyScriptMode Mode { get; set; } = PolyScriptMode.Live;
+
         [Description("Enable verbose output")]
         [CommandOption("-v|--verbose")]
         public bool Verbose { get; set; }
@@ -189,16 +247,18 @@ namespace PolyScript.Framework
     }
 
     /// <summary>
-    /// Generic PolyScript command that routes to tool methods
+    /// Generic PolyScript command that routes to CRUD methods
     /// </summary>
     public class PolyScriptCommand<TTool> : Command<PolyScriptSettings>
         where TTool : IPolyScriptTool, new()
     {
-        private readonly PolyScriptMode _mode;
+        private readonly PolyScriptOperation _operation;
+        private readonly string _rebadgedAs;
 
-        public PolyScriptCommand(PolyScriptMode mode)
+        public PolyScriptCommand(PolyScriptOperation operation, string rebadgedAs = null)
         {
-            _mode = mode;
+            _operation = operation;
+            _rebadgedAs = rebadgedAs;
         }
 
         public override int Execute(CommandContext context, PolyScriptSettings settings)
@@ -206,27 +266,22 @@ namespace PolyScript.Framework
             var tool = new TTool();
             var psContext = new PolyScriptContext
             {
-                Mode = _mode,
+                Operation = _operation,
+                Mode = settings.Mode,
+                Resource = settings.Resource,
+                RebadgedAs = _rebadgedAs,
                 Verbose = settings.Verbose,
                 Force = settings.Force,
                 JsonOutput = settings.JsonOutput
             };
 
-            psContext.OutputData["mode"] = _mode.ToString().ToLower();
             psContext.OutputData["tool"] = typeof(TTool).Name;
 
             try
             {
-                psContext.Log($"Executing {_mode} mode", "debug");
+                psContext.Log($"Executing {_operation} operation in {settings.Mode} mode", "debug");
 
-                object result = _mode switch
-                {
-                    PolyScriptMode.Status => tool.Status(psContext),
-                    PolyScriptMode.Test => tool.Test(psContext),
-                    PolyScriptMode.Sandbox => tool.Sandbox(psContext),
-                    PolyScriptMode.Live => tool.Live(psContext),
-                    _ => throw new InvalidOperationException($"Unknown mode: {_mode}")
-                };
+                object result = ExecuteWithMode(tool, psContext);
 
                 if (result != null)
                     psContext.Output(result);
@@ -246,6 +301,114 @@ namespace PolyScript.Framework
                 return 1;
             }
         }
+
+        private object ExecuteWithMode(TTool tool, PolyScriptContext context)
+        {
+            if (context.Mode == PolyScriptMode.Simulate)
+            {
+                context.Log($"Simulating {context.Operation} operation", "debug");
+                
+                // Read operations can execute in simulate mode
+                if (context.Operation == PolyScriptOperation.Read)
+                    return tool.Read(context.Resource, context.Options, context);
+
+                // For mutating operations, describe what would happen
+                var actionVerbs = new Dictionary<PolyScriptOperation, string>
+                {
+                    [PolyScriptOperation.Create] = "Would create",
+                    [PolyScriptOperation.Update] = "Would update",
+                    [PolyScriptOperation.Delete] = "Would delete"
+                };
+
+                return new
+                {
+                    simulation = true,
+                    action = $"{actionVerbs[context.Operation]} {context.Resource ?? "resource"}",
+                    options = context.Options
+                };
+            }
+            else if (context.Mode == PolyScriptMode.Sandbox)
+            {
+                context.Log($"Testing prerequisites for {context.Operation}", "debug");
+                
+                var validations = new Dictionary<string, string>
+                {
+                    ["permissions"] = "verified",
+                    ["dependencies"] = "available",
+                    ["connectivity"] = "established"
+                };
+
+                // Check for custom validation method
+                var validateMethod = typeof(TTool).GetMethod($"Validate{context.Operation}");
+                if (validateMethod != null)
+                {
+                    var customValidations = validateMethod.Invoke(tool, new object[] { context.Resource, context.Options, context });
+                    if (customValidations is Dictionary<string, string> customDict)
+                    {
+                        foreach (var kvp in customDict)
+                            validations[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                var allPassed = validations.Values.All(v => 
+                    v == "verified" || v == "available" || v == "established" || v == "passed" || v == "true");
+
+                return new
+                {
+                    sandbox = true,
+                    validations = validations,
+                    ready = allPassed
+                };
+            }
+            else // Live mode
+            {
+                context.Log($"Executing {context.Operation} operation", "debug");
+
+                // Confirmation for destructive operations
+                if (context.RequireConfirm())
+                {
+                    if (!context.Confirm($"Are you sure you want to {context.Operation.ToString().ToLower()} {context.Resource}?"))
+                    {
+                        context.OutputData["status"] = "cancelled";
+                        return new { status = "cancelled", reason = "User declined confirmation" };
+                    }
+                }
+
+                // Execute the actual CRUD method
+                return context.Operation switch
+                {
+                    PolyScriptOperation.Create => tool.Create(context.Resource, context.Options, context),
+                    PolyScriptOperation.Read => tool.Read(context.Resource, context.Options, context),
+                    PolyScriptOperation.Update => tool.Update(context.Resource, context.Options, context),
+                    PolyScriptOperation.Delete => tool.Delete(context.Resource, context.Options, context),
+                    _ => throw new InvalidOperationException($"Unknown operation: {context.Operation}")
+                };
+            }
+        }
+    }
+
+    /// <summary>
+    /// Discovery command for simple introspection
+    /// </summary>
+    public class DiscoveryCommand<TTool> : Command
+        where TTool : IPolyScriptTool, new()
+    {
+        public override int Execute(CommandContext context)
+        {
+            var tool = new TTool();
+
+            var discovery = new Dictionary<string, object>
+            {
+                ["polyscript"] = "1.0",
+                ["tool"] = typeof(TTool).Name,
+                ["operations"] = new[] { "create", "read", "update", "delete" },
+                ["modes"] = new[] { "simulate", "sandbox", "live" }
+            };
+
+            var json = JsonSerializer.Serialize(discovery, new JsonSerializerOptions { WriteIndented = true });
+            AnsiConsole.Console.WriteLine(json);
+            return 0;
+        }
     }
 
     /// <summary>
@@ -254,14 +417,10 @@ namespace PolyScript.Framework
     public static class PolyScriptFramework
     {
         /// <summary>
-        /// Run a PolyScript tool with command-line arguments
+        /// Run a PolyScript CRUD tool with command-line arguments
         /// </summary>
         public static int Run<TTool>(string[] args) where TTool : IPolyScriptTool, new()
         {
-            // Verify the tool has the PolyScript attribute
-            if (!typeof(TTool).HasCustomAttribute<PolyScriptToolAttribute>())
-                throw new InvalidOperationException($"{typeof(TTool).Name} must have [PolyScriptTool] attribute");
-
             var app = new CommandApp();
             var tool = new TTool();
 
@@ -270,39 +429,60 @@ namespace PolyScript.Framework
                 config.SetApplicationName(typeof(TTool).Name.ToLower());
                 config.SetApplicationVersion("1.0.0");
                 
-                // Set description from tool
                 if (!string.IsNullOrEmpty(tool.Description))
                     config.SetDescription(tool.Description);
 
-                // Add the four PolyScript mode commands
-                config.AddCommand<PolyScriptCommand<TTool>>("status")
-                    .WithDescription("Show current state");
+                // Add discovery command
+                config.AddCommand<DiscoveryCommand<TTool>>("--discover")
+                    .WithDescription("Show tool capabilities for agents");
 
-                config.AddCommand<PolyScriptCommand<TTool>>("test")
-                    .WithDescription("Simulate operations (dry-run)");
+                // Add CRUD commands
+                config.AddCommand<PolyScriptCommand<TTool>>("create")
+                    .WithDescription("Create new resources");
 
-                config.AddCommand<PolyScriptCommand<TTool>>("sandbox")
-                    .WithDescription("Test dependencies and environment");
+                config.AddCommand<PolyScriptCommand<TTool>>("read")
+                    .WithDescription("Read/query resources");
 
-                config.AddCommand<PolyScriptCommand<TTool>>("live")
-                    .WithDescription("Execute actual operations");
+                config.AddCommand<PolyScriptCommand<TTool>>("update")
+                    .WithDescription("Update existing resources");
 
-                // Set default command to status
-                config.SetDefaultCommand<PolyScriptCommand<TTool>>();
+                config.AddCommand<PolyScriptCommand<TTool>>("delete")
+                    .WithDescription("Delete resources");
+
+                config.AddCommand<PolyScriptCommand<TTool>>("list")
+                    .WithDescription("List resources (alias for read)");
+
+                // Add rebadged commands
+                var rebadging = LoadRebadging<TTool>();
+                foreach (var (alias, (operation, mode)) in rebadging)
+                {
+                    var op = Enum.Parse<PolyScriptOperation>(operation, true);
+                    var cmd = new PolyScriptCommand<TTool>(op, alias);
+                    
+                    config.AddCommand<PolyScriptCommand<TTool>>(alias)
+                        .WithDescription($"{operation} ({mode} mode)")
+                        .WithData(cmd);
+                }
             });
 
             return app.Run(args);
         }
-    }
 
-    /// <summary>
-    /// Extension methods for reflection
-    /// </summary>
-    public static class TypeExtensions
-    {
-        public static bool HasCustomAttribute<T>(this Type type) where T : Attribute
+        private static Dictionary<string, (string Operation, string Mode)> LoadRebadging<T>()
         {
-            return type.GetCustomAttribute<T>() != null;
+            var rebadging = new Dictionary<string, (string Operation, string Mode)>();
+
+            // Load from attributes only
+            var toolType = typeof(T);
+            foreach (var attr in toolType.GetCustomAttributes<RebadgeAttribute>())
+            {
+                var parts = attr.Mapping.Split('+');
+                var operation = parts[0];
+                var mode = parts.Length > 1 ? parts[1] : "live";
+                rebadging[attr.Alias] = (operation, mode);
+            }
+
+            return rebadging;
         }
     }
 }
@@ -311,66 +491,63 @@ namespace PolyScript.Framework
  * EXAMPLE USAGE:
  * 
  * [PolyScriptTool]
- * public class BackupTool : IPolyScriptTool
+ * [Rebadge("compile", "create+live")]
+ * [Rebadge("dry-compile", "create+simulate")]
+ * [Rebadge("status", "read+live")]
+ * [Rebadge("clean", "delete+live")]
+ * public class CompilerTool : IPolyScriptTool
  * {
- *     public string Description => "PolyScript-compliant backup tool with zero boilerplate";
+ *     public string Description => "Example compiler tool demonstrating CRUD × Modes";
  *     
- *     public object Status(PolyScriptContext context)
+ *     public object Create(string resource, Dictionary<string, object> options, PolyScriptContext context)
  *     {
- *         context.Log("Checking backup status...");
+ *         context.Log($"Compiling {resource}...");
+ *         
+ *         var outputFile = options.GetValueOrDefault("output", resource.Replace(".c", ".out"));
+ *         
  *         return new
  *         {
- *             operational = true,
- *             last_backup = DateTime.Now.AddDays(-1),
- *             files_ready = 1234
+ *             compiled = resource,
+ *             output = outputFile,
+ *             optimized = options.GetValueOrDefault("optimize", false),
+ *             timestamp = DateTime.Now.ToString("O")
  *         };
  *     }
  *     
- *     public object Test(PolyScriptContext context)
+ *     public object Read(string resource, Dictionary<string, object> options, PolyScriptContext context)
  *     {
- *         context.Log("Planning backup operations...");
+ *         context.Log("Checking compilation status...");
+ *         
  *         return new
  *         {
- *             planned_operations = new[]
- *             {
- *                 new { operation = "backup", source = "/src", dest = "/dest" }
- *             },
- *             note = "No changes made in test mode"
+ *             source_files = new[] { "main.c", "utils.c", "config.c" },
+ *             compiled_files = new[] { "main.o", "utils.o" },
+ *             missing = new[] { "config.o" },
+ *             last_build = DateTime.Now.ToString("O")
  *         };
  *     }
  *     
- *     public object Sandbox(PolyScriptContext context)
+ *     public object Update(string resource, Dictionary<string, object> options, PolyScriptContext context)
  *     {
- *         context.Log("Testing environment...");
- *         var tests = new Dictionary<string, string>
- *         {
- *             ["filesystem"] = "accessible",
- *             ["permissions"] = "sufficient",
- *             ["diskspace"] = "available"
- *         };
+ *         context.Log($"Recompiling {resource}...");
  *         
  *         return new
  *         {
- *             dependency_tests = tests,
- *             all_passed = true
+ *             recompiled = resource,
+ *             reason = "source file changed",
+ *             timestamp = DateTime.Now.ToString("O")
  *         };
  *     }
  *     
- *     public object Live(PolyScriptContext context)
+ *     public object Delete(string resource, Dictionary<string, object> options, PolyScriptContext context)
  *     {
- *         context.Log("Starting backup operations...");
- *         
- *         if (!context.Confirm("Execute backup operations?"))
- *             return new { status = "cancelled" };
- *         
- *         // Actual backup logic here
- *         context.Log("Backup completed successfully");
+ *         context.Log($"Cleaning {resource}...");
  *         
  *         return new
  *         {
- *             operation = "backup_completed",
- *             files_copied = 1234,
- *             bytes_copied = 567890
+ *             cleaned = new[] { "*.o", "*.out", ".build/" },
+ *             freed_space = "12.3 MB",
+ *             timestamp = DateTime.Now.ToString("O")
  *         };
  *     }
  * }
@@ -380,13 +557,14 @@ namespace PolyScript.Framework
  * {
  *     public static int Main(string[] args)
  *     {
- *         return PolyScriptFramework.Run<BackupTool>(args);
+ *         return PolyScriptFramework.Run<CompilerTool>(args);
  *     }
  * }
  * 
  * Command examples:
+ * dotnet run create main.c --mode simulate
+ * dotnet run compile main.c -o app.exe
  * dotnet run status
- * dotnet run test --verbose
- * dotnet run sandbox --json
- * dotnet run live --force
+ * dotnet run clean --mode simulate
+ * dotnet run --discover --json
  */

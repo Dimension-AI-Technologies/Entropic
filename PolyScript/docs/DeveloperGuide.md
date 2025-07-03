@@ -1,17 +1,18 @@
 # PolyScript Developer Guide
 
-**Complete guide for contributing to and extending the PolyScript framework**
+**Complete guide for implementing and extending the PolyScript CRUD × Modes framework**
 
 ## Table of Contents
 
 1. [Getting Started with Development](#getting-started-with-development)
-2. [Framework Architecture](#framework-architecture)
-3. [Creating New Language Frameworks](#creating-new-language-frameworks)
-4. [Contributing to Existing Frameworks](#contributing-to-existing-frameworks)
-5. [Testing and Quality Assurance](#testing-and-quality-assurance)
-6. [Documentation Standards](#documentation-standards)
-7. [Release Process](#release-process)
-8. [Troubleshooting Development Issues](#troubleshooting-development-issues)
+2. [CRUD × Modes Architecture](#crud-modes-architecture)
+3. [Framework Implementation](#framework-implementation)
+4. [Creating New Language Frameworks](#creating-new-language-frameworks)
+5. [Contributing to Existing Frameworks](#contributing-to-existing-frameworks)
+6. [Testing and Quality Assurance](#testing-and-quality-assurance)
+7. [Documentation Standards](#documentation-standards)
+8. [Release Process](#release-process)
+9. [Troubleshooting Development Issues](#troubleshooting-development-issues)
 
 ## Getting Started with Development
 
@@ -62,24 +63,42 @@ PolyScript/
 7. **Document Changes**: Update relevant documentation
 8. **Submit PR**: Include tests, examples, and documentation
 
-## Framework Architecture
+## CRUD × Modes Architecture
 
 ### Core Design Principles
 
+**CRUD × Modes Multiplication**: Write 4 operations, get 12 behaviors automatically
 **Behavioral Consistency**: All frameworks provide identical user experience  
 **Language Optimization**: Each framework uses the best CLI library for its language  
-**Zero Boilerplate**: Business logic only, no CLI infrastructure code  
+**Zero Boilerplate**: Developers write only CRUD business logic  
 **Data-Driven Output**: Structured, machine-readable results  
+
+### The Multiplication Effect
+
+```
+         | Simulate | Sandbox | Live
+---------|----------|---------|------
+Create   |    ✓     |    ✓    |  ✓
+Read     |    -     |    ✓    |  ✓
+Update   |    ✓     |    ✓    |  ✓  
+Delete   |    ✓     |    ✓    |  ✓
+```
+
+**4 methods × 3 modes = 12 behaviors**
+
+## Framework Implementation
 
 ### Framework Components
 
 Every PolyScript framework must implement:
 
-1. **CLI Argument Parser**: Handle standard and custom arguments
-2. **Mode Router**: Route execution to appropriate business logic methods
-3. **Context Provider**: Give business logic access to execution context
-4. **Output Formatter**: Handle both JSON and console output
-5. **Error Handler**: Consistent error reporting and exit codes
+1. **Operation Parser**: Parse CRUD operation from CLI
+2. **Mode Parser**: Extract execution mode from --mode flag
+3. **Operation Router**: Route to appropriate CRUD method
+4. **Mode Wrapper**: Apply mode-specific behavior
+5. **Context Provider**: Give business logic access to operation context
+6. **Output Formatter**: Handle both JSON and console output
+7. **Error Handler**: Consistent error reporting and exit codes
 
 ### Interface Requirements
 
@@ -88,17 +107,20 @@ Every PolyScript framework must implement:
 class PolyScriptFramework:
     # Tool lifecycle
     def register_tool(tool_class): pass
-    def execute_tool(args): pass
+    def parse_arguments(args): pass
+    def execute_tool(operation, resource, mode, options): pass
     
-    # Mode execution
-    def execute_status(tool, context): pass
-    def execute_test(tool, context): pass
-    def execute_sandbox(tool, context): pass
-    def execute_live(tool, context): pass
+    # Operation routing
+    def route_operation(tool, operation, resource, options, context): pass
+    
+    # Mode wrapping
+    def simulate_wrapper(method, resource, options, context): pass
+    def sandbox_wrapper(method, resource, options, context): pass
+    def live_wrapper(method, resource, options, context): pass
     
     # Output handling
-    def format_json_output(data): pass
-    def format_console_output(data): pass
+    def format_json_output(operation, mode, data): pass
+    def format_console_output(operation, mode, data): pass
     def handle_errors(exception): pass
 ```
 
@@ -182,7 +204,7 @@ class PolyScriptContext:
         pass
 
 class PolyScriptTool:
-    """Base class for PolyScript tools"""
+    """Base class for PolyScript CRUD tools"""
     
     def description(self):
         raise NotImplementedError("Subclasses must implement description()")
@@ -191,39 +213,60 @@ class PolyScriptTool:
         # Override to add tool-specific arguments
         pass
     
-    def status(self, context):
-        raise NotImplementedError("Subclasses must implement status()")
+    def create(self, resource, options, context):
+        raise NotImplementedError("Subclasses must implement create()")
     
-    def test(self, context):
-        raise NotImplementedError("Subclasses must implement test()")
+    def read(self, resource, options, context):
+        raise NotImplementedError("Subclasses must implement read()")
     
-    def sandbox(self, context):
-        raise NotImplementedError("Subclasses must implement sandbox()")
+    def update(self, resource, options, context):
+        raise NotImplementedError("Subclasses must implement update()")
     
-    def live(self, context):
-        raise NotImplementedError("Subclasses must implement live()")
+    def delete(self, resource, options, context):
+        raise NotImplementedError("Subclasses must implement delete()")
 
 def run_polyscript_tool(tool_class):
-    """Main entry point for PolyScript tools"""
+    """Main entry point for PolyScript CRUD tools"""
     
-    # Set up CLI parser with standard arguments
+    # Set up CLI parser with CRUD operations
     parser = setup_argument_parser()
     parser = tool_class().add_arguments(parser)
     args = parser.parse_args()
     
+    # Parse operation and resource
+    operation = args.operation
+    resource = args.resource
+    if operation == 'list':
+        operation = 'read'
+        resource = 'list'
+    
     # Create context
     context = PolyScriptContext(
+        operation=operation,
         mode=args.mode,
+        resource=resource,
         verbose=args.verbose,
         force=args.force,
         json_output=args.json,
         tool_name=tool_class.__name__
     )
     
-    # Execute appropriate mode
+    # Get CRUD method
     tool = tool_class()
+    crud_method = getattr(tool, operation)
+    
+    # Parse additional options
+    options = parse_additional_options(args)
+    
     try:
-        result = execute_mode(tool, context)
+        # Apply mode wrapper
+        if context.mode == 'simulate' and operation != 'read':
+            result = simulate_wrapper(crud_method, resource, options, context)
+        elif context.mode == 'sandbox':
+            result = sandbox_wrapper(crud_method, resource, options, context)
+        else:
+            result = live_wrapper(crud_method, resource, options, context)
+        
         context.output_data['data'] = result or {}
         context.finalize_output()
         return 0
@@ -232,24 +275,52 @@ def run_polyscript_tool(tool_class):
         return 1
 
 def setup_argument_parser():
-    """Set up argument parser with standard PolyScript arguments"""
+    """Set up argument parser with CRUD operations and modes"""
     # Language-specific implementation
+    # Must support:
+    # - operation: create/read/update/delete/list
+    # - resource: what to operate on
+    # - --mode: simulate/sandbox/live
+    # - --json, --verbose, --force
     pass
 
-def execute_mode(tool, context):
-    """Route to appropriate mode method"""
-    mode_map = {
-        'status': tool.status,
-        'test': tool.test,
-        'sandbox': tool.sandbox,
-        'live': tool.live
+def simulate_wrapper(method, resource, options, context):
+    """Wrap CRUD method for simulation"""
+    # Set simulation flag
+    context._simulating = True
+    
+    # Run method in planning mode
+    planned = method(resource, options, context)
+    
+    # Return simulation result
+    return {
+        "would_execute": context.operation,
+        "resource": resource,
+        "planned_changes": planned,
+        "message": f"Would {context.operation} {resource}"
     }
+
+def sandbox_wrapper(method, resource, options, context):
+    """Wrap CRUD method for sandbox validation"""
+    # Test prerequisites
+    tests = validate_prerequisites(context.operation, resource, options)
     
-    method = mode_map.get(context.mode)
-    if not method:
-        raise ValueError(f"Unknown mode: {context.mode}")
+    return {
+        "operation": context.operation,
+        "resource": resource,
+        "tests": tests,
+        "prerequisites_met": all(tests.values())
+    }
+
+def live_wrapper(method, resource, options, context):
+    """Wrap CRUD method for live execution"""
+    # Confirm destructive operations
+    if context.operation in ['delete', 'update'] and not context.force:
+        if not context.confirm(f"Really {context.operation} {resource}?"):
+            return {"cancelled": True}
     
-    return method(context)
+    # Execute method
+    return method(resource, options, context)
 ```
 
 #### Step 4: Create Example Tool
@@ -259,65 +330,110 @@ Create a working backup tool example that demonstrates all framework features:
 ```python
 class BackupTool(PolyScriptTool):
     def description(self):
-        return "Example backup tool demonstrating PolyScript framework"
+        return "Example backup tool demonstrating PolyScript CRUD × Modes framework"
     
     def add_arguments(self, parser):
-        parser.add_argument('source', help='Source directory')
-        parser.add_argument('dest', help='Destination directory')
+        # Add tool-specific options
+        parser.add_argument('--source', help='Source directory for backups')
+        parser.add_argument('--dest', help='Destination directory')
         parser.add_argument('--overwrite', action='store_true',
-                          help='Overwrite existing destination')
+                          help='Overwrite existing backups')
+        parser.add_argument('--schedule', help='Backup schedule (cron format)')
         return parser
     
-    def status(self, context):
-        # Implement status checking
-        return {
-            "operational": True,
-            "source_exists": os.path.exists(context.args.source),
-            "destination_exists": os.path.exists(context.args.dest)
-        }
-    
-    def test(self, context):
-        # Implement dry-run logic
-        operations = self._plan_backup_operations(context)
-        return {
-            "planned_operations": operations,
-            "estimated_duration": self._estimate_duration(operations),
-            "note": "No changes made in test mode"
-        }
-    
-    def sandbox(self, context):
-        # Implement dependency checking
-        tests = {
-            "source_readable": self._test_source_access(context),
-            "destination_writable": self._test_dest_access(context),
-            "sufficient_space": self._test_disk_space(context)
-        }
-        return {
-            "dependency_tests": tests,
-            "all_passed": all(test == "passed" for test in tests.values())
-        }
-    
-    def live(self, context):
-        # Implement actual backup
-        if not context.force and self._needs_confirmation(context):
-            if not context.confirm("Execute backup?"):
-                return {"status": "cancelled"}
+    def create(self, resource, options, context):
+        """Create a new backup"""
+        # In simulate mode, framework ensures no side effects
+        backup_id = f"backup-{resource}-{timestamp}"
         
-        results = self._execute_backup(context)
+        # Plan the backup creation
+        plan = {
+            "backup_id": backup_id,
+            "source": options.get('source', '/data'),
+            "destination": f"/backups/{backup_id}",
+            "size_estimate": self._estimate_size(options['source'])
+        }
+        
+        # In live mode, actually create
+        if not context._simulating:
+            self._create_backup(plan)
+        
         return {
-            "operation": "backup_completed",
-            "files_copied": results['files'],
-            "bytes_copied": results['bytes']
+            "created": backup_id,
+            "location": plan['destination'],
+            "schedule": options.get('schedule', 'manual')
+        }
+    
+    def read(self, resource, options, context):
+        """Read backup information"""
+        if resource == 'list':
+            # List all backups
+            backups = self._list_backups()
+            return {
+                "backups": backups,
+                "count": len(backups),
+                "total_size": sum(b['size'] for b in backups)
+            }
+        else:
+            # Read specific backup
+            backup = self._get_backup(resource)
+            return {
+                "backup_id": resource,
+                "exists": backup is not None,
+                "data": backup
+            }
+    
+    def update(self, resource, options, context):
+        """Update backup configuration"""
+        backup = self._get_backup(resource)
+        if not backup:
+            raise ValueError(f"Backup '{resource}' not found")
+        
+        # Plan changes
+        changes = {}
+        if 'schedule' in options:
+            changes['schedule'] = options['schedule']
+        if 'retention' in options:
+            changes['retention'] = options['retention']
+        
+        # In live mode, apply changes
+        if not context._simulating:
+            self._update_backup(resource, changes)
+        
+        return {
+            "updated": resource,
+            "changes": changes,
+            "previous": {k: backup.get(k) for k in changes}
+        }
+    
+    def delete(self, resource, options, context):
+        """Delete a backup"""
+        backup = self._get_backup(resource)
+        if not backup:
+            raise ValueError(f"Backup '{resource}' not found")
+        
+        # In live mode, actually delete
+        if not context._simulating:
+            archived = not options.get('permanent', False)
+            if archived:
+                self._archive_backup(resource)
+            else:
+                self._delete_backup(resource)
+        
+        return {
+            "deleted": resource,
+            "archived": not options.get('permanent', False),
+            "size_freed": backup['size']
         }
     
     # Helper methods for business logic
-    def _plan_backup_operations(self, context): pass
-    def _estimate_duration(self, operations): pass
-    def _test_source_access(self, context): pass
-    def _test_dest_access(self, context): pass
-    def _test_disk_space(self, context): pass
-    def _needs_confirmation(self, context): pass
-    def _execute_backup(self, context): pass
+    def _estimate_size(self, path): pass
+    def _create_backup(self, plan): pass
+    def _list_backups(self): pass
+    def _get_backup(self, backup_id): pass
+    def _update_backup(self, backup_id, changes): pass
+    def _archive_backup(self, backup_id): pass
+    def _delete_backup(self, backup_id): pass
 
 # Entry point
 if __name__ == "__main__":
@@ -337,10 +453,13 @@ class TestNewLanguageFramework(unittest.TestCase):
     
     def _create_test_context(self):
         context = Mock()
-        context.mode = 'test'
+        context.operation = 'create'
+        context.mode = 'simulate'
+        context.resource = 'test-backup'
         context.verbose = False
         context.force = False
         context.json_output = True
+        context._simulating = True
         return context
     
     def test_framework_initialization(self):
@@ -348,25 +467,43 @@ class TestNewLanguageFramework(unittest.TestCase):
         self.assertIsNotNone(self.tool)
         self.assertIsInstance(self.tool.description(), str)
     
-    def test_all_modes_implemented(self):
-        """Test all required modes are implemented"""
-        modes = ['status', 'test', 'sandbox', 'live']
-        for mode in modes:
-            with self.subTest(mode=mode):
-                method = getattr(self.tool, mode)
+    def test_all_crud_operations_implemented(self):
+        """Test all required CRUD operations are implemented"""
+        operations = ['create', 'read', 'update', 'delete']
+        for op in operations:
+            with self.subTest(operation=op):
+                method = getattr(self.tool, op)
                 self.assertTrue(callable(method))
+    
+    def test_crud_method_signatures(self):
+        """Test CRUD methods have correct signatures"""
+        import inspect
+        
+        for op in ['create', 'read', 'update', 'delete']:
+            method = getattr(self.tool, op)
+            sig = inspect.signature(method)
+            params = list(sig.parameters.keys())
+            
+            # Should have: self, resource, options, context
+            self.assertEqual(len(params), 4)
+            self.assertEqual(params[1], 'resource')
+            self.assertEqual(params[2], 'options')
+            self.assertEqual(params[3], 'context')
+    
+    def test_simulate_mode_no_side_effects(self):
+        """Test simulate mode doesn't modify system"""
+        self.context.mode = 'simulate'
+        self.context._simulating = True
+        
+        # Create shouldn't actually create
+        result = self.tool.create('test', {}, self.context)
+        self.assertIn('created', result)
+        # Verify no actual backup was created
     
     def test_json_output_structure(self):
         """Test JSON output follows PolyScript v1.0 spec"""
-        result = self.tool.status(self.context)
-        
-        # Test would run tool and parse JSON output
-        # Verify required fields are present
-        pass
-    
-    def test_error_handling(self):
-        """Test framework handles errors consistently"""
-        # Test various error conditions
+        # Would test actual JSON output from framework
+        # Required fields: polyscript, operation, mode, tool, status, data
         pass
 
 class TestCLIIntegration(unittest.TestCase):
@@ -453,52 +590,95 @@ python ../../tools/test_suite/test_integration.py new-language
 #### Strongly Typed Languages (Go, Rust, C#, F#)
 
 ```go
-// Go example: Use interfaces and structs
+// Go example: Use interfaces for CRUD operations
 type PolyScriptTool interface {
     Description() string
-    Status(*PolyScriptContext) (interface{}, error)
-    Test(*PolyScriptContext) (interface{}, error)
-    Sandbox(*PolyScriptContext) (interface{}, error)
-    Live(*PolyScriptContext) (interface{}, error)
+    Create(resource string, options map[string]interface{}, ctx *PolyScriptContext) (interface{}, error)
+    Read(resource string, options map[string]interface{}, ctx *PolyScriptContext) (interface{}, error)
+    Update(resource string, options map[string]interface{}, ctx *PolyScriptContext) (interface{}, error)
+    Delete(resource string, options map[string]interface{}, ctx *PolyScriptContext) (interface{}, error)
 }
 
 // Implement with structs
 type BackupTool struct {
-    sourcePath string
-    destPath   string
+    backupDir string
 }
 
-func (t *BackupTool) Status(ctx *PolyScriptContext) (interface{}, error) {
-    return map[string]interface{}{
-        "operational": true,
-        "source_exists": fileExists(t.sourcePath),
-    }, nil
+func (t *BackupTool) Create(resource string, options map[string]interface{}, ctx *PolyScriptContext) (interface{}, error) {
+    backupID := fmt.Sprintf("backup-%s-%d", resource, time.Now().Unix())
+    
+    // Plan the backup
+    plan := map[string]interface{}{
+        "created": backupID,
+        "source": options["source"],
+        "destination": filepath.Join(t.backupDir, backupID),
+    }
+    
+    // In live mode, actually create
+    if !ctx.IsSimulating() {
+        err := t.createBackup(plan)
+        if err != nil {
+            return nil, err
+        }
+    }
+    
+    return plan, nil
 }
 ```
 
 #### Dynamic Languages (Python, JavaScript, Ruby)
 
 ```python
-# Python example: Use classes and decorators
+# Python example: Use classes with CRUD methods
 @polyscript_tool
 class BackupTool:
-    def __init__(self, source=None, dest=None):
-        self.source = source
-        self.dest = dest
-    
-    def status(self, context):
+    def create(self, resource, options, context):
+        backup_id = f"backup-{resource}-{int(time.time())}"
         return {
-            "operational": True,
-            "source_exists": os.path.exists(self.source)
+            "created": backup_id,
+            "location": f"/backups/{backup_id}"
         }
-
-# JavaScript example: Use classes or functions
-class BackupTool extends PolyScriptTool {
-    async status(context) {
+    
+    def read(self, resource, options, context):
+        if resource == "list":
+            return {"backups": self.list_backups()}
+        return {"backup": self.get_backup(resource)}
+    
+    def update(self, resource, options, context):
         return {
-            operational: true,
-            source_exists: await fs.pathExists(this.sourcePath)
+            "updated": resource,
+            "changes": options
+        }
+    
+    def delete(self, resource, options, context):
+        return {"deleted": resource}
+
+# JavaScript example: CRUD with async/await
+class BackupTool extends PolyScriptTool {
+    async create(resource, options, context) {
+        const backupId = `backup-${resource}-${Date.now()}`;
+        return {
+            created: backupId,
+            location: `/backups/${backupId}`
         };
+    }
+    
+    async read(resource, options, context) {
+        if (resource === 'list') {
+            return { backups: await this.listBackups() };
+        }
+        return { backup: await this.getBackup(resource) };
+    }
+    
+    async update(resource, options, context) {
+        return {
+            updated: resource,
+            changes: options
+        };
+    }
+    
+    async delete(resource, options, context) {
+        return { deleted: resource };
     }
 }
 ```
@@ -506,23 +686,38 @@ class BackupTool extends PolyScriptTool {
 #### Functional Languages (F#, Haskell)
 
 ```fsharp
-// F# example: Use computation expressions or records
+// F# example: CRUD operations with functional style
 type PolyScriptTool = {
     Description: string
-    Status: PolyScriptContext -> Result<obj, string>
-    Test: PolyScriptContext -> Result<obj, string>
-    Sandbox: PolyScriptContext -> Result<obj, string>
-    Live: PolyScriptContext -> Result<obj, string>
+    Create: string -> Map<string,obj> -> PolyScriptContext -> Result<obj, string>
+    Read: string -> Map<string,obj> -> PolyScriptContext -> Result<obj, string>
+    Update: string -> Map<string,obj> -> PolyScriptContext -> Result<obj, string>
+    Delete: string -> Map<string,obj> -> PolyScriptContext -> Result<obj, string>
 }
 
 let backupTool = {
-    Description = "Backup tool using F# PolyScript framework"
-    Status = fun context ->
+    Description = "Backup tool using F# PolyScript CRUD framework"
+    
+    Create = fun resource options context ->
+        let backupId = sprintf "backup-%s-%d" resource (DateTime.Now.Ticks)
         Ok (dict [
-            "operational", box true
-            "source_exists", box (File.Exists context.Args.Source)
+            "created", box backupId
+            "location", box (sprintf "/backups/%s" backupId)
         ])
-    // ... other modes
+    
+    Read = fun resource options context ->
+        match resource with
+        | "list" -> Ok (dict ["backups", box (listBackups())])
+        | _ -> Ok (dict ["backup", box (getBackup resource)])
+    
+    Update = fun resource options context ->
+        Ok (dict [
+            "updated", box resource
+            "changes", box options
+        ])
+    
+    Delete = fun resource options context ->
+        Ok (dict ["deleted", box resource])
 }
 ```
 
@@ -676,31 +871,45 @@ import subprocess
 import statistics
 
 def benchmark_framework(language, tool_path, iterations=10):
-    """Benchmark framework performance"""
+    """Benchmark CRUD × Modes framework performance"""
     
     results = {
-        'status': [],
-        'test': [], 
-        'sandbox': [],
+        'operations': {},
+        'modes': {},
         'startup': []
     }
     
-    for mode in ['status', 'test', 'sandbox']:
-        times = []
-        for _ in range(iterations):
-            start = time.time()
-            result = subprocess.run([tool_path, mode, '--json'], 
-                                  capture_output=True)
-            end = time.time()
+    # Test each operation × mode combination
+    operations = ['create', 'read', 'update', 'delete']
+    modes = ['simulate', 'sandbox', 'live']
+    
+    for operation in operations:
+        results['operations'][operation] = {}
+        for mode in modes:
+            # Skip read × simulate (not supported)
+            if operation == 'read' and mode == 'simulate':
+                continue
+                
+            times = []
+            for _ in range(iterations):
+                start = time.time()
+                cmd = [tool_path, operation, 'test-resource', 
+                       '--mode', mode, '--json']
+                if mode == 'live':
+                    cmd.append('--force')  # Skip confirmations
+                    
+                result = subprocess.run(cmd, capture_output=True)
+                end = time.time()
+                
+                if result.returncode == 0:
+                    times.append((end - start) * 1000)  # Convert to ms
             
-            if result.returncode == 0:
-                times.append((end - start) * 1000)  # Convert to ms
-        
-        results[mode] = {
-            'mean': statistics.mean(times),
-            'median': statistics.median(times),
-            'stdev': statistics.stdev(times) if len(times) > 1 else 0
-        }
+            if times:
+                results['operations'][operation][mode] = {
+                    'mean': statistics.mean(times),
+                    'median': statistics.median(times),
+                    'stdev': statistics.stdev(times) if len(times) > 1 else 0
+                }
     
     # Test startup time (just help output)
     startup_times = []
@@ -822,44 +1031,45 @@ License information.
 
 **Method Documentation**:
 ```python
-def sandbox(self, context):
+def create(self, resource, options, context):
     """
-    Test environment and dependencies for the tool.
+    Create a new resource.
     
-    This method should validate that all prerequisites for the tool
-    are available and working correctly. It should test:
-    - Required dependencies (libraries, services, etc.)
-    - File system permissions
-    - Network connectivity (if needed)
-    - Available disk space
-    - Any other environmental requirements
+    This method implements the 'C' in CRUD. It should:
+    - Validate inputs
+    - Plan the creation (useful for simulate mode)
+    - Create the resource (in live mode only)
+    - Return details about what was created
     
-    The method should be safe to run and not modify any system state.
+    The framework handles mode-specific behavior:
+    - simulate: Shows what would be created without side effects
+    - sandbox: Tests if creation is possible
+    - live: Actually creates the resource
     
     Args:
+        resource (str): The resource to create (name/type/identifier)
+        options (dict): Creation parameters specific to your tool
         context (PolyScriptContext): Execution context containing:
-            - mode: Always 'sandbox' for this method
-            - verbose: Whether to provide detailed output
-            - force: Ignored in sandbox mode
-            - json_output: Whether output should be JSON formatted
+            - operation: 'create'
+            - mode: Current execution mode
+            - _simulating: True if in simulate mode
+            - can_mutate(): False in simulate/sandbox
+            - require_confirm(): True for destructive ops
     
     Returns:
-        dict: Sandbox test results with structure:
+        dict: Creation result with details like:
             {
-                "dependency_tests": {
-                    "test_name": "passed|failed|error"
-                },
-                "all_passed": bool,
-                "failed_tests": [list of failed test names],
-                "details": {additional test details}
+                "created": "resource-id",
+                "location": "/path/to/resource",
+                "metadata": {...}
             }
     
     Example:
         >>> tool = MyTool()
-        >>> context = PolyScriptContext('sandbox', verbose=True)
-        >>> result = tool.sandbox(context)
-        >>> print(result['all_passed'])
-        True
+        >>> result = tool.create('daily-backup', 
+                                {'source': '/data'}, context)
+        >>> print(result['created'])
+        'backup-daily-20240101'
     """
 ```
 
@@ -1042,4 +1252,18 @@ python my_tool.py status --verbose
 
 ---
 
-**Ready to contribute?** Pick an area that interests you and start with a small improvement. The PolyScript community welcomes contributors at all levels! 🚀
+## Summary: Building CRUD × Modes Frameworks
+
+The key to implementing PolyScript is understanding the **multiplication effect**:
+
+1. **Developers write**: 4 CRUD methods
+2. **Framework provides**: 3 execution modes
+3. **Users get**: 12 different behaviors
+
+When building or extending a framework:
+- Focus on clean separation between operations and modes
+- Let the framework handle mode-specific behavior
+- Ensure CRUD methods are pure business logic
+- Test all 12 operation × mode combinations
+
+**Ready to contribute?** Pick a language that needs a framework or improve an existing one. The PolyScript community welcomes contributors at all levels! 🚀

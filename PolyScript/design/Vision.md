@@ -1,35 +1,94 @@
 # PolyScript Vision
 
-## Core Vision
+## Core Objective
 
-Abstract away language-specific CLI boilerplate to enable accelerated script development across any scripting language.
+Provide a consistent behavioral contract for CLI tools across programming languages. Implementation language choice becomes practical rather than architectural.
 
-## Problem Statement
+## Technical Approach
 
-Developers waste time reimplementing identical CLI patterns (argument parsing, mode routing, JSON output, error handling) instead of focusing on business logic.
+### Data-Code Separation
 
-## Solution
+- **Discovery is Data** - Tool capabilities exposed as JSON for introspection
+- **Configuration is Data** - Mode selection and tool metadata in structured formats  
+- **Behavior is Code** - Business logic remains in native, idiomatic implementations
+- **Interfaces are the bridge** - Clean contracts between data-driven routing and code execution
 
-A data-driven specification with language-native framework instantiations that eliminate boilerplate entirely.
+### PolyScript Implementation
 
-## Key Principles
+- **Behavioral Contracts** - Universal CRUD × Modes matrix implemented across languages
+- **Language Agnostic Patterns** - Identical behavioral contracts with language-specific implementations
 
-1. **Zero Boilerplate**: Developers write only business logic
-2. **Language Native**: Each framework uses the best CLI library for that language  
-3. **Data Driven**: Common specification ensures consistent behavior
-4. **Four Modes**: Standardized status/test/sandbox/live pattern
-5. **JSON First**: Machine-readable output for automation
+Language frameworks implement these contracts idiomatically while maintaining consistency.
 
-## Success Metrics
+## Current Limitations
 
-- Time from idea to working CLI tool: < 15 minutes
-- Lines of boilerplate code: 0
-- Cross-language consistency: 100%
-- Developer cognitive load: Minimal
+### Traditional Scripting Languages
 
-## Anti-Goals
+**Unix Shells (bash, sh, zsh, fish)**:
+- No interface contracts or formal method signatures
+- No templating beyond basic variable substitution  
+- No design pattern support
+- Functions without formal contracts or type safety
 
-- Cross-language compatibility layers
-- Universal frameworks that compromise language strengths
-- Complex configuration systems
-- Feature creep beyond core CLI patterns
+**MS-DOS Batch**:
+- No interfaces, contracts, or patterns
+- Limited templating capabilities
+
+**PowerShell**:
+- Object-oriented programming with .NET integration
+- Formal interfaces (IDisposable, custom interfaces) 
+- Advanced language constructs
+- Design pattern support through OOP
+
+### CLI Development Issues
+
+- Inconsistent interface patterns across tools
+- No standardized exploration methods
+- Pattern reimplementation across languages
+- Poor tool composition capabilities
+
+## PolyScript Specification
+
+### Core Operations
+Four CRUD operations with domain rebadging:
+- `create` → `compile`, `commit`, `deploy`, `backup`
+- `read` → `status`, `analyze`, `list`, `verify`
+- `update` → `refactor`, `optimize`, `patch`, `sync`
+- `delete` → `clean`, `purge`, `uninstall`, `revert`
+
+### Execution Modes
+Three modes per operation:
+1. **Simulate** - Show planned actions without execution
+2. **Sandbox** - Validate prerequisites and permissions
+3. **Live** - Execute operations with optional confirmation
+
+### Operation Matrix
+4 Operations × 3 Modes = 12 behaviors from single implementation:
+- Create operations can be simulated, validated, or executed
+- Read operations support all modes (safe by default)
+- Update operations can be tested before application
+- Delete operations can be previewed before execution
+
+### Rebadging Implementation
+Code-based configuration through decorators maintains single-file tools.
+
+### Agent Integration
+Basic agent support through:
+- Consistent CRUD × Modes patterns
+- Simulate and sandbox modes for safe exploration
+- Standard JSON responses
+
+## Target Outcomes
+
+- Rapid CLI tool development (minutes vs hours)
+- Consistent behavioral patterns across teams and languages
+- Implementation language choice based on practical considerations
+- Inherent testability through consistent modes
+
+## Excluded Features
+
+- Language bridges or compatibility layers
+- Frameworks that conflict with language idioms
+- Complex YAML configuration
+- Complex agent discovery systems
+- Features beyond CRUD × Modes

@@ -2,7 +2,7 @@
 
 **Welcome to PolyScript - Zero-Boilerplate CLI Development**
 
-If you're new to PolyScript, this is your starting point. This guide will get you up and running in **5 minutes**.
+If you're new to PolyScript, this is your starting point. This guide will get you up and running quickly.
 
 ## What is PolyScript?
 
@@ -27,20 +27,28 @@ BackupTool.run()
 
 Both provide identical CLI interfaces, but PolyScript handles everything automatically.
 
-## Quick Start (5 Minutes)
+## Quick Start
 
-### Step 1: Choose Your Language (30 seconds)
+### Step 1: Choose Your Language
 
-Pick the language you prefer:
-- **[Python](frameworks/python/)** - Most popular, great for automation
-- **[C#](frameworks/csharp/)** - Enterprise environments, Windows focus
-- **[Go](frameworks/go/)** - Single binaries, DevOps tools
-- **[Node.js](frameworks/nodejs/)** - Universal JavaScript, npm ecosystem
-- **[Rust](frameworks/rust/)** - High performance, memory safety
-- **[F#](frameworks/fsharp/)** - Functional programming, .NET ecosystem  
-- **[Ruby](frameworks/ruby/)** - Elegant syntax, scripting focus
+Pick from our 9 comprehensive frameworks (7 ready, 2 coming):
 
-### Step 2: Copy the Framework (1 minute)
+**Production Ready:**
+- **[Python](frameworks/python/)** - General scripting, huge ecosystem
+- **[C#](frameworks/csharp/)** - Enterprise Windows/.NET development
+- **[Go](frameworks/go/)** - DevOps tools, single binaries
+- **[Node.js](frameworks/nodejs/)** - JavaScript ecosystem, web developers
+- **[Rust](frameworks/rust/)** - Systems programming, memory safety
+- **[F#](frameworks/fsharp/)** - Functional-first .NET programming
+- **[Ruby](frameworks/ruby/)** - Elegant scripting, Rails culture
+
+**Coming Soon:**
+- **[PowerShell](frameworks/powershell/)** - Windows admin, cross-platform automation
+- **[Haskell](frameworks/haskell/)** - Pure functional, type-safe programming
+
+**Why these 9?** Complete coverage of all paradigms, ecosystems, and use cases without redundancy.
+
+### Step 2: Copy the Framework
 
 ```bash
 # Example for Python - adjust for your language
@@ -49,7 +57,7 @@ cp /path/to/PolyScript/frameworks/python/polyscript_click.py ./
 cp /path/to/PolyScript/frameworks/python/backup_tool_example.py ./my_tool.py
 ```
 
-### Step 3: Customize Your Tool (3 minutes)
+### Step 3: Customize Your Tool
 
 Edit `my_tool.py` and replace the backup logic with your tool's logic:
 
@@ -62,7 +70,7 @@ class MyTool:
     
     def test(self):
         # Simulate operations - no changes made
-        return {"would_process": ["file1", "file2"], "estimated_time": "30s"}
+        return {"would_process": ["file1", "file2"], "items_to_process": 2}
     
     def sandbox(self):
         # Test dependencies and environment
@@ -73,7 +81,7 @@ class MyTool:
         return {"processed": 100, "status": "completed"}
 ```
 
-### Step 4: Run Your Tool (30 seconds)
+### Step 4: Run Your Tool
 
 ```bash
 # Your tool now has a complete CLI interface

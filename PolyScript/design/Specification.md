@@ -1,26 +1,96 @@
 # PolyScript Specification
 
+## Contract-First Design Principles
+
+PolyScript achieves language transcendence through behavioral contracts and design patterns:
+
+1. **Behavioral Contracts**: Operations (Command pattern) and modes (Strategy pattern) define behavior
+2. **Declarative Configuration**: Rebadging and routing defined through configuration files
+3. **Interface Contracts**: All communication follows strict JSON contract specifications
+4. **Contract Discovery**: Tools expose capabilities through introspectable contracts
+
+Each language framework implements these patterns idiomatically while maintaining behavioral consistency.
+
+## Operation Rebadging
+
+Tools expose CRUD operations with domain-specific names through declarative configuration:
+
+```yaml
+# .polyscript.yaml or embedded configuration
+expose:
+  - operation: create
+    mode: live
+    as: "compile"
+    
+  - operation: create  
+    mode: simulate
+    as: "dry-compile"
+    
+  - operation: read
+    mode: live
+    as: "status"
+    
+  - operation: update
+    mode: live
+    as: "optimize"
+    
+  - operation: delete
+    mode: live
+    as: "clean"
+```
+
+This allows natural domain language while maintaining CRUD substrate.
+
+## CRUD Operations
+
+### Create Operation
+- **Purpose**: Add new resources/entities
+- **CLI**: `tool create <resource> [options]`
+- **Modes**: All three modes supported
+
+### Read Operation  
+- **Purpose**: Query existing resources/state
+- **CLI**: `tool read <resource> [options]` or `tool list`
+- **Modes**: Mode optional (always safe), defaults to live
+
+### Update Operation
+- **Purpose**: Modify existing resources
+- **CLI**: `tool update <resource> [options]`
+- **Modes**: All three modes supported
+
+### Delete Operation
+- **Purpose**: Remove resources
+- **CLI**: `tool delete <resource> [options]`
+- **Modes**: All three modes supported
+
 ## Execution Modes
 
-### Status Mode (default)
-- **Purpose**: Display current state without modifications
-- **Behavior**: Read-only operations, safe to run repeatedly
-- **Exit Code**: 0 for healthy state, 1 for issues detected
+### Simulate Mode (--mode simulate)
+- **Purpose**: Show what would happen without making changes
+- **Behavior**: Dry-run execution, displays planned actions
+- **Applied to**: Create, Update, Delete operations
+- **Exit Code**: 0 for valid simulation, 1 for validation failures
 
-### Test Mode  
-- **Purpose**: Simulate operations without making changes
-- **Behavior**: Dry-run execution, show planned operations
-- **Exit Code**: 0 for valid plan, 1 for planning failures
+### Sandbox Mode (--mode sandbox)
+- **Purpose**: Validate prerequisites and test connectivity
+- **Behavior**: Test permissions, dependencies, resource availability
+- **Applied to**: All operations
+- **Exit Code**: 0 for ready environment, 1 for missing prerequisites
 
-### Sandbox Mode
-- **Purpose**: Validate dependencies and environment
-- **Behavior**: Test prerequisites without side effects
-- **Exit Code**: 0 for ready environment, 1 for missing dependencies
-
-### Live Mode
+### Live Mode (--mode live or default)
 - **Purpose**: Execute actual operations
-- **Behavior**: Make real changes, requires confirmation unless --force
+- **Behavior**: Makes real changes, requires confirmation for destructive operations unless --force
+- **Applied to**: All operations
 - **Exit Code**: 0 for success, 1 for execution failures
+
+## Operation × Mode Matrix
+
+| Operation | Simulate | Sandbox | Live |
+|-----------|----------|---------|------|
+| **Create** | Show what would be created | Test if creation is possible | Actually create |
+| **Read** | Same as live (safe) | Test read permissions | Perform read |
+| **Update** | Show what would change | Test if update is valid | Actually update |
+| **Delete** | Show what would be deleted | Test if deletion is allowed | Actually delete |
 
 ## Standard Flags
 
@@ -45,7 +115,8 @@
 ```json
 {
   "polyscript": "1.0",
-  "mode": "status|test|sandbox|live", 
+  "operation": "create|read|update|delete",
+  "mode": "simulate|sandbox|live", 
   "tool": "ToolClassName",
   "status": "success|failure|error|cancelled",
   "data": {}
@@ -57,42 +128,138 @@
 {
   "errors": ["error message 1", "error message 2"],
   "warnings": ["warning message 1"],
-  "messages": ["info message 1", "debug message 2"]
+  "messages": ["info message 1", "debug message 2"],
+  "resource": "the resource being operated on",
+  "rebadged_as": "compile"  // If operation was called via rebadged name
+}
+```
+
+### Agent Discovery Format
+```json
+{
+  "polyscript": "1.0",
+  "discovery": true,
+  "tool": "ToolClassName",
+  "operations": {
+    "create": ["compile", "build"],
+    "read": ["status", "list"],
+    "update": ["optimize", "refactor"],
+    "delete": ["clean", "purge"]
+  },
+  "modes": ["simulate", "sandbox", "live"],
+  "description": "Tool purpose and capabilities"
 }
 ```
 
 ## Command Structure
 
-### Base Command
+### Base Command Pattern
 ```
-tool [--json] [--verbose] [--force] [mode] [args...]
+tool <operation> <resource> [--mode <mode>] [--json] [--verbose] [--force] [options]
 ```
 
-### Mode Commands
+### Rebadged Command Pattern
 ```
-tool status [--json] [--verbose] [args...]
-tool test [--json] [--verbose] [args...]  
-tool sandbox [--json] [--verbose] [args...]
-tool live [--json] [--verbose] [--force] [args...]
+# If 'compile' is rebadged from 'create+live':
+tool compile <resource> [options]
+
+# If 'dry-compile' is rebadged from 'create+simulate':
+tool dry-compile <resource> [options]
 ```
+
+### Discovery Command
+```
+tool --discover --json    # Returns discovery format for agents
+```
+
+### Operation Commands
+```
+# Create operations
+tool create user john --email john@example.com
+tool create user john --mode simulate    # Dry-run
+tool create user john --mode sandbox     # Test prerequisites
+
+# Read operations (mode optional, always safe)
+tool read users
+tool list users
+tool show user john
+
+# Update operations  
+tool update user john --email new@example.com
+tool update user john --email new@example.com --mode simulate
+
+# Delete operations
+tool delete user john
+tool delete user john --mode simulate    # Show what would be deleted
+tool delete user john --mode sandbox     # Test if deletion allowed
+```
+
+### Default Mode Behavior
+- **Read operations**: Default to live (always safe)
+- **Create/Update/Delete**: Default to live with confirmation prompt
+- **With --force**: Skip confirmation in live mode
 
 ## Method Contracts
 
-### Input
-- Context object with mode, flags, and arguments
-- Logging and output methods
-- Confirmation method (respects --force)
+### Framework Responsibilities
+- Parse operation and mode from CLI arguments
+- Route to appropriate method implementation
+- Handle mode-specific behavior wrapping
+- Manage JSON output formatting
+- Process standard flags (--json, --verbose, --force)
 
-### Output
-- Return data structure for JSON mode
-- Or null/void for text-only output
-- Exceptions handled by framework
+### Developer Responsibilities
+Implement four methods:
+```
+create(resource, options, context)
+read(resource, options, context)
+update(resource, options, context)
+delete(resource, options, context)
+```
 
-### Side Effects
-- Status: None permitted
-- Test: None permitted  
-- Sandbox: Read-only validation only
-- Live: All operations permitted
+### Mode Behavior (Handled by Framework)
+
+#### Simulate Mode
+- Framework intercepts operation before execution
+- Calls operation with simulation flag
+- Ensures no side effects occur
+- Formats output as "would do X"
+
+#### Sandbox Mode  
+- Framework wraps operation in validation context
+- Calls operation with validation flag
+- Allows only read operations and tests
+- Reports on prerequisites and permissions
+
+#### Live Mode
+- Framework allows direct execution
+- Handles confirmation prompts (unless --force)
+- Executes actual operation
+- Returns real results
+
+### Context Object
+```
+{
+  operation: "create|read|update|delete",
+  mode: "simulate|sandbox|live",
+  resource: "target resource",
+  rebadged_as: "compile",  // If called via rebadged name
+  options: {/* operation-specific options */},
+  flags: {
+    json: boolean,
+    verbose: boolean,
+    force: boolean
+  },
+  // Helper methods
+  log(message, level),
+  confirm(prompt),
+  output(data),
+  // Agent-friendly methods
+  can_mutate(): boolean,      // false in simulate/sandbox
+  is_safe_mode(): boolean,    // true in simulate/sandbox
+  get_capabilities(): object  // returns tool capabilities
+}
+```
 
 ## Error Handling
 

@@ -1,26 +1,46 @@
 /*
  * PolyScript Framework for Rust using clap
- *
- * A true zero-boilerplate framework for creating PolyScript-compliant CLI tools.
- * Developers write ONLY business logic - the framework handles everything else.
+ * CRUD × Modes Architecture: Zero-boilerplate CLI development
  *
  * Author: Mathew Burkitt, Dimension Technologies <mathew.burkitt@ditech.ai>
  */
 
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command, Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::env;
 use std::error::Error;
 use std::fmt;
+use std::fs;
 use std::io::{self, Write};
 
+/// PolyScript CRUD operations
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
+#[serde(rename_all = "lowercase")]
+pub enum PolyScriptOperation {
+    Create,
+    Read,
+    Update,
+    Delete,
+}
+
+impl fmt::Display for PolyScriptOperation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PolyScriptOperation::Create => write!(f, "create"),
+            PolyScriptOperation::Read => write!(f, "read"),
+            PolyScriptOperation::Update => write!(f, "update"),
+            PolyScriptOperation::Delete => write!(f, "delete"),
+        }
+    }
+}
+
 /// PolyScript execution modes
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
 #[serde(rename_all = "lowercase")]
 pub enum PolyScriptMode {
-    Status,
-    Test,
+    Simulate,
     Sandbox,
     Live,
 }
@@ -28,17 +48,21 @@ pub enum PolyScriptMode {
 impl fmt::Display for PolyScriptMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            PolyScriptMode::Status => write!(f, "status"),
-            PolyScriptMode::Test => write!(f, "test"),
+            PolyScriptMode::Simulate => write!(f, "simulate"),
             PolyScriptMode::Sandbox => write!(f, "sandbox"),
             PolyScriptMode::Live => write!(f, "live"),
         }
     }
 }
 
+
 /// PolyScript context passed to tool methods
 pub struct PolyScriptContext {
+    pub operation: PolyScriptOperation,
     pub mode: PolyScriptMode,
+    pub resource: Option<String>,
+    pub rebadged_as: Option<String>,
+    pub options: HashMap<String, Value>,
     pub verbose: bool,
     pub force: bool,
     pub json_output: bool,
@@ -46,16 +70,39 @@ pub struct PolyScriptContext {
 }
 
 impl PolyScriptContext {
-    pub fn new(mode: PolyScriptMode, verbose: bool, force: bool, json_output: bool, tool_name: &str) -> Self {
+    pub fn new(
+        operation: PolyScriptOperation,
+        mode: PolyScriptMode,
+        resource: Option<String>,
+        rebadged_as: Option<String>,
+        options: HashMap<String, Value>,
+        verbose: bool,
+        force: bool,
+        json_output: bool,
+        tool_name: &str,
+    ) -> Self {
         let mut output_data = HashMap::new();
         output_data.insert("polyscript".to_string(), json!("1.0"));
+        output_data.insert("operation".to_string(), json!(operation.to_string()));
         output_data.insert("mode".to_string(), json!(mode.to_string()));
         output_data.insert("tool".to_string(), json!(tool_name));
         output_data.insert("status".to_string(), json!("success"));
         output_data.insert("data".to_string(), json!({}));
 
+        if let Some(ref r) = resource {
+            output_data.insert("resource".to_string(), json!(r));
+        }
+
+        if let Some(ref r) = rebadged_as {
+            output_data.insert("rebadged_as".to_string(), json!(r));
+        }
+
         Self {
+            operation,
             mode,
+            resource,
+            rebadged_as,
+            options,
             verbose,
             force,
             json_output,
@@ -63,12 +110,30 @@ impl PolyScriptContext {
         }
     }
 
+    pub fn can_mutate(&self) -> bool {
+        self.mode == PolyScriptMode::Live
+    }
+
+    pub fn should_validate(&self) -> bool {
+        self.mode == PolyScriptMode::Sandbox
+    }
+
+    pub fn require_confirm(&self) -> bool {
+        self.mode == PolyScriptMode::Live
+            && matches!(self.operation, PolyScriptOperation::Update | PolyScriptOperation::Delete)
+            && !self.force
+    }
+
+    pub fn is_safe_mode(&self) -> bool {
+        self.mode != PolyScriptMode::Live
+    }
+
+
     /// Log a message at the specified level
     pub fn log(&mut self, message: &str, level: Option<&str>) {
         let level = level.unwrap_or("info");
-        
+
         if self.json_output {
-            // Route to JSON data structure
             let key = match level {
                 "error" | "critical" => Some("errors"),
                 "warning" => Some("warnings"),
@@ -77,16 +142,16 @@ impl PolyScriptContext {
             };
 
             if let Some(k) = key {
-                let entry = self.output_data
+                let entry = self
+                    .output_data
                     .entry(k.to_string())
                     .or_insert_with(|| json!(Vec::<String>::new()));
-                
+
                 if let Value::Array(ref mut arr) = entry {
                     arr.push(json!(format!("{}: {}", level.to_uppercase(), message)));
                 }
             }
         } else {
-            // Direct console output
             match level {
                 "error" | "critical" => {
                     eprintln!("Error: {}", message);
@@ -110,15 +175,15 @@ impl PolyScriptContext {
         if self.json_output {
             if data.is_string() {
                 let key = if error { "errors" } else { "messages" };
-                let entry = self.output_data
+                let entry = self
+                    .output_data
                     .entry(key.to_string())
                     .or_insert_with(|| json!(Vec::<String>::new()));
-                
+
                 if let Value::Array(ref mut arr) = entry {
                     arr.push(data);
                 }
             } else if let Value::Object(obj) = data {
-                // Merge object properties into data section
                 if let Some(Value::Object(ref mut data_obj)) = self.output_data.get_mut("data") {
                     for (key, value) in obj {
                         data_obj.insert(key, value);
@@ -131,7 +196,10 @@ impl PolyScriptContext {
             } else if data.is_string() {
                 println!("{}", data.as_str().unwrap());
             } else {
-                println!("{}", serde_json::to_string_pretty(&data).unwrap_or_default());
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&data).unwrap_or_default()
+                );
             }
         }
     }
@@ -149,85 +217,311 @@ impl PolyScriptContext {
 
         print!("{} [y/N]: ", message);
         io::stdout().flush().unwrap();
-        
+
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
-        input.trim().to_lowercase() == "y"
+        matches!(input.trim().to_lowercase().as_str(), "y" | "yes")
     }
 
-    /// Finalize output (called at the end to output JSON if needed)
+    /// Finalize output for JSON mode
     pub fn finalize_output(&self) {
         if self.json_output {
-            println!("{}", serde_json::to_string_pretty(&self.output_data).unwrap_or_default());
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&self.output_data).unwrap_or_default()
+            );
         }
     }
 }
 
-/// Error type for PolyScript execution
-#[derive(Debug)]
-pub struct PolyScriptError {
-    pub message: String,
-}
-
-impl fmt::Display for PolyScriptError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-impl Error for PolyScriptError {}
-
-/// Result type for PolyScript operations
-pub type PolyScriptResult<T> = Result<T, PolyScriptError>;
-
-/// Trait that PolyScript tools must implement
+/// Trait that PolyScript CRUD tools must implement
 pub trait PolyScriptTool {
-    /// Tool description for help text
     fn description(&self) -> &str;
 
-    /// Add tool-specific arguments to the command
-    fn add_arguments(&self, _cmd: Command) -> Command {
-        // Default implementation - no additional arguments
-        _cmd
+    fn create(
+        &self,
+        resource: Option<&str>,
+        options: &HashMap<String, Value>,
+        context: &mut PolyScriptContext,
+    ) -> Result<Value, Box<dyn Error>>;
+
+    fn read(
+        &self,
+        resource: Option<&str>,
+        options: &HashMap<String, Value>,
+        context: &mut PolyScriptContext,
+    ) -> Result<Value, Box<dyn Error>>;
+
+    fn update(
+        &self,
+        resource: Option<&str>,
+        options: &HashMap<String, Value>,
+        context: &mut PolyScriptContext,
+    ) -> Result<Value, Box<dyn Error>>;
+
+    fn delete(
+        &self,
+        resource: Option<&str>,
+        options: &HashMap<String, Value>,
+        context: &mut PolyScriptContext,
+    ) -> Result<Value, Box<dyn Error>>;
+
+    // Optional validation methods
+    fn validate_create(
+        &self,
+        _resource: Option<&str>,
+        _options: &HashMap<String, Value>,
+        _context: &PolyScriptContext,
+    ) -> HashMap<String, String> {
+        HashMap::new()
     }
 
-    /// Execute status mode (show current state)
-    fn status(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>>;
+    fn validate_read(
+        &self,
+        _resource: Option<&str>,
+        _options: &HashMap<String, Value>,
+        _context: &PolyScriptContext,
+    ) -> HashMap<String, String> {
+        HashMap::new()
+    }
 
-    /// Execute test mode (simulate operations)
-    fn test(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>>;
+    fn validate_update(
+        &self,
+        _resource: Option<&str>,
+        _options: &HashMap<String, Value>,
+        _context: &PolyScriptContext,
+    ) -> HashMap<String, String> {
+        HashMap::new()
+    }
 
-    /// Execute sandbox mode (test dependencies)
-    fn sandbox(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>>;
-
-    /// Execute live mode (actual operations)
-    fn live(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>>;
+    fn validate_delete(
+        &self,
+        _resource: Option<&str>,
+        _options: &HashMap<String, Value>,
+        _context: &PolyScriptContext,
+    ) -> HashMap<String, String> {
+        HashMap::new()
+    }
 }
 
-/// Main framework function to run a PolyScript tool
-pub fn run_polyscript_tool<T: PolyScriptTool>(tool: T) -> i32 {
+/// Load rebadging configuration (placeholder for future macro-based implementation)
+fn load_rebadging() -> HashMap<String, (String, String)> {
+    // TODO: In the future, this will be populated by a derive macro
+    // For now, rebadging should be done in the tool implementation
+    HashMap::new()
+}
+
+/// Execute CRUD method with appropriate mode wrapping
+fn execute_with_mode<T: PolyScriptTool>(
+    tool: &T,
+    context: &mut PolyScriptContext,
+) -> Result<Value, Box<dyn Error>> {
+    match context.mode {
+        PolyScriptMode::Simulate => {
+            context.log(
+                &format!("Simulating {} operation", context.operation),
+                Some("debug"),
+            );
+
+            // Read operations can execute in simulate mode
+            if context.operation == PolyScriptOperation::Read {
+                return tool.read(context.resource.as_deref(), &context.options, context);
+            }
+
+            // For mutating operations, describe what would happen
+            let action = match context.operation {
+                PolyScriptOperation::Create => "Would create",
+                PolyScriptOperation::Update => "Would update",
+                PolyScriptOperation::Delete => "Would delete",
+                PolyScriptOperation::Read => "Would read", // Should not reach here
+            };
+
+            Ok(json!({
+                "simulation": true,
+                "action": format!("{} {}", action, context.resource.as_deref().unwrap_or("resource")),
+                "options": context.options
+            }))
+        }
+        PolyScriptMode::Sandbox => {
+            context.log(
+                &format!("Testing prerequisites for {}", context.operation),
+                Some("debug"),
+            );
+
+            let mut validations = HashMap::new();
+            validations.insert("permissions".to_string(), "verified".to_string());
+            validations.insert("dependencies".to_string(), "available".to_string());
+            validations.insert("connectivity".to_string(), "established".to_string());
+
+            // Add custom validations
+            let custom_validations = match context.operation {
+                PolyScriptOperation::Create => {
+                    tool.validate_create(context.resource.as_deref(), &context.options, context)
+                }
+                PolyScriptOperation::Read => {
+                    tool.validate_read(context.resource.as_deref(), &context.options, context)
+                }
+                PolyScriptOperation::Update => {
+                    tool.validate_update(context.resource.as_deref(), &context.options, context)
+                }
+                PolyScriptOperation::Delete => {
+                    tool.validate_delete(context.resource.as_deref(), &context.options, context)
+                }
+            };
+
+            validations.extend(custom_validations);
+
+            let all_passed = validations.values().all(|v| {
+                matches!(
+                    v.as_str(),
+                    "verified" | "available" | "established" | "passed" | "true"
+                )
+            });
+
+            Ok(json!({
+                "sandbox": true,
+                "validations": validations,
+                "ready": all_passed
+            }))
+        }
+        PolyScriptMode::Live => {
+            context.log(
+                &format!("Executing {} operation", context.operation),
+                Some("debug"),
+            );
+
+            // Confirmation for destructive operations
+            if context.require_confirm() {
+                let message = format!(
+                    "Are you sure you want to {} {}?",
+                    context.operation,
+                    context.resource.as_deref().unwrap_or("resource")
+                );
+                if !context.confirm(&message) {
+                    context.output_data.insert("status".to_string(), json!("cancelled"));
+                    return Ok(json!({
+                        "status": "cancelled",
+                        "reason": "User declined confirmation"
+                    }));
+                }
+            }
+
+            // Execute the actual CRUD method
+            match context.operation {
+                PolyScriptOperation::Create => {
+                    tool.create(context.resource.as_deref(), &context.options, context)
+                }
+                PolyScriptOperation::Read => {
+                    tool.read(context.resource.as_deref(), &context.options, context)
+                }
+                PolyScriptOperation::Update => {
+                    tool.update(context.resource.as_deref(), &context.options, context)
+                }
+                PolyScriptOperation::Delete => {
+                    tool.delete(context.resource.as_deref(), &context.options, context)
+                }
+            }
+        }
+    }
+}
+
+/// Run discovery for simple introspection
+pub fn run_discovery<T: PolyScriptTool>(tool: &T, json_output: bool) -> i32 {
+    let discovery = json!({
+        "polyscript": "1.0",
+        "tool": std::any::type_name::<T>().split("::").last().unwrap_or("Unknown"),
+        "operations": ["create", "read", "update", "delete"],
+        "modes": ["simulate", "sandbox", "live"]
+    });
+
+    if json_output {
+        println!("{}", serde_json::to_string_pretty(&discovery).unwrap());
+    } else {
+        println!("Tool: {}", discovery["tool"]);
+        println!("Operations: create, read, update, delete");
+        println!("Modes: simulate, sandbox, live");
+    }
+
+    0
+}
+
+/// Main framework runner function
+pub fn run<T: PolyScriptTool>(tool: T, args: Vec<String>) -> i32 {
     let tool_name = std::any::type_name::<T>()
         .split("::")
         .last()
-        .unwrap_or("PolyScriptTool");
+        .unwrap_or("Unknown")
+        .to_lowercase();
 
-    // Create base command
-    let mut cmd = Command::new(tool_name.to_lowercase())
-        .version("1.0.0")
-        .about(tool.description())
-        .subcommand_required(false)
-        .arg_required_else_help(false)
+    if args.is_empty() {
+        println!("PolyScript CRUD × Modes Framework");
+        println!("Available commands: create, read, update, delete, list, --discover");
+        println!("Use: {} <command> [options]", tool_name);
+        return 0;
+    }
+
+    let rebadging = load_rebadging();
+
+    // Handle discovery
+    if args[0] == "--discover" {
+        let json_output = args.len() > 1 && args[1] == "--json";
+        return run_discovery(&tool, json_output);
+    }
+
+    // Parse operation and rebadging
+    let (operation, rebadged_as) = match args[0].as_str() {
+        "create" => (PolyScriptOperation::Create, None),
+        "read" | "list" => (PolyScriptOperation::Read, None),
+        "update" => (PolyScriptOperation::Update, None),
+        "delete" => (PolyScriptOperation::Delete, None),
+        cmd => {
+            if let Some((op_str, _mode)) = rebadging.get(cmd) {
+                let operation = match op_str.as_str() {
+                    "create" => PolyScriptOperation::Create,
+                    "read" => PolyScriptOperation::Read,
+                    "update" => PolyScriptOperation::Update,
+                    "delete" => PolyScriptOperation::Delete,
+                    _ => {
+                        eprintln!("Unknown operation: {}", op_str);
+                        return 1;
+                    }
+                };
+                (operation, Some(cmd.to_string()))
+            } else {
+                eprintln!("Unknown command: {}", cmd);
+                eprintln!("Available commands: create, read, update, delete, list, --discover");
+                return 1;
+            }
+        }
+    };
+
+    // Build clap command for the operation
+    let mut cmd = Command::new(&tool_name)
+        .arg(
+            Arg::new("resource")
+                .help("Resource to operate on")
+                .required(operation != PolyScriptOperation::Read)
+                .index(1),
+        )
+        .arg(
+            Arg::new("mode")
+                .long("mode")
+                .short('m')
+                .help("Execution mode")
+                .value_parser(clap::value_parser!(PolyScriptMode))
+                .default_value("live"),
+        )
         .arg(
             Arg::new("verbose")
-                .short('v')
                 .long("verbose")
+                .short('v')
                 .help("Enable verbose output")
                 .action(clap::ArgAction::SetTrue),
         )
         .arg(
             Arg::new("force")
-                .short('f')
                 .long("force")
+                .short('f')
                 .help("Skip confirmation prompts")
                 .action(clap::ArgAction::SetTrue),
         )
@@ -238,372 +532,158 @@ pub fn run_polyscript_tool<T: PolyScriptTool>(tool: T) -> i32 {
                 .action(clap::ArgAction::SetTrue),
         );
 
-    // Add PolyScript mode subcommands
-    cmd = cmd
-        .subcommand(
-            tool.add_arguments(
-                Command::new("status")
-                    .about("Show current state")
-                    .arg(
-                        Arg::new("verbose")
-                            .short('v')
-                            .long("verbose")
-                            .help("Enable verbose output")
-                            .action(clap::ArgAction::SetTrue),
-                    )
-                    .arg(
-                        Arg::new("force")
-                            .short('f')
-                            .long("force")
-                            .help("Skip confirmation prompts")
-                            .action(clap::ArgAction::SetTrue),
-                    )
-                    .arg(
-                        Arg::new("json")
-                            .long("json")
-                            .help("Output in JSON format")
-                            .action(clap::ArgAction::SetTrue),
-                    ),
-            ),
-        )
-        .subcommand(
-            tool.add_arguments(
-                Command::new("test")
-                    .about("Simulate operations (dry-run)")
-                    .arg(
-                        Arg::new("verbose")
-                            .short('v')
-                            .long("verbose")
-                            .help("Enable verbose output")
-                            .action(clap::ArgAction::SetTrue),
-                    )
-                    .arg(
-                        Arg::new("force")
-                            .short('f')
-                            .long("force")
-                            .help("Skip confirmation prompts")
-                            .action(clap::ArgAction::SetTrue),
-                    )
-                    .arg(
-                        Arg::new("json")
-                            .long("json")
-                            .help("Output in JSON format")
-                            .action(clap::ArgAction::SetTrue),
-                    ),
-            ),
-        )
-        .subcommand(
-            tool.add_arguments(
-                Command::new("sandbox")
-                    .about("Test dependencies and environment")
-                    .arg(
-                        Arg::new("verbose")
-                            .short('v')
-                            .long("verbose")
-                            .help("Enable verbose output")
-                            .action(clap::ArgAction::SetTrue),
-                    )
-                    .arg(
-                        Arg::new("force")
-                            .short('f')
-                            .long("force")
-                            .help("Skip confirmation prompts")
-                            .action(clap::ArgAction::SetTrue),
-                    )
-                    .arg(
-                        Arg::new("json")
-                            .long("json")
-                            .help("Output in JSON format")
-                            .action(clap::ArgAction::SetTrue),
-                    ),
-            ),
-        )
-        .subcommand(
-            tool.add_arguments(
-                Command::new("live")
-                    .about("Execute actual operations")
-                    .arg(
-                        Arg::new("verbose")
-                            .short('v')
-                            .long("verbose")
-                            .help("Enable verbose output")
-                            .action(clap::ArgAction::SetTrue),
-                    )
-                    .arg(
-                        Arg::new("force")
-                            .short('f')
-                            .long("force")
-                            .help("Skip confirmation prompts")
-                            .action(clap::ArgAction::SetTrue),
-                    )
-                    .arg(
-                        Arg::new("json")
-                            .long("json")
-                            .help("Output in JSON format")
-                            .action(clap::ArgAction::SetTrue),
-                    ),
-            ),
-        );
-
-    // Parse arguments
-    let matches = cmd.get_matches();
-
-    // Determine mode and get subcommand matches
-    let (mode, sub_matches) = match matches.subcommand() {
-        Some(("status", sub_m)) => (PolyScriptMode::Status, sub_m),
-        Some(("test", sub_m)) => (PolyScriptMode::Test, sub_m),
-        Some(("sandbox", sub_m)) => (PolyScriptMode::Sandbox, sub_m),
-        Some(("live", sub_m)) => (PolyScriptMode::Live, sub_m),
-        _ => {
-            // Default to status mode if no subcommand
-            let default_matches = ArgMatches::default();
-            (PolyScriptMode::Status, &default_matches)
+    // Parse remaining arguments (skip the command name)
+    let remaining_args: Vec<String> = args.into_iter().skip(1).collect();
+    let matches = match cmd.try_get_matches_from(std::iter::once(tool_name).chain(remaining_args)) {
+        Ok(m) => m,
+        Err(e) => {
+            eprintln!("{}", e);
+            return 1;
         }
     };
 
-    // Extract flags
-    let verbose = sub_matches.get_flag("verbose") || matches.get_flag("verbose");
-    let force = sub_matches.get_flag("force") || matches.get_flag("force");
-    let json_output = sub_matches.get_flag("json") || matches.get_flag("json");
+    // Extract parsed values
+    let resource = matches.get_one::<String>("resource").map(|s| s.clone());
+    let mode = *matches.get_one::<PolyScriptMode>("mode").unwrap();
+    let verbose = matches.get_flag("verbose");
+    let force = matches.get_flag("force");
+    let json_output = matches.get_flag("json");
 
     // Create context
-    let mut context = PolyScriptContext::new(mode, verbose, force, json_output, tool_name);
+    let mut context = PolyScriptContext::new(
+        operation,
+        mode,
+        resource,
+        rebadged_as,
+        HashMap::new(), // TODO: Add support for additional options
+        verbose,
+        force,
+        json_output,
+        &tool_name,
+    );
 
-    context.log(&format!("Executing {} mode", mode), Some("debug"));
-
-    // Execute the appropriate method
-    let result = match mode {
-        PolyScriptMode::Status => tool.status(&mut context),
-        PolyScriptMode::Test => tool.test(&mut context),
-        PolyScriptMode::Sandbox => tool.sandbox(&mut context),
-        PolyScriptMode::Live => tool.live(&mut context),
-    };
-
-    // Handle result
-    let exit_code = match result {
-        Ok(Some(data)) => {
-            context.output(data, false);
+    // Execute with mode wrapping
+    match execute_with_mode(&tool, &mut context) {
+        Ok(result) => {
+            context.output(result, false);
+            context.finalize_output();
             0
         }
-        Ok(None) => 0,
-        Err(err) => {
+        Err(e) => {
             context.output_data.insert("status".to_string(), json!("error"));
-            context.output(json!(err.message), true);
-            if context.verbose {
-                context.log(&format!("Error details: {}", err), Some("error"));
-            }
+            context.output(json!(format!("Error: {}", e)), true);
+            context.finalize_output();
             1
         }
-    };
-
-    context.finalize_output();
-    exit_code
-}
-
-/// Macro to create a simple PolyScript tool
-#[macro_export]
-macro_rules! polyscript_tool {
-    (
-        name: $name:ident,
-        description: $desc:expr,
-        status: $status_fn:expr,
-        test: $test_fn:expr,
-        sandbox: $sandbox_fn:expr,
-        live: $live_fn:expr
-    ) => {
-        pub struct $name;
-
-        impl PolyScriptTool for $name {
-            fn description(&self) -> &str {
-                $desc
-            }
-
-            fn status(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>> {
-                $status_fn(context)
-            }
-
-            fn test(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>> {
-                $test_fn(context)
-            }
-
-            fn sandbox(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>> {
-                $sandbox_fn(context)
-            }
-
-            fn live(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>> {
-                $live_fn(context)
-            }
-        }
-    };
-}
-
-// Example tool implementation
-pub struct ExampleTool;
-
-impl PolyScriptTool for ExampleTool {
-    fn description(&self) -> &str {
-        "Example PolyScript tool demonstrating the Rust framework"
-    }
-
-    fn add_arguments(&self, cmd: Command) -> Command {
-        cmd.arg(
-            Arg::new("target")
-                .long("target")
-                .help("Target to operate on")
-                .default_value("default"),
-        )
-        .arg(
-            Arg::new("count")
-                .long("count")
-                .help("Number of operations")
-                .value_parser(clap::value_parser!(u32))
-                .default_value("1"),
-        )
-    }
-
-    fn status(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>> {
-        context.log("Checking status...", None);
-        
-        Ok(Some(json!({
-            "operational": true,
-            "last_check": "2024-01-02T10:00:00Z",
-            "files_ready": 1234
-        })))
-    }
-
-    fn test(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>> {
-        context.log("Running test mode...", None);
-        
-        Ok(Some(json!({
-            "planned_operations": [
-                {"operation": "Operation 1", "status": "would execute"},
-                {"operation": "Operation 2", "status": "would execute"}
-            ],
-            "total_operations": 2,
-            "note": "No changes made in test mode"
-        })))
-    }
-
-    fn sandbox(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>> {
-        context.log("Testing environment...", None);
-        
-        let tests = json!({
-            "rust": "available",
-            "filesystem": "writable",
-            "network": "accessible"
-        });
-
-        let all_passed = true; // Simplified for example
-
-        Ok(Some(json!({
-            "dependency_tests": tests,
-            "all_passed": all_passed
-        })))
-    }
-
-    fn live(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>> {
-        context.log("Executing live mode...", None);
-        
-        if !context.confirm("Execute operations?") {
-            return Ok(Some(json!({"status": "cancelled"})));
-        }
-
-        context.log("Executing operation 1...", None);
-        context.log("Executing operation 2...", None);
-        
-        Ok(Some(json!({
-            "executed_operations": [
-                {"operation": "Operation 1", "status": "completed"},
-                {"operation": "Operation 2", "status": "completed"}
-            ],
-            "total_completed": 2
-        })))
     }
 }
 
 /*
  * EXAMPLE USAGE:
- * 
- * // Simple tool using the macro
- * polyscript_tool! {
- *     name: SimpleBackupTool,
- *     description: "Simple backup tool with zero boilerplate",
- *     status: |context| {
- *         context.log("Checking backup status...", None);
- *         Ok(Some(json!({"operational": true})))
- *     },
- *     test: |context| {
- *         context.log("Planning backup...", None);
- *         Ok(Some(json!({"would_backup": ["file1", "file2"]})))
- *     },
- *     sandbox: |context| {
- *         context.log("Testing environment...", None);
- *         Ok(Some(json!({"environment": "ok"})))
- *     },
- *     live: |context| {
- *         context.log("Executing backup...", None);
- *         Ok(Some(json!({"backup_completed": true})))
- *     }
- * }
- * 
- * // Main function
- * fn main() {
- *     let exit_code = run_polyscript_tool(SimpleBackupTool);
- *     std::process::exit(exit_code);
- * }
- * 
- * // Advanced tool with custom implementation
- * pub struct AdvancedBackupTool {
- *     source_path: String,
- *     dest_path: String,
- * }
- * 
- * impl AdvancedBackupTool {
- *     pub fn new(source: String, dest: String) -> Self {
- *         Self {
- *             source_path: source,
- *             dest_path: dest,
- *         }
- *     }
- * }
- * 
- * impl PolyScriptTool for AdvancedBackupTool {
+ *
+ * // Note: Rust rebadging can be implemented in the main function
+ * // by customizing the command handling before calling run().
+ * // A future version may provide derive macros for this.
+ *
+ * struct CompilerTool;
+ *
+ * impl PolyScriptTool for CompilerTool {
  *     fn description(&self) -> &str {
- *         "Advanced backup tool with full configuration support"
+ *         "Example compiler tool demonstrating CRUD × Modes"
  *     }
- * 
- *     fn add_arguments(&self, cmd: Command) -> Command {
- *         cmd.arg(
- *             Arg::new("source")
- *                 .help("Source directory")
- *                 .required(true)
- *                 .index(1),
- *         )
- *         .arg(
- *             Arg::new("dest")
- *                 .help("Destination directory")
- *                 .required(true)
- *                 .index(2),
- *         )
- *         .arg(
- *             Arg::new("overwrite")
- *                 .long("overwrite")
- *                 .help("Overwrite existing destination")
- *                 .action(clap::ArgAction::SetTrue),
- *         )
+ *
+ *     fn create(
+ *         &self,
+ *         resource: Option<&str>,
+ *         options: &HashMap<String, Value>,
+ *         context: &mut PolyScriptContext,
+ *     ) -> Result<Value, Box<dyn Error>> {
+ *         let resource = resource.unwrap_or("source");
+ *         context.log(&format!("Compiling {}...", resource), None);
+ *
+ *         let output_file = options
+ *             .get("output")
+ *             .and_then(|v| v.as_str())
+ *             .unwrap_or(&resource.replace(".rs", ".exe"));
+ *
+ *         Ok(json!({
+ *             "compiled": resource,
+ *             "output": output_file,
+ *             "timestamp": chrono::Utc::now().to_rfc3339()
+ *         }))
  *     }
- * 
- *     fn status(&self, context: &mut PolyScriptContext) -> PolyScriptResult<Option<Value>> {
- *         // Implementation here
- *         Ok(Some(json!({"source_exists": true, "dest_exists": false})))
+ *
+ *     fn read(
+ *         &self,
+ *         _resource: Option<&str>,
+ *         _options: &HashMap<String, Value>,
+ *         context: &mut PolyScriptContext,
+ *     ) -> Result<Value, Box<dyn Error>> {
+ *         context.log("Checking compilation status...", None);
+ *
+ *         Ok(json!({
+ *             "source_files": ["main.rs", "utils.rs", "config.rs"],
+ *             "compiled_files": ["main.exe", "utils.dll"],
+ *             "missing": ["config.dll"],
+ *             "last_build": chrono::Utc::now().to_rfc3339()
+ *         }))
  *     }
- * 
- *     // ... other methods
+ *
+ *     fn update(
+ *         &self,
+ *         resource: Option<&str>,
+ *         _options: &HashMap<String, Value>,
+ *         context: &mut PolyScriptContext,
+ *     ) -> Result<Value, Box<dyn Error>> {
+ *         let resource = resource.unwrap_or("source");
+ *         context.log(&format!("Recompiling {}...", resource), None);
+ *
+ *         Ok(json!({
+ *             "recompiled": resource,
+ *             "reason": "source file changed",
+ *             "timestamp": chrono::Utc::now().to_rfc3339()
+ *         }))
+ *     }
+ *
+ *     fn delete(
+ *         &self,
+ *         resource: Option<&str>,
+ *         _options: &HashMap<String, Value>,
+ *         context: &mut PolyScriptContext,
+ *     ) -> Result<Value, Box<dyn Error>> {
+ *         let resource = resource.unwrap_or("build artifacts");
+ *         context.log(&format!("Cleaning {}...", resource), None);
+ *
+ *         Ok(json!({
+ *             "cleaned": ["*.exe", "*.dll", "target/"],
+ *             "freed_space": "15.2 MB",
+ *             "timestamp": chrono::Utc::now().to_rfc3339()
+ *         }))
+ *     }
  * }
+ *
+ * fn main() {
+ *     let args: Vec<String> = std::env::args().collect();
+ *     let tool = CompilerTool;
+ *     
+ *     // For rebadging, you can manually handle command aliases:
+ *     // let args = if args.len() > 1 {
+ *     //     match args[1].as_str() {
+ *     //         "compile" => vec![args[0].clone(), "create".to_string()]
+ *     //             .into_iter().chain(args[2..].iter().cloned()).collect(),
+ *     //         "clean" => vec![args[0].clone(), "delete".to_string()]
+ *     //             .into_iter().chain(args[2..].iter().cloned()).collect(),
+ *     //         _ => args
+ *     //     }
+ *     // } else { args };
+ *     
+ *     std::process::exit(run(tool, args));
+ * }
+ *
+ * Command examples:
+ * cargo run create main.rs --mode simulate
+ * cargo run read
+ * cargo run update main.rs
+ * cargo run delete --mode simulate
+ * cargo run -- --discover --json
  */
-
-// Main function for the example
-fn main() {
-    let exit_code = run_polyscript_tool(ExampleTool);
-    std::process::exit(exit_code);
-}

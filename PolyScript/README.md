@@ -1,45 +1,76 @@
 # PolyScript Framework
 
-> Zero-Boilerplate CLI Development Across Any Language
+> Zero-Boilerplate CLI Development: Write CRUD Once, Get 12 Behaviors Free
 
 ## What is PolyScript?
 
-PolyScript is a data-driven framework that eliminates CLI boilerplate by abstracting language-specific implementation details. Developers write **only business logic** while the framework handles argument parsing, JSON output, error handling, and standardization.
+PolyScript is a framework that eliminates CLI boilerplate through **CRUD Operations × Modal Execution**. Write four methods (Create, Read, Update, Delete), and the framework automatically provides 12 different behaviors through three execution modes (simulate, sandbox, live).
 
 ## The Vision
 
-**Abstract away language-specific CLI boilerplate to enable accelerated script development across any scripting language.**
+**Abstract away language-specific CLI boilerplate to enable accelerated script development across any scripting language through standardized CRUD operations with modal execution.**
 
-Instead of writing hundreds of lines of CLI setup code, developers focus solely on the problem they're solving.
+Instead of writing hundreds of lines of CLI setup code, developers implement only CRUD business logic - the framework handles the rest.
 
 ## Quick Example
 
-The same backup tool in any language:
+Write CRUD operations once, get 12 behaviors automatically:
 
-**Python** (3 lines):
+**Python** (< 10 lines):
 ```python
 @polyscript_tool
 class BackupTool:
-    def status(self): return {"operational": True}
-    def live(self): return {"backup_completed": True}
-BackupTool.run()
+    def create(self, resource, options, context):
+        return {"created": f"backup-{resource}"}
+    
+    def read(self, resource, options, context):
+        return {"status": "ready", "size": "1.2GB"}
+    
+    def update(self, resource, options, context):
+        return {"updated": resource, "timestamp": "2024-01-01"}
+    
+    def delete(self, resource, options, context):
+        return {"deleted": resource}
 ```
 
-**C#** (3 lines):
+**C#** (< 10 lines):
 ```csharp
 [PolyScriptTool]
 public class BackupTool : IPolyScriptTool {
-    public object Status(PolyScriptContext ctx) => new { operational = true };
-    public object Live(PolyScriptContext ctx) => new { backup_completed = true };
+    public object Create(string resource, Options opt, Context ctx) 
+        => new { created = $"backup-{resource}" };
+    
+    public object Read(string resource, Options opt, Context ctx)
+        => new { status = "ready", size = "1.2GB" };
+    
+    public object Update(string resource, Options opt, Context ctx)
+        => new { updated = resource, timestamp = "2024-01-01" };
+    
+    public object Delete(string resource, Options opt, Context ctx)
+        => new { deleted = resource };
 }
 ```
 
-**All languages provide identical CLI**:
+**Get 12 CLI behaviors for free**:
 ```bash
-backup-tool status --json
-backup-tool test --verbose  
-backup-tool sandbox
-backup-tool live --force
+# Create operations × 3 modes
+backup-tool create daily --mode simulate  # Would create
+backup-tool create daily --mode sandbox   # Test creation
+backup-tool create daily                  # Actually create
+
+# Read operations (safe by default)
+backup-tool read daily                    # Show backup info
+backup-tool list                          # List all backups
+
+# Update operations × 3 modes  
+backup-tool update daily --size 2GB --mode simulate
+backup-tool update daily --size 2GB --mode sandbox
+backup-tool update daily --size 2GB
+
+# Delete operations × 3 modes
+backup-tool delete daily --mode simulate  # Would delete
+backup-tool delete daily --mode sandbox   # Test deletion
+backup-tool delete daily --force          # Actually delete
 ```
 
 ## Directory Structure
@@ -54,32 +85,93 @@ PolyScript/
 │   ├── rust/                # clap-based framework
 │   ├── go/                  # cobra-based framework
 │   ├── nodejs/              # yargs-based framework
-│   └── ruby/                # thor-based framework
+│   ├── ruby/                # thor-based framework
+│   ├── powershell/          # (planned) PowerShell framework
+│   └── haskell/             # (planned) optparse-applicative framework
 ├── schema/                   # JSON schema and specifications
 ├── tools/                    # Validation and generation tools
 ├── examples/                 # Cross-language example implementations
 └── archive/                  # Superseded documentation
 ```
 
-## The Four Modes
+## The CRUD × Modes Matrix
 
-Every PolyScript tool implements:
+Write 4 operations, get 12 behaviors:
 
-1. **`status`** - Show current state (read-only, default)
-2. **`test`** - Simulate operations (dry-run)  
-3. **`sandbox`** - Test dependencies and environment
-4. **`live`** - Execute actual operations
+### CRUD Operations (You Write These)
+1. **`create`** - Add new resources
+2. **`read`** - Query existing resources  
+3. **`update`** - Modify resources
+4. **`delete`** - Remove resources
+
+### Execution Modes (Framework Provides These)
+1. **`simulate`** - Show what would happen (dry-run)
+2. **`sandbox`** - Test prerequisites and validation
+3. **`live`** - Execute actual operations (default)
+
+### The Magic: 4 × 3 = 12
+```
+         | Simulate | Sandbox | Live
+---------|----------|---------|------
+Create   |    ✓     |    ✓    |  ✓
+Read     |    -     |    ✓    |  ✓
+Update   |    ✓     |    ✓    |  ✓  
+Delete   |    ✓     |    ✓    |  ✓
+```
 
 ## Framework Languages
 
-✅ **7 Complete Frameworks**:
-- **Python** (Click) - Decorator pattern, zero boilerplate
-- **C#** (Spectre.Console) - Interface-based with attributes
-- **F#** (Argu) - Functional with computation expressions  
-- **Rust** (clap) - Trait implementation with derive macros
-- **Go** (cobra) - Interface implementation with structs
-- **Node.js** (yargs) - Class and functional approaches
-- **Ruby** (thor) - Class inheritance with metaprogramming
+✅ **9 Comprehensive Frameworks** (7 complete + 2 planned):
+
+### Production Ready
+- **Python** (Click) - General scripting, massive ecosystem
+- **C#** (Spectre.Console) - Enterprise Windows/.NET development
+- **F#** (Argu) - Functional-first .NET programming  
+- **Rust** (clap) - Systems programming with memory safety
+- **Go** (cobra) - DevOps tooling, single binaries
+- **Node.js** (yargs) - JavaScript ecosystem, web developers
+- **Ruby** (thor) - Elegant scripting, Rails culture
+
+### Coming Soon
+- **PowerShell** - Windows administration, cross-platform automation
+- **Haskell** (optparse-applicative) - Pure functional programming
+
+## Why These 9 Languages?
+
+Our framework selection provides **complete coverage** without redundancy:
+
+### ✅ **All Major Paradigms**
+- **Imperative**: Python, PowerShell, Ruby
+- **Object-Oriented**: C#, Ruby, Python  
+- **Functional-First**: F#
+- **Pure Functional**: Haskell
+- **Systems**: Rust, Go
+
+### ✅ **All Major Ecosystems**
+- **Python**: PyPI, data science, automation
+- **npm**: Node.js, web development
+- **.NET**: C#/F#, enterprise
+- **Cargo**: Rust, systems programming
+- **Go modules**: Cloud native, DevOps
+- **RubyGems**: Ruby, web applications
+- **Native**: Compiled binaries (Rust, Go, Haskell)
+
+### ✅ **All Major Use Cases**
+- **General Scripting**: Python, Ruby, PowerShell
+- **Enterprise**: C#, F#, PowerShell
+- **Systems/Performance**: Rust, Go  
+- **DevOps/Cloud**: Go, Ruby, Python
+- **Web Developers**: Node.js, Ruby
+- **Windows Admin**: PowerShell, C#
+- **Academic/Research**: Haskell, Python
+
+### ✅ **Manageable Scope**
+- **9 frameworks** is comprehensive yet maintainable
+- Each fills a specific niche without duplication
+- Small teams can choose their preferred language
+- Maintenance burden remains reasonable
+
+**Beyond 9 is diminishing returns** - additional languages would duplicate existing capabilities rather than fill gaps. This selection covers 95%+ of real-world CLI development needs.
 
 ## Getting Started
 
@@ -97,26 +189,44 @@ Each framework directory contains:
 # frameworks/python/polyscript_click.py handles everything
 @polyscript_tool  
 class MyTool:
-    def status(self): return {"ready": True}
-    def test(self): return {"would_process": 100}
-    def sandbox(self): return {"dependencies": "ok"}  
-    def live(self): return {"processed": 100}
+    def create(self, resource, options, context):
+        # Just implement creation logic
+        return {"created": resource}
+    
+    def read(self, resource, options, context):
+        # Just implement read logic
+        return {"data": "..."}
+    
+    def update(self, resource, options, context):
+        # Just implement update logic
+        return {"updated": resource}
+    
+    def delete(self, resource, options, context):
+        # Just implement deletion logic
+        return {"deleted": resource}
 ```
 
 ### 4. Get Full CLI for Free
 ```bash
-my-tool status --json
-my-tool test --verbose
-my-tool sandbox
-my-tool live --force
+# 12 different behaviors from 4 methods
+my-tool create item --mode simulate    # Dry-run
+my-tool create item --mode sandbox     # Validate
+my-tool create item                    # Execute
+
+my-tool read item                      # Query
+my-tool list                           # List all
+
+my-tool update item --key value        # Modify
+my-tool delete item --force            # Remove
 ```
 
 ## Key Benefits
 
-- **🚀 Zero Boilerplate** - Write only business logic
+- **🚀 Zero Boilerplate** - Write only CRUD business logic
+- **✖️ Force Multiplier** - 4 methods → 12 behaviors automatically
 - **🔄 Language Freedom** - Same standard, any language
 - **📊 Structured Output** - Consistent JSON for automation  
-- **🛡️ Safety Built-in** - Test/sandbox modes prevent accidents
+- **🛡️ Safety Built-in** - Simulate/sandbox modes prevent accidents
 - **🎯 Small Team Focused** - Optimized for team productivity
 - **🤖 AI-Ready** - Clear specification for code generation
 
@@ -144,17 +254,20 @@ All tools produce PolyScript v1.0 compliant JSON:
 ```json
 {
   "polyscript": "1.0",
-  "mode": "status", 
+  "operation": "create",
+  "mode": "simulate", 
   "tool": "BackupTool",
   "status": "success",
   "data": {
-    "operational": true,
-    "files_ready": 1234
-  }
+    "created": "backup-daily"
+  },
+  "messages": ["Would create backup-daily"]
 }
 ```
 
 ## Philosophy
+
+**CRUD × Modes Architecture**: The power of PolyScript comes from the multiplication effect - implement 4 CRUD operations, get 12 different behaviors through modal execution. This creates maximum functionality from minimal code.
 
 **Data-Driven Design**: PolyScript is a behavioral standard with language-native instantiations. Each framework uses the best CLI library for that language while maintaining consistency.
 
@@ -177,4 +290,4 @@ PolyScript is an open standard for accelerated CLI development.
 
 ---
 
-**PolyScript: Write the logic. We'll handle the rest.**
+**PolyScript: Write CRUD once. Get 12 behaviors free.**
