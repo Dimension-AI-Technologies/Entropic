@@ -170,7 +170,7 @@ class PolyScriptBase {
                             simulation = $true
                             action = "$actionVerb $resourceDesc"
                             options = $options
-                        })
+                        }, $false)
                     }
                 }
                 
@@ -185,14 +185,14 @@ class PolyScriptBase {
                         sandbox = $true
                         validations = $validations
                         ready = $true
-                    })
+                    }, $false)
                 }
                 
                 Live {
                     # Confirmation for destructive operations
                     if ($this.Operation -in @([Operation]::Update, [Operation]::Delete) -and -not $this.Force) {
                         $resourceDesc = if ($this.Resource) { $this.Resource } else { "resource" }
-                        if (-not $this.Confirm("Are you sure you want to $($this.Operation.ToString().ToLower()) $resourceDesc?")) {
+                        if (-not $this.Confirm("Are you sure you want to $($this.Operation.ToString().ToLower()) ${resourceDesc}?")) {
                             $this.OutputData.status = "cancelled"
                             $this.Output("Operation cancelled", $true)
                             return 1
@@ -269,7 +269,7 @@ class PolyScriptExample : PolyScriptBase {
     }
     
     [int] Create([string]$Resource, [hashtable]$Options) {
-        $this.Output("Creating $Resource...")
+        $this.Output("Creating $Resource...", $false)
         
         $results = @()
         for ($i = 1; $i -le $this.Count; $i++) {
@@ -281,13 +281,13 @@ class PolyScriptExample : PolyScriptBase {
             }
         }
         
-        $this.Output(@{created_items = $results})
-        $this.Output("Successfully created $($results.Count) items")
+        $this.Output(@{created_items = $results}, $false)
+        $this.Output("Successfully created $($results.Count) items", $false)
         return 0
     }
     
     [int] Read([string]$Resource, [hashtable]$Options) {
-        $this.Output("Reading resources...")
+        $this.Output("Reading resources...", $false)
         
         $statusData = @{
             operational = $true
@@ -308,7 +308,7 @@ class PolyScriptExample : PolyScriptBase {
             )
         }
         
-        $this.Output($statusData)
+        $this.Output($statusData, $false)
         return 0
     }
     
@@ -318,7 +318,7 @@ class PolyScriptExample : PolyScriptBase {
             return 1
         }
         
-        $this.Output("Updating $Resource...")
+        $this.Output("Updating $Resource...", $false)
         
         Write-Verbose "Applying updates to $Resource..."
         
@@ -329,13 +329,13 @@ class PolyScriptExample : PolyScriptBase {
             status = "updated"
         }
         
-        $this.Output($updateResult)
-        $this.Output("Successfully updated $Resource")
+        $this.Output($updateResult, $false)
+        $this.Output("Successfully updated $Resource", $false)
         return 0
     }
     
     [int] Delete([string]$Resource, [hashtable]$Options) {
-        $this.Output("Deleting resources...")
+        $this.Output("Deleting resources...", $false)
         
         $deleteTargets = if ($Resource) { @($Resource) } else { @("default-1", "default-2", "default-3") }
         
@@ -349,13 +349,11 @@ class PolyScriptExample : PolyScriptBase {
             deleted_resources = $deleted
             freed_space = "15.7 MB"
             timestamp = (Get-Date).ToString()
-        })
+        }, $false)
         
-        $this.Output("Successfully deleted $($deleted.Count) resources")
+        $this.Output("Successfully deleted $($deleted.Count) resources", $false)
         return 0
     }
 }
 
-# Export module members
-Export-ModuleMember -Function New-PolyScriptTool
-Export-ModuleMember -Variable PolyScriptBase, ExecutionMode
+# Classes and enums are automatically available when script is dot-sourced

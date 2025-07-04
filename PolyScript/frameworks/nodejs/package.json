@@ -1,0 +1,11 @@
+{
+  "name": "polyscript-nodejs-framework",
+  "version": "1.0.0",
+  "description": "PolyScript Framework for Node.js",
+  "main": "polyscript-framework.js",
+  "dependencies": {
+    "yargs": "^17.7.2"
+  },
+  "author": "Mathew Burkitt, Dimension Technologies <mathew.burkitt@ditech.ai>",
+  "license": "MIT"
+}

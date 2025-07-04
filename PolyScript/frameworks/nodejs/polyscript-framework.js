@@ -387,7 +387,6 @@ async function runPolyScriptTool(tool) {
   let yargsInstance = yargs(hideBin(process.argv))
     .scriptName(toolName.toLowerCase())
     .usage('$0 <command> [options]')
-    .description(tool.description)
     .help()
     .version('1.0.0');
 
