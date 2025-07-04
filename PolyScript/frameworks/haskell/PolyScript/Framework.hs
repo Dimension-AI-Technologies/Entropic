@@ -29,11 +29,13 @@ module PolyScript.Framework
     -- * Utilities
   , outputJSON
   , outputText
+  , logMessage
   ) where
 
 import Control.Monad (when, unless)
 import Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Aeson (ToJSON, FromJSON, encode, object, (.=))
+import Data.Aeson (ToJSON, FromJSON, encode, object, (.=), toJSON, Key)
+import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson as Aeson
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
@@ -82,12 +84,12 @@ data PolyScriptContext = PolyScriptContext
   , ctxMode       :: PolyScriptMode
   , ctxResource   :: Maybe Text
   , ctxRebadgedAs :: Maybe Text
-  , ctxOptions    :: [(Text, Aeson.Value)]
+  , ctxOptions    :: [(Key, Aeson.Value)]
   , ctxVerbose    :: Bool
   , ctxForce      :: Bool
   , ctxJsonOutput :: Bool
   , ctxToolName   :: Text
-  , ctxOutputData :: [(Text, Aeson.Value)]
+  , ctxOutputData :: [(Key, Aeson.Value)]
   } deriving (Show, Eq)
 
 -- | Create a new context
@@ -102,22 +104,22 @@ newContext op mode resource toolName = PolyScriptContext
   , ctxForce      = False
   , ctxJsonOutput = False
   , ctxToolName   = toolName
-  , ctxOutputData = [ ("polyscript", Aeson.String "1.0")
-                    , ("operation", toJSON op)
-                    , ("mode", toJSON mode)
-                    , ("tool", Aeson.String toolName)
-                    , ("status", Aeson.String "success")
-                    , ("data", object [])
+  , ctxOutputData = [ (Key.fromText "polyscript", Aeson.String "1.0")
+                    , (Key.fromText "operation", toJSON op)
+                    , (Key.fromText "mode", toJSON mode)
+                    , (Key.fromText "tool", Aeson.String toolName)
+                    , (Key.fromText "status", Aeson.String "success")
+                    , (Key.fromText "data", object [])
                     ]
   }
 
 -- | Type class for PolyScript tools
 class PolyScriptTool a where
   toolDescription :: a -> Text
-  toolCreate :: a -> Maybe Text -> [(Text, Aeson.Value)] -> PolyScriptContext -> IO (Either PolyScriptError Aeson.Value)
-  toolRead   :: a -> Maybe Text -> [(Text, Aeson.Value)] -> PolyScriptContext -> IO (Either PolyScriptError Aeson.Value)
-  toolUpdate :: a -> Maybe Text -> [(Text, Aeson.Value)] -> PolyScriptContext -> IO (Either PolyScriptError Aeson.Value)
-  toolDelete :: a -> Maybe Text -> [(Text, Aeson.Value)] -> PolyScriptContext -> IO (Either PolyScriptError Aeson.Value)
+  toolCreate :: a -> Maybe Text -> [(Key, Aeson.Value)] -> PolyScriptContext -> IO (Either PolyScriptError Aeson.Value)
+  toolRead   :: a -> Maybe Text -> [(Key, Aeson.Value)] -> PolyScriptContext -> IO (Either PolyScriptError Aeson.Value)
+  toolUpdate :: a -> Maybe Text -> [(Key, Aeson.Value)] -> PolyScriptContext -> IO (Either PolyScriptError Aeson.Value)
+  toolDelete :: a -> Maybe Text -> [(Key, Aeson.Value)] -> PolyScriptContext -> IO (Either PolyScriptError Aeson.Value)
 
 -- | Context utility functions
 canMutate :: PolyScriptContext -> Bool
@@ -181,22 +183,22 @@ executeWithMode tool ctx = do
                 Delete -> "Would delete"
                 Read   -> "Would read"
           return $ Right $ object
-            [ ("simulation", Aeson.Bool True)
-            , ("action", Aeson.String $ actionVerb <> " " <> fromMaybe "resource" (ctxResource ctx))
-            , ("options", object $ ctxOptions ctx)
+            [ (Key.fromText "simulation", Aeson.Bool True)
+            , (Key.fromText "action", Aeson.String $ actionVerb <> " " <> fromMaybe "resource" (ctxResource ctx))
+            , (Key.fromText "options", object $ ctxOptions ctx)
             ]
     
     Sandbox -> do
       logMessage ctx "debug" $ "Testing prerequisites for " <> T.pack (show $ ctxOperation ctx)
       let validations = object
-            [ ("permissions", Aeson.String "verified")
-            , ("dependencies", Aeson.String "available")
-            , ("connectivity", Aeson.String "established")
+            [ (Key.fromText "permissions", Aeson.String "verified")
+            , (Key.fromText "dependencies", Aeson.String "available")
+            , (Key.fromText "connectivity", Aeson.String "established")
             ]
       return $ Right $ object
-        [ ("sandbox", Aeson.Bool True)
-        , ("validations", validations)
-        , ("ready", Aeson.Bool True)
+        [ (Key.fromText "sandbox", Aeson.Bool True)
+        , (Key.fromText "validations", validations)
+        , (Key.fromText "ready", Aeson.Bool True)
         ]
     
     Live -> do
@@ -217,13 +219,13 @@ executeWithMode tool ctx = do
   case result of
     Left (PolyScriptError err) -> do
       if ctxJsonOutput ctx
-        then outputJSON $ object $ ctxOutputData ctx ++ [("status", Aeson.String "error"), ("error", Aeson.String $ T.pack err)]
+        then outputJSON $ object $ ctxOutputData ctx ++ [(Key.fromText "status", Aeson.String "error"), (Key.fromText "error", Aeson.String $ T.pack err)]
         else hPutStrLn stderr $ "Error: " <> err
       exitFailure
     Right value -> do
       if ctxJsonOutput ctx
         then do
-          let outputData = ctxOutputData ctx ++ [("result", value)]
+          let outputData = ctxOutputData ctx ++ [(Key.fromText "result", value)]
           outputJSON $ object outputData
         else outputJSON value
 
@@ -370,10 +372,10 @@ runTool tool = do
   case cmd of
     CmdDiscover (DiscoverOpts global) -> do
       let discovery = object
-            [ ("polyscript", Aeson.String "1.0")
-            , ("tool", Aeson.String toolName)
-            , ("operations", toJSON ["create", "read", "update", "delete" :: Text])
-            , ("modes", toJSON ["simulate", "sandbox", "live" :: Text])
+            [ (Key.fromText "polyscript", Aeson.String "1.0")
+            , (Key.fromText "tool", Aeson.String toolName)
+            , (Key.fromText "operations", toJSON ["create", "read", "update", "delete" :: Text])
+            , (Key.fromText "modes", toJSON ["simulate", "sandbox", "live" :: Text])
             ]
       if optJson global
         then outputJSON discovery
