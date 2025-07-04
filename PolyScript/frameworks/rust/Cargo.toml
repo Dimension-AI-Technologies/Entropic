@@ -3,6 +3,14 @@ name = "polyscript-rust-framework"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "polyscript_framework"
+path = "polyscript_framework.rs"
+
+[[bin]]
+name = "test-compiler"
+path = "../test/test-compiler.rs"
+
 [dependencies]
 clap = { version = "4.3", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }

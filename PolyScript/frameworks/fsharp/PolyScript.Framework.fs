@@ -48,13 +48,14 @@ type PolyScriptContext = {
         Verbose = verbose
         Force = force
         JsonOutput = jsonOutput
-        OutputData = Dictionary<string, obj>([
-            ("polyscript", "1.0" :> obj)
-            ("operation", operation.ToString().ToLower() :> obj)
-            ("mode", mode.ToString().ToLower() :> obj)
-            ("status", "success" :> obj)
-            ("data", Dictionary<string, obj>() :> obj)
-        ])
+        OutputData = 
+            let data = Dictionary<string, obj>()
+            data.["polyscript"] <- "1.0" :> obj
+            data.["operation"] <- operation.ToString().ToLower() :> obj
+            data.["mode"] <- mode.ToString().ToLower() :> obj
+            data.["status"] <- "success" :> obj
+            data.["data"] <- Dictionary<string, obj>() :> obj
+            data
     }
 
     member this.CanMutate() = this.Mode = Live
@@ -227,18 +228,18 @@ let executeWithMode (tool: 'T when 'T :> IPolyScriptTool) (context: PolyScriptCo
             
             dict [
                 ("simulation", true :> obj)
-                ("action", $"{actionVerbs} {context.Resource |> Option.defaultValue "resource"}" :> obj)
+                let resourceName = context.Resource |> Option.defaultValue "resource"
+                ("action", sprintf "%s %s" actionVerbs resourceName :> obj)
                 ("options", context.Options :> obj)
             ] :> obj
     
     | Sandbox ->
         context.Log($"Testing prerequisites for {context.Operation}", "debug")
         
-        let validations = Dictionary<string, string>([
-            ("permissions", "verified")
-            ("dependencies", "available")
-            ("connectivity", "established")
-        ])
+        let validations = Dictionary<string, string>()
+        validations.["permissions"] <- "verified"
+        validations.["dependencies"] <- "available"
+        validations.["connectivity"] <- "established"
         
         // TODO: Add custom validation support
         let allPassed = validations.Values |> Seq.forall (fun v -> 
@@ -255,7 +256,8 @@ let executeWithMode (tool: 'T when 'T :> IPolyScriptTool) (context: PolyScriptCo
         
         // Confirmation for destructive operations
         if context.RequireConfirm() then
-            let confirmMsg = $"Are you sure you want to {context.Operation.ToString().ToLower()} {context.Resource |> Option.defaultValue "resource"}?"
+            let resourceName = context.Resource |> Option.defaultValue "resource"
+            let confirmMsg = sprintf "Are you sure you want to %s %s?" (context.Operation.ToString().ToLower()) resourceName
             if not (context.Confirm(confirmMsg)) then
                 context.OutputData.["status"] <- "cancelled" :> obj
                 dict [
@@ -289,9 +291,9 @@ let executeCrudOperation<'T when 'T :> IPolyScriptTool and 'T : (new : unit -> '
         let results = parser.Parse(args)
         let resource = results.TryGetResult(Resource)
         let mode = results.GetResult(Mode, defaultValue = Live)
-        let verbose = results.Contains(Verbose)
-        let force = results.Contains(Force)
-        let jsonOutput = results.Contains(Json)
+        let verbose = results.Contains(CrudArguments.Verbose)
+        let force = results.Contains(CrudArguments.Force)
+        let jsonOutput = results.Contains(CrudArguments.Json)
         
         let tool = new 'T()
         let context = PolyScriptContext.Create(operation, mode, resource, rebadgedAs, None, verbose, force, jsonOutput)
@@ -321,7 +323,7 @@ let executeDiscovery<'T when 'T :> IPolyScriptTool and 'T : (new : unit -> 'T)> 
     
     try
         let results = parser.Parse(args)
-        let jsonOutput = results.Contains(Json)
+        let jsonOutput = results.Contains(DiscoveryArguments.Json)
         
         let tool = new 'T()
         
@@ -340,14 +342,11 @@ let executeDiscovery<'T when 'T :> IPolyScriptTool and 'T : (new : unit -> 'T)> 
             printfn "Operations: create, read, update, delete"
             printfn "Modes: simulate, sandbox, live"
             printfn "\nOperations:"
-            let ops = discovery.["operations"] :?> Dictionary<string, obj>
+            let ops = discovery.["operations"] :?> obj :?> string list
             for op in ops do
-                let aliases = op.Value :?> List<string>
-                if aliases.Count > 0 then
-                    printfn "  %s: %s" op.Key (String.Join(", ", aliases))
-                else
-                    printfn "  %s: (no aliases)" op.Key
-            printfn "\nModes: %s" (String.Join(", ", discovery.["modes"] :?> List<string>))
+                printfn "  %s" op
+            let modes = discovery.["modes"] :?> obj :?> string list
+            printfn "\nModes: %s" (String.Join(", ", modes))
         
         0
         
@@ -403,15 +402,16 @@ let run<'T when 'T :> IPolyScriptTool and 'T : (new : unit -> 'T)> (args: string
  *         member _.Description = "Example compiler tool demonstrating CRUD × Modes"
  *         
  *         member _.Create(resource, options, context) =
- *             context.Log($"Compiling {resource |> Option.defaultValue "source"}...")
+ *             let resourceName = resource |> Option.defaultValue "source"
+ *             context.Log(sprintf "Compiling %s..." resourceName)
  *             
  *             let outputFile = 
  *                 match options.TryGetValue("output") with
  *                 | (true, value) -> value :?> string
- *                 | _ -> (resource |> Option.defaultValue "source").Replace(".fs", ".exe")
+ *                 | _ -> resourceName.Replace(".fs", ".exe")
  *             
  *             dict [
- *                 ("compiled", resource |> Option.defaultValue "source" :> obj)
+ *                 ("compiled", resourceName :> obj)
  *                 ("output", outputFile :> obj)
  *                 ("timestamp", DateTime.Now.ToString("O") :> obj)
  *             ] :> obj
@@ -427,16 +427,18 @@ let run<'T when 'T :> IPolyScriptTool and 'T : (new : unit -> 'T)> (args: string
  *             ] :> obj
  *         
  *         member _.Update(resource, options, context) =
- *             context.Log($"Recompiling {resource |> Option.defaultValue "source"}...")
+ *             let resourceName = resource |> Option.defaultValue "source"
+ *             context.Log(sprintf "Recompiling %s..." resourceName)
  *             
  *             dict [
- *                 ("recompiled", resource |> Option.defaultValue "source" :> obj)
+ *                 ("recompiled", resourceName :> obj)
  *                 ("reason", "source file changed" :> obj)
  *                 ("timestamp", DateTime.Now.ToString("O") :> obj)
  *             ] :> obj
  *         
  *         member _.Delete(resource, options, context) =
- *             context.Log($"Cleaning {resource |> Option.defaultValue "build artifacts"}...")
+ *             let resourceName = resource |> Option.defaultValue "build artifacts"
+ *             context.Log(sprintf "Cleaning %s..." resourceName)
  *             
  *             dict [
  *                 ("cleaned", ["*.exe"; "*.dll"; "bin/"; "obj/"] :> obj)

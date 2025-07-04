@@ -28,18 +28,57 @@ namespace PolyScript.Examples
         public string DestPath { get; set; } = "/dest";
         public bool Overwrite { get; set; } = false;
 
-        public object Status(PolyScriptContext context)
+        public object Create(string resource, Dictionary<string, object> options, PolyScriptContext context)
+        {
+            context.Log($"Creating backup for {resource}...");
+
+            var sourceInfo = GetDirectoryInfo(resource ?? SourcePath);
+            if (!sourceInfo.exists)
+            {
+                context.Output("Source directory does not exist", error: true);
+                return null!;
+            }
+
+            var destPath = options.GetValueOrDefault("destination", DestPath)?.ToString() ?? DestPath;
+            var destInfo = GetDirectoryInfo(destPath);
+
+            try
+            {
+                context.Log($"Starting backup from {resource ?? SourcePath} to {destPath}");
+                
+                // Simulate backup operation
+                System.Threading.Thread.Sleep(1000); // Simulate work
+                
+                return new
+                {
+                    operation = "backup_created",
+                    source = resource ?? SourcePath,
+                    destination = destPath,
+                    files_copied = sourceInfo.files,
+                    bytes_copied = sourceInfo.size,
+                    timestamp = DateTime.Now.ToString("O")
+                };
+            }
+            catch (Exception ex)
+            {
+                context.Output($"Backup failed: {ex.Message}", error: true);
+                return null!;
+            }
+        }
+
+        public object Read(string resource, Dictionary<string, object> options, PolyScriptContext context)
         {
             context.Log("Checking backup status...");
 
-            var sourceInfo = GetDirectoryInfo(SourcePath);
+            var sourcePath = resource ?? SourcePath;
+            var sourceInfo = GetDirectoryInfo(sourcePath);
             var destInfo = GetDirectoryInfo(DestPath);
 
             return new
             {
                 source = new
                 {
-                    path = SourcePath,
+                    path = sourcePath,
                     exists = sourceInfo.exists,
                     size_bytes = sourceInfo.size,
                     file_count = sourceInfo.files
@@ -55,125 +94,77 @@ namespace PolyScript.Examples
             };
         }
 
-        public object Test(PolyScriptContext context)
+        public object Update(string resource, Dictionary<string, object> options, PolyScriptContext context)
         {
-            context.Log("Planning backup operations...");
+            context.Log($"Updating backup for {resource}...");
 
-            var sourceInfo = GetDirectoryInfo(SourcePath);
-            var destInfo = GetDirectoryInfo(DestPath);
-
+            var sourceInfo = GetDirectoryInfo(resource ?? SourcePath);
             if (!sourceInfo.exists)
             {
                 context.Output("Source directory does not exist", error: true);
-                return null;
+                return null!;
             }
 
-            var operations = new List<object>();
-
-            if (destInfo.exists && !Overwrite)
-            {
-                operations.Add(new
-                {
-                    operation = "skip",
-                    reason = "destination exists and overwrite not specified",
-                    source = SourcePath,
-                    destination = DestPath
-                });
-            }
-            else
-            {
-                operations.Add(new
-                {
-                    operation = "backup",
-                    source = SourcePath,
-                    destination = DestPath,
-                    file_count = sourceInfo.files,
-                    size_bytes = sourceInfo.size,
-                    would_overwrite = destInfo.exists
-                });
-            }
-
-            return new
-            {
-                planned_operations = operations,
-                total_files = sourceInfo.files,
-                total_size = sourceInfo.size,
-                note = "No changes made in test mode"
-            };
-        }
-
-        public object Sandbox(PolyScriptContext context)
-        {
-            context.Log("Testing backup environment...");
-
-            var tests = new Dictionary<string, string>
-            {
-                ["source_readable"] = TestSourceReadable(),
-                ["destination_writable"] = TestDestinationWritable(),
-                ["sufficient_space"] = TestSufficientSpace(),
-                ["filesystem_access"] = TestFilesystemAccess()
-            };
-
-            var allPassed = true;
-            foreach (var test in tests.Values)
-            {
-                if (test != "passed")
-                {
-                    allPassed = false;
-                    break;
-                }
-            }
-
-            return new
-            {
-                dependency_tests = tests,
-                all_passed = allPassed
-            };
-        }
-
-        public object Live(PolyScriptContext context)
-        {
-            context.Log("Preparing backup execution...");
-
-            var sourceInfo = GetDirectoryInfo(SourcePath);
-            if (!sourceInfo.exists)
-            {
-                context.Output("Source directory does not exist", error: true);
-                return null;
-            }
-
-            var destInfo = GetDirectoryInfo(DestPath);
-            if (destInfo.exists && !Overwrite)
-            {
-                if (!context.Confirm($"Destination {DestPath} exists. Overwrite?"))
-                {
-                    return new { status = "cancelled" };
-                }
-            }
+            var incremental = options.GetValueOrDefault("incremental", false);
 
             try
             {
-                context.Log($"Starting backup from {SourcePath} to {DestPath}");
+                context.Log($"Updating backup from {resource ?? SourcePath}");
                 
-                // Simulate backup operation
-                // In real implementation: Directory.Delete(DestPath); Directory.Copy(SourcePath, DestPath);
-                System.Threading.Thread.Sleep(1000); // Simulate work
-                
-                var resultInfo = GetDirectoryInfo(DestPath);
+                // Simulate incremental backup
+                System.Threading.Thread.Sleep(500); // Simulate work
                 
                 return new
                 {
-                    operation = "backup_completed",
-                    source = SourcePath,
+                    operation = "backup_updated",
+                    source = resource ?? SourcePath,
                     destination = DestPath,
-                    files_copied = resultInfo.files,
-                    bytes_copied = resultInfo.size
+                    incremental = incremental,
+                    files_updated = sourceInfo.files / 2, // Simulate partial update
+                    bytes_updated = sourceInfo.size / 2,
+                    timestamp = DateTime.Now.ToString("O")
                 };
             }
             catch (Exception ex)
             {
-                context.Output($"Backup failed: {ex.Message}", error: true);
-                return null;
+                context.Output($"Backup update failed: {ex.Message}", error: true);
+                return null!;
+            }
+        }
+
+        public object Delete(string resource, Dictionary<string, object> options, PolyScriptContext context)
+        {
+            context.Log($"Deleting backup for {resource ?? "all backups"}...");
+
+            var destPath = resource ?? DestPath;
+            var destInfo = GetDirectoryInfo(destPath);
+
+            if (!destInfo.exists)
+            {
+                context.Output("Backup does not exist", error: true);
+                return null!;
+            }
+
+            try
+            {
+                context.Log($"Removing backup at {destPath}");
+                
+                // Simulate deletion
+                System.Threading.Thread.Sleep(300); // Simulate work
+                
+                return new
+                {
+                    operation = "backup_deleted",
+                    path = destPath,
+                    files_removed = destInfo.files,
+                    bytes_freed = destInfo.size,
+                    timestamp = DateTime.Now.ToString("O")
+                };
+            }
+            catch (Exception ex)
+            {
+                context.Output($"Backup deletion failed: {ex.Message}", error: true);
+                return null!;
             }
         }
 
@@ -212,9 +203,12 @@ namespace PolyScript.Examples
         {
             try
             {
-                return Directory.Exists(SourcePath) && 
-                       Directory.GetAccessControl(SourcePath).AreAccessRulesCanonical 
-                       ? "passed" : "failed";
+                if (!Directory.Exists(SourcePath))
+                    return "failed";
+                
+                // Try to enumerate files to test read access
+                var files = Directory.GetFiles(SourcePath);
+                return "passed";
             }
             catch
             {

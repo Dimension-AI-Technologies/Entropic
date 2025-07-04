@@ -46,8 +46,8 @@ namespace PolyScript.Framework
     {
         public PolyScriptOperation Operation { get; set; }
         public PolyScriptMode Mode { get; set; }
-        public string Resource { get; set; }
-        public string RebadgedAs { get; set; }
+        public string? Resource { get; set; }
+        public string? RebadgedAs { get; set; }
         public Dictionary<string, object> Options { get; set; }
         public bool Verbose { get; set; }
         public bool Force { get; set; }
@@ -227,7 +227,7 @@ namespace PolyScript.Framework
     {
         [Description("Resource to operate on")]
         [CommandArgument(0, "[resource]")]
-        public string Resource { get; set; }
+        public string? Resource { get; set; }
 
         [Description("Execution mode")]
         [CommandOption("--mode")]
@@ -249,27 +249,21 @@ namespace PolyScript.Framework
     /// <summary>
     /// Generic PolyScript command that routes to CRUD methods
     /// </summary>
-    public class PolyScriptCommand<TTool> : Command<PolyScriptSettings>
+    public abstract class PolyScriptCommand<TTool> : Command<PolyScriptSettings>
         where TTool : IPolyScriptTool, new()
     {
-        private readonly PolyScriptOperation _operation;
-        private readonly string _rebadgedAs;
-
-        public PolyScriptCommand(PolyScriptOperation operation, string rebadgedAs = null)
-        {
-            _operation = operation;
-            _rebadgedAs = rebadgedAs;
-        }
+        protected abstract PolyScriptOperation Operation { get; }
+        protected virtual string? RebadgedAs => null;
 
         public override int Execute(CommandContext context, PolyScriptSettings settings)
         {
             var tool = new TTool();
             var psContext = new PolyScriptContext
             {
-                Operation = _operation,
+                Operation = Operation,
                 Mode = settings.Mode,
                 Resource = settings.Resource,
-                RebadgedAs = _rebadgedAs,
+                RebadgedAs = RebadgedAs,
                 Verbose = settings.Verbose,
                 Force = settings.Force,
                 JsonOutput = settings.JsonOutput
@@ -279,7 +273,7 @@ namespace PolyScript.Framework
 
             try
             {
-                psContext.Log($"Executing {_operation} operation in {settings.Mode} mode", "debug");
+                psContext.Log($"Executing {Operation} operation in {settings.Mode} mode", "debug");
 
                 object result = ExecuteWithMode(tool, psContext);
 
@@ -388,6 +382,42 @@ namespace PolyScript.Framework
     }
 
     /// <summary>
+    /// Create command implementation
+    /// </summary>
+    public class CreateCommand<TTool> : PolyScriptCommand<TTool>
+        where TTool : IPolyScriptTool, new()
+    {
+        protected override PolyScriptOperation Operation => PolyScriptOperation.Create;
+    }
+
+    /// <summary>
+    /// Read command implementation
+    /// </summary>
+    public class ReadCommand<TTool> : PolyScriptCommand<TTool>
+        where TTool : IPolyScriptTool, new()
+    {
+        protected override PolyScriptOperation Operation => PolyScriptOperation.Read;
+    }
+
+    /// <summary>
+    /// Update command implementation
+    /// </summary>
+    public class UpdateCommand<TTool> : PolyScriptCommand<TTool>
+        where TTool : IPolyScriptTool, new()
+    {
+        protected override PolyScriptOperation Operation => PolyScriptOperation.Update;
+    }
+
+    /// <summary>
+    /// Delete command implementation
+    /// </summary>
+    public class DeleteCommand<TTool> : PolyScriptCommand<TTool>
+        where TTool : IPolyScriptTool, new()
+    {
+        protected override PolyScriptOperation Operation => PolyScriptOperation.Delete;
+    }
+
+    /// <summary>
     /// Discovery command for simple introspection
     /// </summary>
     public class DiscoveryCommand<TTool> : Command
@@ -429,40 +459,41 @@ namespace PolyScript.Framework
                 config.SetApplicationName(typeof(TTool).Name.ToLower());
                 config.SetApplicationVersion("1.0.0");
                 
-                if (!string.IsNullOrEmpty(tool.Description))
-                    config.SetDescription(tool.Description);
+                // Note: SetDescription not available in this version of Spectre.Console.Cli
+                // if (!string.IsNullOrEmpty(tool.Description))
+                //     config.SetDescription(tool.Description);
 
                 // Add discovery command
                 config.AddCommand<DiscoveryCommand<TTool>>("--discover")
                     .WithDescription("Show tool capabilities for agents");
 
                 // Add CRUD commands
-                config.AddCommand<PolyScriptCommand<TTool>>("create")
+                config.AddCommand<CreateCommand<TTool>>("create")
                     .WithDescription("Create new resources");
 
-                config.AddCommand<PolyScriptCommand<TTool>>("read")
+                config.AddCommand<ReadCommand<TTool>>("read")
                     .WithDescription("Read/query resources");
 
-                config.AddCommand<PolyScriptCommand<TTool>>("update")
+                config.AddCommand<UpdateCommand<TTool>>("update")
                     .WithDescription("Update existing resources");
 
-                config.AddCommand<PolyScriptCommand<TTool>>("delete")
+                config.AddCommand<DeleteCommand<TTool>>("delete")
                     .WithDescription("Delete resources");
 
-                config.AddCommand<PolyScriptCommand<TTool>>("list")
+                config.AddCommand<ReadCommand<TTool>>("list")
                     .WithDescription("List resources (alias for read)");
 
                 // Add rebadged commands
-                var rebadging = LoadRebadging<TTool>();
-                foreach (var (alias, (operation, mode)) in rebadging)
-                {
-                    var op = Enum.Parse<PolyScriptOperation>(operation, true);
-                    var cmd = new PolyScriptCommand<TTool>(op, alias);
-                    
-                    config.AddCommand<PolyScriptCommand<TTool>>(alias)
-                        .WithDescription($"{operation} ({mode} mode)")
-                        .WithData(cmd);
-                }
+                // TODO: Fix rebadged command registration with Spectre.Console.Cli
+                // var rebadging = LoadRebadging<TTool>();
+                // foreach (var (alias, (operation, mode)) in rebadging)
+                // {
+                //     var op = Enum.Parse<PolyScriptOperation>(operation, true);
+                //     
+                //     // Need to create specific command types for rebadged commands
+                //     // config.AddCommand<RebadgedCommand<TTool>>(alias)
+                //     //     .WithDescription($"{operation} ({mode} mode)");
+                // }
             });
 
             return app.Run(args);

@@ -5,14 +5,12 @@
  * Author: Mathew Burkitt, Dimension Technologies <mathew.burkitt@ditech.ai>
  */
 
-use clap::{Arg, ArgMatches, Command, Parser, Subcommand, ValueEnum};
+use clap::{Arg, Command, ValueEnum};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::env;
 use std::error::Error;
 use std::fmt;
-use std::fs;
 use std::io::{self, Write};
 
 /// PolyScript CRUD operations
@@ -242,28 +240,28 @@ pub trait PolyScriptTool {
         &self,
         resource: Option<&str>,
         options: &HashMap<String, Value>,
-        context: &mut PolyScriptContext,
+        context: &PolyScriptContext,
     ) -> Result<Value, Box<dyn Error>>;
 
     fn read(
         &self,
         resource: Option<&str>,
         options: &HashMap<String, Value>,
-        context: &mut PolyScriptContext,
+        context: &PolyScriptContext,
     ) -> Result<Value, Box<dyn Error>>;
 
     fn update(
         &self,
         resource: Option<&str>,
         options: &HashMap<String, Value>,
-        context: &mut PolyScriptContext,
+        context: &PolyScriptContext,
     ) -> Result<Value, Box<dyn Error>>;
 
     fn delete(
         &self,
         resource: Option<&str>,
         options: &HashMap<String, Value>,
-        context: &mut PolyScriptContext,
+        context: &PolyScriptContext,
     ) -> Result<Value, Box<dyn Error>>;
 
     // Optional validation methods
@@ -325,7 +323,9 @@ fn execute_with_mode<T: PolyScriptTool>(
 
             // Read operations can execute in simulate mode
             if context.operation == PolyScriptOperation::Read {
-                return tool.read(context.resource.as_deref(), &context.options, context);
+                let resource = context.resource.as_deref();
+                let options = context.options.clone();
+                return tool.read(resource, &options, context);
             }
 
             // For mutating operations, describe what would happen
@@ -407,18 +407,20 @@ fn execute_with_mode<T: PolyScriptTool>(
             }
 
             // Execute the actual CRUD method
+            let resource = context.resource.as_deref();
+            let options = context.options.clone();
             match context.operation {
                 PolyScriptOperation::Create => {
-                    tool.create(context.resource.as_deref(), &context.options, context)
+                    tool.create(resource, &options, context)
                 }
                 PolyScriptOperation::Read => {
-                    tool.read(context.resource.as_deref(), &context.options, context)
+                    tool.read(resource, &options, context)
                 }
                 PolyScriptOperation::Update => {
-                    tool.update(context.resource.as_deref(), &context.options, context)
+                    tool.update(resource, &options, context)
                 }
                 PolyScriptOperation::Delete => {
-                    tool.delete(context.resource.as_deref(), &context.options, context)
+                    tool.delete(resource, &options, context)
                 }
             }
         }
@@ -426,7 +428,7 @@ fn execute_with_mode<T: PolyScriptTool>(
 }
 
 /// Run discovery for simple introspection
-pub fn run_discovery<T: PolyScriptTool>(tool: &T, json_output: bool) -> i32 {
+pub fn run_discovery<T: PolyScriptTool>(_tool: &T, json_output: bool) -> i32 {
     let discovery = json!({
         "polyscript": "1.0",
         "tool": std::any::type_name::<T>().split("::").last().unwrap_or("Unknown"),
@@ -447,7 +449,7 @@ pub fn run_discovery<T: PolyScriptTool>(tool: &T, json_output: bool) -> i32 {
 
 /// Main framework runner function
 pub fn run<T: PolyScriptTool>(tool: T, args: Vec<String>) -> i32 {
-    let tool_name = std::any::type_name::<T>()
+    let tool_name_str = std::any::type_name::<T>()
         .split("::")
         .last()
         .unwrap_or("Unknown")
@@ -456,7 +458,7 @@ pub fn run<T: PolyScriptTool>(tool: T, args: Vec<String>) -> i32 {
     if args.is_empty() {
         println!("PolyScript CRUD × Modes Framework");
         println!("Available commands: create, read, update, delete, list, --discover");
-        println!("Use: {} <command> [options]", tool_name);
+        println!("Use: {} <command> [options]", tool_name_str);
         return 0;
     }
 
@@ -496,7 +498,7 @@ pub fn run<T: PolyScriptTool>(tool: T, args: Vec<String>) -> i32 {
     };
 
     // Build clap command for the operation
-    let mut cmd = Command::new(&tool_name)
+    let cmd = Command::new("polyscript-tool")
         .arg(
             Arg::new("resource")
                 .help("Resource to operate on")
@@ -534,7 +536,7 @@ pub fn run<T: PolyScriptTool>(tool: T, args: Vec<String>) -> i32 {
 
     // Parse remaining arguments (skip the command name)
     let remaining_args: Vec<String> = args.into_iter().skip(1).collect();
-    let matches = match cmd.try_get_matches_from(std::iter::once(tool_name).chain(remaining_args)) {
+    let matches = match cmd.try_get_matches_from(std::iter::once("polyscript-tool".to_string()).chain(remaining_args)) {
         Ok(m) => m,
         Err(e) => {
             eprintln!("{}", e);
@@ -559,7 +561,7 @@ pub fn run<T: PolyScriptTool>(tool: T, args: Vec<String>) -> i32 {
         verbose,
         force,
         json_output,
-        &tool_name,
+        &tool_name_str,
     );
 
     // Execute with mode wrapping

@@ -1,0 +1,13 @@
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/bin/Debug/net8.0/PolyScript.Framework.deps.json
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/bin/Debug/net8.0/PolyScript.Framework.dll
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/bin/Debug/net8.0/PolyScript.Framework.pdb
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/PolyScript.Framework.csproj.AssemblyReference.cache
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/PolyScript.Framework.GeneratedMSBuildEditorConfig.editorconfig
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/PolyScript.Framework.AssemblyInfoInputs.cache
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/PolyScript.Framework.AssemblyInfo.cs
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/PolyScript.Framework.csproj.CoreCompileInputs.cache
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/PolyScript.Framework.sourcelink.json
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/PolyScript.Framework.dll
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/refint/PolyScript.Framework.dll
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/PolyScript.Framework.pdb
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/ref/PolyScript.Framework.dll
