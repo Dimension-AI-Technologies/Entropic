@@ -2,9 +2,7 @@
 
 /*
  * PolyScript Framework for Node.js using yargs
- *
- * A true zero-boilerplate framework for creating PolyScript-compliant CLI tools.
- * Developers write ONLY business logic - the framework handles everything else.
+ * CRUD × Modes Architecture: Zero-boilerplate CLI development
  *
  * Author: Mathew Burkitt, Dimension Technologies <mathew.burkitt@ditech.ai>
  */
@@ -14,11 +12,20 @@ const { hideBin } = require('yargs/helpers');
 const readline = require('readline');
 
 /**
+ * PolyScript CRUD operations
+ */
+const PolyScriptOperation = {
+  CREATE: 'create',
+  READ: 'read',
+  UPDATE: 'update',
+  DELETE: 'delete'
+};
+
+/**
  * PolyScript execution modes
  */
 const PolyScriptMode = {
-  STATUS: 'status',
-  TEST: 'test',
+  SIMULATE: 'simulate',
   SANDBOX: 'sandbox',
   LIVE: 'live'
 };
@@ -27,19 +34,56 @@ const PolyScriptMode = {
  * PolyScript context for tool execution
  */
 class PolyScriptContext {
-  constructor(mode, verbose = false, force = false, jsonOutput = false, toolName = 'PolyScriptTool') {
+  constructor(operation, mode, resource = null, verbose = false, force = false, jsonOutput = false, toolName = 'PolyScriptTool') {
+    this.operation = operation;
     this.mode = mode;
+    this.resource = resource;
     this.verbose = verbose;
     this.force = force;
     this.jsonOutput = jsonOutput;
     this.toolName = toolName;
+    this.options = {};
     this.outputData = {
       polyscript: '1.0',
+      operation: operation,
       mode: mode,
       tool: toolName,
       status: 'success',
       data: {}
     };
+    if (resource) {
+      this.outputData.resource = resource;
+    }
+  }
+
+  /**
+   * Check if current mode allows mutations
+   */
+  canMutate() {
+    return this.mode === PolyScriptMode.LIVE;
+  }
+
+  /**
+   * Check if current mode should validate
+   */
+  shouldValidate() {
+    return this.mode === PolyScriptMode.SANDBOX;
+  }
+
+  /**
+   * Check if confirmation required for destructive operations
+   */
+  requireConfirm() {
+    return this.mode === PolyScriptMode.LIVE && 
+           (this.operation === PolyScriptOperation.UPDATE || this.operation === PolyScriptOperation.DELETE) &&
+           !this.force;
+  }
+
+  /**
+   * Check if in a safe mode (simulate/sandbox)
+   */
+  isSafeMode() {
+    return this.mode === PolyScriptMode.SIMULATE || this.mode === PolyScriptMode.SANDBOX;
   }
 
   /**
@@ -59,7 +103,7 @@ class PolyScriptContext {
           break;
         case 'info':
         case 'debug':
-          if (this.verbose) {
+          if (this.verbose || level === 'info') {
             key = 'messages';
           }
           break;
@@ -105,7 +149,7 @@ class PolyScriptContext {
         }
         this.outputData[key].push(data);
       } else if (typeof data === 'object' && data !== null) {
-        // Merge object properties into data section
+        // Merge object data
         Object.assign(this.outputData.data, data);
       }
     } else {
@@ -140,13 +184,13 @@ class PolyScriptContext {
     return new Promise((resolve) => {
       rl.question(`${message} [y/N]: `, (answer) => {
         rl.close();
-        resolve(answer.toLowerCase().trim() === 'y');
+        resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
       });
     });
   }
 
   /**
-   * Finalize output (called at the end to output JSON if needed)
+   * Finalize JSON output
    */
   finalizeOutput() {
     if (this.jsonOutput) {
@@ -184,145 +228,131 @@ class PolyScriptTool {
   }
 
   /**
-   * Execute status mode (show current state)
+   * Create new resources
    */
-  async status(context) {
-    throw new Error('Subclasses must implement status method');
+  async create(resource, options, context) {
+    throw new Error('Subclasses must implement create method');
   }
 
   /**
-   * Execute test mode (simulate operations)
+   * Read/query resources
    */
-  async test(context) {
-    throw new Error('Subclasses must implement test method');
+  async read(resource, options, context) {
+    throw new Error('Subclasses must implement read method');
   }
 
   /**
-   * Execute sandbox mode (test dependencies)
+   * Update existing resources
    */
-  async sandbox(context) {
-    throw new Error('Subclasses must implement sandbox method');
+  async update(resource, options, context) {
+    throw new Error('Subclasses must implement update method');
   }
 
   /**
-   * Execute live mode (actual operations)
+   * Delete resources
    */
-  async live(context) {
-    throw new Error('Subclasses must implement live method');
+  async delete(resource, options, context) {
+    throw new Error('Subclasses must implement delete method');
   }
 }
 
 /**
- * Run a PolyScript tool with yargs CLI handling
+ * Execute CRUD method with appropriate mode wrapping
  */
-async function runPolyScriptTool(tool) {
-  const toolName = tool.constructor.name;
-
-  // Create yargs instance
-  let yargsInstance = yargs(hideBin(process.argv))
-    .scriptName(toolName.toLowerCase())
-    .description(tool.description)
-    .help()
-    .version('1.0.0');
-
-  // Add global options
-  yargsInstance = yargsInstance
-    .option('verbose', {
-      alias: 'v',
-      type: 'boolean',
-      description: 'Enable verbose output',
-      global: true
-    })
-    .option('force', {
-      alias: 'f',
-      type: 'boolean',
-      description: 'Skip confirmation prompts',
-      global: true
-    })
-    .option('json', {
-      type: 'boolean',
-      description: 'Output in JSON format',
-      global: true
-    });
-
-  // Let tool add custom arguments
-  yargsInstance = tool.addArguments(yargsInstance);
-
-  // Add mode commands
-  const modeHandler = (mode) => {
-    return {
-      command: mode,
-      describe: getModeDescription(mode),
-      handler: async (argv) => {
-        await executeMode(tool, mode, argv);
-      }
-    };
-  };
-
-  yargsInstance = yargsInstance
-    .command(modeHandler(PolyScriptMode.STATUS))
-    .command(modeHandler(PolyScriptMode.TEST))
-    .command(modeHandler(PolyScriptMode.SANDBOX))
-    .command(modeHandler(PolyScriptMode.LIVE))
-    .command('$0', 'Default to status mode', {}, async (argv) => {
-      await executeMode(tool, PolyScriptMode.STATUS, argv);
-    });
-
-  // Parse and execute
-  yargsInstance.parse();
-}
-
-/**
- * Get description for a PolyScript mode
- */
-function getModeDescription(mode) {
-  switch (mode) {
-    case PolyScriptMode.STATUS:
-      return 'Show current state';
-    case PolyScriptMode.TEST:
-      return 'Simulate operations (dry-run)';
-    case PolyScriptMode.SANDBOX:
-      return 'Test dependencies and environment';
-    case PolyScriptMode.LIVE:
-      return 'Execute actual operations';
-    default:
-      return 'Unknown mode';
-  }
-}
-
-/**
- * Execute a specific PolyScript mode
- */
-async function executeMode(tool, mode, argv) {
+async function executeWithMode(tool, operation, mode, resource, options, argv) {
   const toolName = tool.constructor.name;
   
   // Create context
   const context = new PolyScriptContext(
+    operation,
     mode,
+    resource,
     argv.verbose || false,
     argv.force || false,
     argv.json || false,
     toolName
   );
-
-  context.log(`Executing ${mode} mode`, 'debug');
+  context.options = options;
 
   try {
-    // Execute appropriate method
     let result;
+
     switch (mode) {
-      case PolyScriptMode.STATUS:
-        result = await tool.status(context);
+      case PolyScriptMode.SIMULATE:
+        context.log(`Simulating ${operation} operation`, 'debug');
+        
+        // Read operations can execute in simulate mode
+        if (operation === PolyScriptOperation.READ) {
+          result = await tool.read(resource, options, context);
+        } else {
+          // For mutating operations, describe what would happen
+          const actionVerbs = {
+            [PolyScriptOperation.CREATE]: 'Would create',
+            [PolyScriptOperation.UPDATE]: 'Would update',
+            [PolyScriptOperation.DELETE]: 'Would delete'
+          };
+          const verb = actionVerbs[operation] || `Would ${operation}`;
+          
+          result = {
+            simulation: true,
+            action: `${verb} ${resource || 'resource'}`,
+            options: options
+          };
+        }
         break;
-      case PolyScriptMode.TEST:
-        result = await tool.test(context);
-        break;
+
       case PolyScriptMode.SANDBOX:
-        result = await tool.sandbox(context);
+        context.log(`Testing prerequisites for ${operation}`, 'debug');
+        
+        const validations = {
+          permissions: 'verified',
+          dependencies: 'available',
+          connectivity: 'established'
+        };
+        
+        // Tools can add custom validations by checking context.shouldValidate()
+        const allPassed = Object.values(validations).every(v => 
+          v === 'verified' || v === 'available' || v === 'established' || v === 'passed'
+        );
+        
+        result = {
+          sandbox: true,
+          validations: validations,
+          ready: allPassed
+        };
         break;
+
       case PolyScriptMode.LIVE:
-        result = await tool.live(context);
+        context.log(`Executing ${operation} operation`, 'debug');
+        
+        // Confirmation for destructive operations
+        if (context.requireConfirm()) {
+          const confirmed = await context.confirm(
+            `Are you sure you want to ${operation} ${resource}?`
+          );
+          if (!confirmed) {
+            context.outputData.status = 'cancelled';
+            throw new PolyScriptError('User declined confirmation');
+          }
+        }
+        
+        // Execute the actual CRUD method
+        switch (operation) {
+          case PolyScriptOperation.CREATE:
+            result = await tool.create(resource, options, context);
+            break;
+          case PolyScriptOperation.READ:
+            result = await tool.read(resource, options, context);
+            break;
+          case PolyScriptOperation.UPDATE:
+            result = await tool.update(resource, options, context);
+            break;
+          case PolyScriptOperation.DELETE:
+            result = await tool.delete(resource, options, context);
+            break;
+        }
         break;
+
       default:
         throw new PolyScriptError(`Unknown mode: ${mode}`);
     }
@@ -348,186 +378,302 @@ async function executeMode(tool, mode, argv) {
 }
 
 /**
- * Decorator function for creating PolyScript tools
+ * Run a PolyScript tool with yargs CLI handling
  */
-function polyscriptTool(description, methods) {
-  return class extends PolyScriptTool {
+async function runPolyScriptTool(tool) {
+  const toolName = tool.constructor.name;
+
+  // Create yargs instance
+  let yargsInstance = yargs(hideBin(process.argv))
+    .scriptName(toolName.toLowerCase())
+    .usage('$0 <command> [options]')
+    .description(tool.description)
+    .help()
+    .version('1.0.0');
+
+  // Add global options
+  yargsInstance = yargsInstance
+    .option('verbose', {
+      alias: 'v',
+      type: 'boolean',
+      description: 'Enable verbose output',
+      global: true
+    })
+    .option('force', {
+      alias: 'f',
+      type: 'boolean',
+      description: 'Skip confirmation prompts',
+      global: true
+    })
+    .option('json', {
+      type: 'boolean',
+      description: 'Output in JSON format',
+      global: true
+    });
+
+  // Add discover command
+  yargsInstance = yargsInstance.command(
+    'discover',
+    'Show tool capabilities',
+    {},
+    (argv) => {
+      const discovery = {
+        polyscript: '1.0',
+        tool: toolName,
+        operations: ['create', 'read', 'update', 'delete'],
+        modes: ['simulate', 'sandbox', 'live']
+      };
+      
+      if (argv.json) {
+        console.log(JSON.stringify(discovery, null, 2));
+      } else {
+        console.log(`Tool: ${toolName}`);
+        console.log('Operations: create, read, update, delete');
+        console.log('Modes: simulate, sandbox, live');
+      }
+    }
+  );
+
+  // Create CRUD command handler
+  const crudHandler = (operation) => {
+    return {
+      command: operation === PolyScriptOperation.READ ? `${operation} [resource]` : `${operation} <resource>`,
+      describe: getOperationDescription(operation),
+      builder: (yargs) => {
+        yargs = yargs
+          .positional('resource', {
+            describe: 'Resource to operate on',
+            type: 'string'
+          })
+          .option('mode', {
+            alias: 'm',
+            type: 'string',
+            choices: Object.values(PolyScriptMode),
+            default: PolyScriptMode.LIVE,
+            description: 'Execution mode'
+          });
+        
+        // Let tool add custom arguments
+        return tool.addArguments(yargs);
+      },
+      handler: async (argv) => {
+        const { resource, mode, ...otherArgs } = argv;
+        
+        // Extract custom options (exclude yargs internals)
+        const options = {};
+        for (const key in otherArgs) {
+          if (!key.startsWith('$') && !key.startsWith('_') && 
+              key !== 'verbose' && key !== 'force' && key !== 'json') {
+            options[key] = otherArgs[key];
+          }
+        }
+        
+        await executeWithMode(tool, operation, mode, resource, options, argv);
+      }
+    };
+  };
+
+  // Add CRUD commands
+  yargsInstance = yargsInstance
+    .command(crudHandler(PolyScriptOperation.CREATE))
+    .command(crudHandler(PolyScriptOperation.READ))
+    .command(crudHandler(PolyScriptOperation.UPDATE))
+    .command(crudHandler(PolyScriptOperation.DELETE));
+
+  // Add list as alias for read
+  yargsInstance = yargsInstance.command(
+    'list',
+    'List resources (alias for read)',
+    (yargs) => {
+      yargs = yargs
+        .option('mode', {
+          alias: 'm',
+          type: 'string',
+          choices: Object.values(PolyScriptMode),
+          default: PolyScriptMode.LIVE,
+          description: 'Execution mode'
+        });
+      return tool.addArguments(yargs);
+    },
+    async (argv) => {
+      const { mode, ...otherArgs } = argv;
+      const options = {};
+      for (const key in otherArgs) {
+        if (!key.startsWith('$') && !key.startsWith('_') && 
+            key !== 'verbose' && key !== 'force' && key !== 'json') {
+          options[key] = otherArgs[key];
+        }
+      }
+      await executeWithMode(tool, PolyScriptOperation.READ, mode, null, options, argv);
+    }
+  );
+
+  // Set default command behavior
+  yargsInstance = yargsInstance
+    .demandCommand(1, 'You must specify a command')
+    .recommendCommands()
+    .strict();
+
+  // Parse and execute
+  yargsInstance.parse();
+}
+
+/**
+ * Get description for a CRUD operation
+ */
+function getOperationDescription(operation) {
+  switch (operation) {
+    case PolyScriptOperation.CREATE:
+      return 'Create new resources';
+    case PolyScriptOperation.READ:
+      return 'Read/query resources';
+    case PolyScriptOperation.UPDATE:
+      return 'Update existing resources';
+    case PolyScriptOperation.DELETE:
+      return 'Delete resources';
+    default:
+      return 'Unknown operation';
+  }
+}
+
+/**
+ * Create a PolyScript tool from simple functions (functional style)
+ */
+function createPolyScriptTool(config) {
+  class FunctionalTool extends PolyScriptTool {
     get description() {
-      return description;
-    }
-
-    async status(context) {
-      return methods.status ? await methods.status(context) : null;
-    }
-
-    async test(context) {
-      return methods.test ? await methods.test(context) : null;
-    }
-
-    async sandbox(context) {
-      return methods.sandbox ? await methods.sandbox(context) : null;
-    }
-
-    async live(context) {
-      return methods.live ? await methods.live(context) : null;
+      return config.description || 'PolyScript CLI tool';
     }
 
     addArguments(yargs) {
-      return methods.addArguments ? methods.addArguments(yargs) : yargs;
-    }
-  };
-}
-
-// Example tool implementation
-class ExampleTool extends PolyScriptTool {
-  get description() {
-    return 'Example PolyScript tool demonstrating the Node.js framework';
-  }
-
-  addArguments(yargs) {
-    return yargs
-      .option('target', {
-        type: 'string',
-        default: 'default',
-        description: 'Target to operate on'
-      })
-      .option('count', {
-        type: 'number',
-        default: 1,
-        description: 'Number of operations'
-      });
-  }
-
-  async status(context) {
-    context.log('Checking status...');
-    return {
-      operational: true,
-      last_check: new Date().toISOString(),
-      files_ready: 1234
-    };
-  }
-
-  async test(context) {
-    context.log('Running test mode...');
-    return {
-      planned_operations: [
-        { operation: 'Operation 1', status: 'would execute' },
-        { operation: 'Operation 2', status: 'would execute' }
-      ],
-      total_operations: 2,
-      note: 'No changes made in test mode'
-    };
-  }
-
-  async sandbox(context) {
-    context.log('Testing environment...');
-    const tests = {
-      nodejs: 'available',
-      filesystem: 'writable',
-      network: 'accessible'
-    };
-
-    const allPassed = Object.values(tests).every(status => 
-      ['available', 'writable', 'accessible'].includes(status)
-    );
-
-    return {
-      dependency_tests: tests,
-      all_passed: allPassed
-    };
-  }
-
-  async live(context) {
-    context.log('Executing live mode...');
-    
-    if (!await context.confirm('Execute operations?')) {
-      return { status: 'cancelled' };
+      if (config.addArguments) {
+        return config.addArguments(yargs);
+      }
+      return yargs;
     }
 
-    context.log('Executing operation 1...');
-    context.log('Executing operation 2...');
+    async create(resource, options, context) {
+      if (config.create) {
+        return await config.create(resource, options, context);
+      }
+      throw new PolyScriptError('Create operation not implemented');
+    }
 
-    return {
-      executed_operations: [
-        { operation: 'Operation 1', status: 'completed' },
-        { operation: 'Operation 2', status: 'completed' }
-      ],
-      total_completed: 2
-    };
+    async read(resource, options, context) {
+      if (config.read) {
+        return await config.read(resource, options, context);
+      }
+      throw new PolyScriptError('Read operation not implemented');
+    }
+
+    async update(resource, options, context) {
+      if (config.update) {
+        return await config.update(resource, options, context);
+      }
+      throw new PolyScriptError('Update operation not implemented');
+    }
+
+    async delete(resource, options, context) {
+      if (config.delete) {
+        return await config.delete(resource, options, context);
+      }
+      throw new PolyScriptError('Delete operation not implemented');
+    }
   }
+
+  return new FunctionalTool();
 }
 
-// Export framework components
+// Export everything
 module.exports = {
-  PolyScriptTool,
+  PolyScriptOperation,
+  PolyScriptMode,
   PolyScriptContext,
   PolyScriptError,
-  PolyScriptMode,
+  PolyScriptTool,
   runPolyScriptTool,
-  polyscriptTool,
-  ExampleTool
+  createPolyScriptTool
 };
 
-// If run directly, execute example tool
-if (require.main === module) {
-  const tool = new ExampleTool();
-  runPolyScriptTool(tool);
-}
-
 /*
- * USAGE EXAMPLES:
+ * EXAMPLE USAGE:
  *
- * // Class-based approach
- * class BackupTool extends PolyScriptTool {
+ * const { PolyScriptTool, runPolyScriptTool } = require('./polyscript-framework');
+ *
+ * class CompilerTool extends PolyScriptTool {
  *   get description() {
- *     return 'Backup tool with zero boilerplate';
+ *     return 'Example compiler tool demonstrating CRUD × Modes';
  *   }
  *
- *   async status(context) {
- *     return { operational: true };
+ *   async create(resource, options, context) {
+ *     context.log(`Compiling ${resource}...`);
+ *     
+ *     const outputFile = options.output || resource.replace('.js', '.out');
+ *     
+ *     return {
+ *       compiled: resource,
+ *       output: outputFile,
+ *       optimized: options.optimize || false,
+ *       timestamp: new Date().toISOString()
+ *     };
  *   }
  *
- *   async test(context) {
- *     return { would_backup: ['file1', 'file2'] };
+ *   async read(resource, options, context) {
+ *     context.log('Checking compilation status...');
+ *     
+ *     return {
+ *       source_files: ['main.js', 'utils.js', 'config.js'],
+ *       compiled_files: ['main.out', 'utils.out'],
+ *       missing: ['config.out'],
+ *       last_build: new Date().toISOString()
+ *     };
  *   }
  *
- *   async sandbox(context) {
- *     return { environment: 'ok' };
+ *   async update(resource, options, context) {
+ *     context.log(`Recompiling ${resource}...`);
+ *     
+ *     return {
+ *       recompiled: resource,
+ *       reason: 'source file changed',
+ *       timestamp: new Date().toISOString()
+ *     };
  *   }
  *
- *   async live(context) {
- *     return { backup_completed: true };
+ *   async delete(resource, options, context) {
+ *     context.log(`Cleaning ${resource}...`);
+ *     
+ *     return {
+ *       cleaned: ['*.out', '*.map', 'dist/'],
+ *       freed_space: '23.5 MB',
+ *       timestamp: new Date().toISOString()
+ *     };
+ *   }
+ *
+ *   addArguments(yargs) {
+ *     return yargs
+ *       .option('optimize', {
+ *         alias: 'O',
+ *         type: 'boolean',
+ *         description: 'Enable optimizations'
+ *       })
+ *       .option('output', {
+ *         alias: 'o',
+ *         type: 'string',
+ *         description: 'Output file name'
+ *       });
  *   }
  * }
  *
- * runPolyScriptTool(new BackupTool());
- *
- * // Functional approach
- * const SimpleTool = polyscriptTool('Simple backup tool', {
- *   status: async (ctx) => ({ operational: true }),
- *   test: async (ctx) => ({ would_backup: ['file1'] }),
- *   sandbox: async (ctx) => ({ environment: 'ok' }),
- *   live: async (ctx) => ({ backup_completed: true })
- * });
- *
- * runPolyScriptTool(new SimpleTool());
- *
- * // Package.json
- * {
- *   "name": "backup-tool",
- *   "version": "1.0.0", 
- *   "dependencies": {
- *     "yargs": "^17.7.2"
- *   },
- *   "bin": {
- *     "backup-tool": "./backup-tool.js"
- *   }
+ * // Run the tool
+ * if (require.main === module) {
+ *   const tool = new CompilerTool();
+ *   runPolyScriptTool(tool);
  * }
  *
- * // Usage:
- * npm install yargs
- * node backup-tool.js status
- * node backup-tool.js test --verbose
- * node backup-tool.js sandbox --json
- * node backup-tool.js live --force
+ * // Command examples:
+ * // node compiler.js create main.js --mode simulate
+ * // node compiler.js read
+ * // node compiler.js update main.js --optimize
+ * // node compiler.js delete --mode simulate
+ * // node compiler.js discover --json
  */

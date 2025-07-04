@@ -2,9 +2,7 @@
 
 =begin
 PolyScript Framework for Ruby using thor
-
-A true zero-boilerplate framework for creating PolyScript-compliant CLI tools.
-Developers write ONLY business logic - the framework handles everything else.
+CRUD × Modes Architecture: Zero-boilerplate CLI development
 
 Author: Mathew Burkitt, Dimension Technologies <mathew.burkitt@ditech.ai>
 =end
@@ -14,31 +12,66 @@ require 'json'
 require 'io/console'
 
 module PolyScript
+  # PolyScript CRUD operations
+  module Operation
+    CREATE = 'create'.freeze
+    READ = 'read'.freeze
+    UPDATE = 'update'.freeze
+    DELETE = 'delete'.freeze
+  end
+
   # PolyScript execution modes
   module Mode
-    STATUS = 'status'.freeze
-    TEST = 'test'.freeze
+    SIMULATE = 'simulate'.freeze
     SANDBOX = 'sandbox'.freeze
     LIVE = 'live'.freeze
   end
 
   # PolyScript context for tool execution
   class Context
-    attr_reader :mode, :verbose, :force, :json_output, :tool_name, :output_data
+    attr_reader :operation, :mode, :resource, :options, :verbose, :force, :json_output, :tool_name, :output_data
+    attr_accessor :rebadged_as
 
-    def initialize(mode, verbose: false, force: false, json_output: false, tool_name: 'PolyScriptTool')
+    def initialize(operation, mode, resource = nil, options = {}, verbose: false, force: false, json_output: false, tool_name: 'PolyScriptTool')
+      @operation = operation
       @mode = mode
+      @resource = resource
+      @options = options
       @verbose = verbose
       @force = force
       @json_output = json_output
       @tool_name = tool_name
       @output_data = {
         'polyscript' => '1.0',
+        'operation' => operation,
         'mode' => mode,
         'tool' => tool_name,
         'status' => 'success',
         'data' => {}
       }
+      @output_data['resource'] = resource if resource
+    end
+
+    # Check if current mode allows mutations
+    def can_mutate?
+      @mode == Mode::LIVE
+    end
+
+    # Check if current mode should validate
+    def should_validate?
+      @mode == Mode::SANDBOX
+    end
+
+    # Check if confirmation required for destructive operations
+    def require_confirm?
+      @mode == Mode::LIVE && 
+      (@operation == Operation::UPDATE || @operation == Operation::DELETE) &&
+      !@force
+    end
+
+    # Check if in a safe mode (simulate/sandbox)
+    def safe_mode?
+      @mode == Mode::SIMULATE || @mode == Mode::SANDBOX
     end
 
     # Log a message at the specified level
@@ -51,7 +84,7 @@ module PolyScript
               when 'warning'
                 'warnings'
               when 'info', 'debug'
-                'messages' if @verbose
+                'messages' if @verbose || level == 'info'
               end
 
         if key
@@ -110,10 +143,10 @@ module PolyScript
 
       print "#{message} [y/N]: "
       response = $stdin.gets.chomp.downcase
-      response == 'y'
+      response == 'y' || response == 'yes'
     end
 
-    # Finalize output (called at the end to output JSON if needed)
+    # Finalize output for JSON mode
     def finalize_output
       if @json_output
         puts JSON.pretty_generate(@output_data)
@@ -122,79 +155,107 @@ module PolyScript
   end
 
   # PolyScript error class
-  class Error < StandardError
-    def initialize(message)
-      super(message)
-    end
-  end
+  class Error < StandardError; end
 
   # Base class for PolyScript tools
   class Tool < Thor
-    # Class method to define the tool description
-    def self.polyscript_description(desc)
-      @polyscript_description = desc
-    end
-
-    def self.get_polyscript_description
-      @polyscript_description || 'PolyScript-compliant CLI tool'
-    end
-
-    # Add global PolyScript options to all commands
-    class_option :verbose, aliases: '-v', type: :boolean, desc: 'Enable verbose output'
-    class_option :force, aliases: '-f', type: :boolean, desc: 'Skip confirmation prompts'
+    class_option :verbose, type: :boolean, aliases: '-v', desc: 'Enable verbose output'
+    class_option :force, type: :boolean, aliases: '-f', desc: 'Skip confirmation prompts'
     class_option :json, type: :boolean, desc: 'Output in JSON format'
 
-    # Define the four PolyScript mode commands
-    desc 'status', 'Show current state'
-    def status
-      execute_mode(Mode::STATUS)
+    class << self
+      attr_accessor :tool_description
+
+      def polyscript_description(desc)
+        @tool_description = desc
+      end
     end
 
-    desc 'test', 'Simulate operations (dry-run)'
-    def test
-      execute_mode(Mode::TEST)
+    desc 'create RESOURCE', 'Create new resources'
+    option :mode, type: :string, aliases: '-m', default: Mode::LIVE, 
+           enum: [Mode::SIMULATE, Mode::SANDBOX, Mode::LIVE], 
+           desc: 'Execution mode'
+    def create(resource)
+      execute_with_mode(Operation::CREATE, options[:mode], resource, options)
     end
 
-    desc 'sandbox', 'Test dependencies and environment'
-    def sandbox
-      execute_mode(Mode::SANDBOX)
+    desc 'read [RESOURCE]', 'Read/query resources'
+    option :mode, type: :string, aliases: '-m', default: Mode::LIVE,
+           enum: [Mode::SIMULATE, Mode::SANDBOX, Mode::LIVE],
+           desc: 'Execution mode'
+    def read(resource = nil)
+      execute_with_mode(Operation::READ, options[:mode], resource, options)
     end
 
-    desc 'live', 'Execute actual operations'
-    def live
-      execute_mode(Mode::LIVE)
+    desc 'update RESOURCE', 'Update existing resources'
+    option :mode, type: :string, aliases: '-m', default: Mode::LIVE,
+           enum: [Mode::SIMULATE, Mode::SANDBOX, Mode::LIVE],
+           desc: 'Execution mode'
+    def update(resource)
+      execute_with_mode(Operation::UPDATE, options[:mode], resource, options)
     end
 
-    # Default command (status mode)
-    default_task :status
+    desc 'delete RESOURCE', 'Delete resources'
+    option :mode, type: :string, aliases: '-m', default: Mode::LIVE,
+           enum: [Mode::SIMULATE, Mode::SANDBOX, Mode::LIVE],
+           desc: 'Execution mode'
+    def delete(resource)
+      execute_with_mode(Operation::DELETE, options[:mode], resource, options)
+    end
+
+    desc 'list', 'List resources (alias for read)'
+    option :mode, type: :string, aliases: '-m', default: Mode::LIVE,
+           enum: [Mode::SIMULATE, Mode::SANDBOX, Mode::LIVE],
+           desc: 'Execution mode'
+    def list
+      execute_with_mode(Operation::READ, options[:mode], nil, options)
+    end
+
+    desc 'discover', 'Show tool capabilities'
+    def discover
+      discovery = {
+        'polyscript' => '1.0',
+        'tool' => self.class.name.split('::').last,
+        'operations' => ['create', 'read', 'update', 'delete'],
+        'modes' => ['simulate', 'sandbox', 'live']
+      }
+
+      if options[:json]
+        puts JSON.pretty_generate(discovery)
+      else
+        puts "Tool: #{discovery['tool']}"
+        puts 'Operations: create, read, update, delete'
+        puts 'Modes: simulate, sandbox, live'
+      end
+    end
 
     private
 
-    def execute_mode(mode)
+    def execute_with_mode(operation, mode, resource, cmd_options)
       tool_name = self.class.name.split('::').last
 
       # Create context
       context = Context.new(
+        operation,
         mode,
-        verbose: options[:verbose] || false,
-        force: options[:force] || false,
-        json_output: options[:json] || false,
+        resource,
+        cmd_options.reject { |k, _| [:verbose, :force, :json, :mode].include?(k) },
+        verbose: cmd_options[:verbose] || false,
+        force: cmd_options[:force] || false,
+        json_output: cmd_options[:json] || false,
         tool_name: tool_name
       )
 
-      context.log("Executing #{mode} mode", 'debug')
+      context.log("Executing #{operation} in #{mode} mode", 'debug')
 
       begin
-        # Execute appropriate method
         result = case mode
-                 when Mode::STATUS
-                   polyscript_status(context)
-                 when Mode::TEST
-                   polyscript_test(context)
+                 when Mode::SIMULATE
+                   execute_simulate(operation, resource, context)
                  when Mode::SANDBOX
-                   polyscript_sandbox(context)
+                   execute_sandbox(operation, resource, context)
                  when Mode::LIVE
-                   polyscript_live(context)
+                   execute_live(operation, resource, context)
                  else
                    raise PolyScript::Error, "Unknown mode: #{mode}"
                  end
@@ -220,21 +281,86 @@ module PolyScript
       end
     end
 
+    def execute_simulate(operation, resource, context)
+      context.log("Simulating #{operation} operation", 'debug')
+
+      # Read operations can execute in simulate mode
+      if operation == Operation::READ
+        polyscript_read(resource, context.options, context)
+      else
+        # For mutating operations, describe what would happen
+        action_verb = case operation
+                      when Operation::CREATE then 'Would create'
+                      when Operation::UPDATE then 'Would update'
+                      when Operation::DELETE then 'Would delete'
+                      end
+
+        {
+          'simulation' => true,
+          'action' => "#{action_verb} #{resource || 'resource'}",
+          'options' => context.options
+        }
+      end
+    end
+
+    def execute_sandbox(operation, resource, context)
+      context.log("Testing prerequisites for #{operation}", 'debug')
+
+      validations = {
+        'permissions' => 'verified',
+        'dependencies' => 'available',
+        'connectivity' => 'established'
+      }
+
+      # Tools can add custom validations
+      all_passed = validations.values.all? { |v| %w[verified available established passed].include?(v) }
+
+      {
+        'sandbox' => true,
+        'validations' => validations,
+        'ready' => all_passed
+      }
+    end
+
+    def execute_live(operation, resource, context)
+      context.log("Executing #{operation} operation", 'debug')
+
+      # Confirmation for destructive operations
+      if context.require_confirm?
+        unless context.confirm("Are you sure you want to #{operation} #{resource}?")
+          context.output_data['status'] = 'cancelled'
+          raise PolyScript::Error, 'User declined confirmation'
+        end
+      end
+
+      # Execute the actual CRUD method
+      case operation
+      when Operation::CREATE
+        polyscript_create(resource, context.options, context)
+      when Operation::READ
+        polyscript_read(resource, context.options, context)
+      when Operation::UPDATE
+        polyscript_update(resource, context.options, context)
+      when Operation::DELETE
+        polyscript_delete(resource, context.options, context)
+      end
+    end
+
     # Methods that subclasses must implement
-    def polyscript_status(context)
-      raise NotImplementedError, 'Subclasses must implement polyscript_status method'
+    def polyscript_create(resource, options, context)
+      raise NotImplementedError, 'Subclasses must implement polyscript_create method'
     end
 
-    def polyscript_test(context)
-      raise NotImplementedError, 'Subclasses must implement polyscript_test method'
+    def polyscript_read(resource, options, context)
+      raise NotImplementedError, 'Subclasses must implement polyscript_read method'
     end
 
-    def polyscript_sandbox(context)
-      raise NotImplementedError, 'Subclasses must implement polyscript_sandbox method'
+    def polyscript_update(resource, options, context)
+      raise NotImplementedError, 'Subclasses must implement polyscript_update method'
     end
 
-    def polyscript_live(context)
-      raise NotImplementedError, 'Subclasses must implement polyscript_live method'
+    def polyscript_delete(resource, options, context)
+      raise NotImplementedError, 'Subclasses must implement polyscript_delete method'
     end
   end
 
@@ -246,143 +372,73 @@ module PolyScript
       class_eval(&block) if block_given?
     end
   end
-
-  # Example tool implementation
-  class ExampleTool < Tool
-    polyscript_description 'Example PolyScript tool demonstrating the Ruby framework'
-
-    # Add custom options
-    class_option :target, type: :string, default: 'default', desc: 'Target to operate on'
-    class_option :count, type: :numeric, default: 1, desc: 'Number of operations'
-
-    private
-
-    def polyscript_status(context)
-      context.log('Checking status...')
-      {
-        'operational' => true,
-        'last_check' => Time.now.iso8601,
-        'files_ready' => 1234
-      }
-    end
-
-    def polyscript_test(context)
-      context.log('Running test mode...')
-      {
-        'planned_operations' => [
-          { 'operation' => 'Operation 1', 'status' => 'would execute' },
-          { 'operation' => 'Operation 2', 'status' => 'would execute' }
-        ],
-        'total_operations' => 2,
-        'note' => 'No changes made in test mode'
-      }
-    end
-
-    def polyscript_sandbox(context)
-      context.log('Testing environment...')
-      tests = {
-        'ruby' => 'available',
-        'filesystem' => 'writable',
-        'network' => 'accessible'
-      }
-
-      all_passed = tests.values.all? { |status| %w[available writable accessible].include?(status) }
-
-      {
-        'dependency_tests' => tests,
-        'all_passed' => all_passed
-      }
-    end
-
-    def polyscript_live(context)
-      context.log('Executing live mode...')
-
-      unless context.confirm('Execute operations?')
-        return { 'status' => 'cancelled' }
-      end
-
-      context.log('Executing operation 1...')
-      context.log('Executing operation 2...')
-
-      {
-        'executed_operations' => [
-          { 'operation' => 'Operation 1', 'status' => 'completed' },
-          { 'operation' => 'Operation 2', 'status' => 'completed' }
-        ],
-        'total_completed' => 2
-      }
-    end
-  end
-end
-
-# If run directly, execute example tool
-if __FILE__ == $0
-  PolyScript::ExampleTool.start(ARGV)
 end
 
 =begin
-USAGE EXAMPLES:
+EXAMPLE USAGE:
 
-# Class-based approach
-class BackupTool < PolyScript::Tool
-  polyscript_description 'Backup tool with zero boilerplate'
-  
-  class_option :source, type: :string, default: '/source', desc: 'Source directory'
-  class_option :dest, type: :string, default: '/dest', desc: 'Destination directory'
+require_relative 'polyscript_framework'
+
+class CompilerTool < PolyScript::Tool
+  polyscript_description 'Example compiler tool demonstrating CRUD × Modes'
+
+  option :optimize, type: :boolean, aliases: '-O', desc: 'Enable optimizations'
+  option :output, type: :string, aliases: '-o', desc: 'Output file name'
 
   private
 
-  def polyscript_status(context)
-    { 'operational' => true }
+  def polyscript_create(resource, options, context)
+    context.log("Compiling #{resource}...")
+    
+    output_file = options[:output] || resource.gsub(/\.rb$/, '.out')
+    
+    {
+      'compiled' => resource,
+      'output' => output_file,
+      'optimized' => options[:optimize] || false,
+      'timestamp' => Time.now.iso8601
+    }
   end
 
-  def polyscript_test(context)
-    { 'would_backup' => ['file1', 'file2'] }
+  def polyscript_read(resource, options, context)
+    context.log('Checking compilation status...')
+    
+    {
+      'source_files' => ['main.rb', 'utils.rb', 'config.rb'],
+      'compiled_files' => ['main.out', 'utils.out'],
+      'missing' => ['config.out'],
+      'last_build' => Time.now.iso8601
+    }
   end
 
-  def polyscript_sandbox(context)
-    { 'environment' => 'ok' }
+  def polyscript_update(resource, options, context)
+    context.log("Recompiling #{resource}...")
+    
+    {
+      'recompiled' => resource,
+      'reason' => 'source file changed',
+      'timestamp' => Time.now.iso8601
+    }
   end
 
-  def polyscript_live(context)
-    { 'backup_completed' => true }
+  def polyscript_delete(resource, options, context)
+    context.log("Cleaning #{resource}...")
+    
+    {
+      'cleaned' => ['*.out', '*.rbc', 'tmp/'],
+      'freed_space' => '18.7 MB',
+      'timestamp' => Time.now.iso8601
+    }
   end
 end
 
-BackupTool.start(ARGV)
+# Run the tool
+CompilerTool.start(ARGV) if __FILE__ == $0
 
-# Functional approach using utility method
-SimpleBackupTool = PolyScript.create_tool('Simple backup tool') do
-  private
-
-  def polyscript_status(context)
-    context.log('Simple status check...')
-    { 'ready' => true }
-  end
-
-  def polyscript_test(context)
-    { 'would_backup' => ['file1'] }
-  end
-
-  def polyscript_sandbox(context)
-    { 'environment' => 'ok' }
-  end
-
-  def polyscript_live(context)
-    { 'backup_completed' => true }
-  end
-end
-
-SimpleBackupTool.start(ARGV)
-
-# Gemfile
-source 'https://rubygems.org'
-gem 'thor', '~> 1.2'
-
-# Usage:
-bundle install
-ruby backup_tool.rb status
-ruby backup_tool.rb test --verbose
-ruby backup_tool.rb sandbox --json
-ruby backup_tool.rb live --force
+# Command examples:
+# ruby compiler.rb create main.rb --mode simulate
+# ruby compiler.rb read
+# ruby compiler.rb update main.rb --optimize
+# ruby compiler.rb delete --mode simulate
+# ruby compiler.rb discover --json
 =end

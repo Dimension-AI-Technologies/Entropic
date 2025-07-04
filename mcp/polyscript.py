@@ -239,8 +239,18 @@ class PolyScriptBase(ABC):
             message: Message to log
             level: Log level (debug, info, warning, error)
         """
-        log_func = getattr(self.logger, level, self.logger.info)
-        log_func(message)
+        if self.args and self.args.json:
+            # In JSON mode, route log messages to the data structure
+            if level in ["error", "critical"]:
+                self._output_data.setdefault("errors", []).append(f"{level.upper()}: {message}")
+            elif level == "warning":
+                self._output_data.setdefault("warnings", []).append(message)
+            elif level in ["info", "debug"] and self.args.verbose:
+                self._output_data.setdefault("messages", []).append(f"{level.upper()}: {message}")
+        else:
+            # Use standard logger for non-JSON mode
+            log_func = getattr(self.logger, level, self.logger.info)
+            log_func(message)
     
     # Abstract methods that subclasses must implement
     

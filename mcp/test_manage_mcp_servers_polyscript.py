@@ -268,6 +268,114 @@ class TestRunner:
             exit_code, _, _ = self.run_command([flag, "--help"])
             self.assert_equal(exit_code, 0, f"Flag '{flag}' is supported")
     
+    def test_bulk_operations(self):
+        """Test bulk operations functionality"""
+        print("\n=== Testing Bulk Operations ===")
+        
+        # Test --add-all in test mode
+        exit_code, stdout, stderr = self.run_command(["--mode", "test", "--add-all"])
+        self.assert_equal(exit_code, 0, "Test add-all returns 0")
+        self.assert_contains(stdout, "sequential-thinking", "Add-all includes sequential-thinking")
+        self.assert_contains(stdout, "linear", "Add-all includes linear")
+        self.assert_contains(stdout, "context7", "Add-all includes context7")
+        
+        # Test --remove-all in test mode
+        exit_code, stdout, stderr = self.run_command(["--mode", "test", "--remove-all"])
+        self.assert_equal(exit_code, 0, "Test remove-all returns 0")
+        
+        # Test JSON output for bulk operations
+        exit_code, stdout, stderr = self.run_command(["--mode", "test", "--add-all", "--json"])
+        data = self.assert_json(stdout, "Add-all outputs valid JSON")
+        if data:
+            self.assert_equal(len(data.get("data", {}).get("results", [])) >= 3, True, "Add-all includes multiple servers")
+    
+    def test_backup_restore(self):
+        """Test backup and restore functionality"""
+        print("\n=== Testing Backup/Restore ===")
+        
+        # Test list-backups when no backups exist
+        exit_code, stdout, stderr = self.run_command(["--list-backups"])
+        self.assert_equal(exit_code, 0, "List backups returns 0")
+        
+        # Test list-backups JSON output
+        exit_code, stdout, stderr = self.run_command(["--list-backups", "--json"])
+        data = self.assert_json(stdout, "List backups outputs valid JSON")
+        
+        # Note: We can't easily test actual backup/restore in this test suite
+        # without potentially disrupting the user's actual configuration
+        print("  Note: Backup/restore functionality tested separately")
+    
+    def test_verbose_output(self):
+        """Test verbose flag functionality"""
+        print("\n=== Testing Verbose Output ===")
+        
+        # Compare normal vs verbose status output
+        _, stdout_normal, _ = self.run_command(["--mode", "status"])
+        _, stdout_verbose, _ = self.run_command(["--mode", "status", "--verbose"])
+        
+        # Verbose should have more content (already tested above)
+        self.assert_equal(
+            len(stdout_verbose) >= len(stdout_normal),
+            True,
+            "Verbose output is at least as long as normal"
+        )
+        
+        # Test verbose with list-available
+        exit_code, stdout, stderr = self.run_command(["--list-available", "--verbose"])
+        self.assert_equal(exit_code, 0, "List available with verbose returns 0")
+        self.assert_contains(stdout, "Command:", "Verbose shows command details")
+    
+    def test_scope_variations(self):
+        """Test different scope parameters"""
+        print("\n=== Testing Scope Variations ===")
+        
+        scopes = ["user", "project", "machine"]
+        for scope in scopes:
+            exit_code, stdout, stderr = self.run_command(["--mode", "test", "--scope", scope, "--add", "linear"])
+            if scope == "machine" and exit_code == 1:
+                # Machine scope may fail due to permissions
+                self.assert_contains(stdout + stderr, "permission", f"Machine scope shows permission info")
+            else:
+                self.assert_equal(exit_code, 0, f"Test mode with {scope} scope works")
+                self.assert_contains(stdout, f"{scope} scope", f"Output mentions {scope} scope")
+    
+    def test_error_conditions(self):
+        """Test various error conditions"""
+        print("\n=== Testing Error Conditions ===")
+        
+        # Test invalid mode
+        exit_code, stdout, stderr = self.run_command(["--mode", "invalid"])
+        self.assert_equal(exit_code, 2, "Invalid mode returns 2")
+        
+        # Test invalid scope
+        exit_code, stdout, stderr = self.run_command(["--mode", "test", "--scope", "invalid"])
+        self.assert_equal(exit_code, 2, "Invalid scope returns 2")
+        
+        # Test conflicting options
+        exit_code, stdout, stderr = self.run_command(["--add", "server1", "--remove", "server2"])
+        self.assert_equal(exit_code, 2, "Conflicting options return 2")
+        
+        # Test non-existent server
+        exit_code, stdout, stderr = self.run_command(["--mode", "test", "--add", "non-existent-server"])
+        self.assert_equal(exit_code, 1, "Non-existent server returns 1")
+    
+    def test_json_structure(self):
+        """Test JSON output structure compliance"""
+        print("\n=== Testing JSON Structure ===")
+        
+        modes = ["status", "test", "sandbox"]
+        for mode in modes:
+            exit_code, stdout, stderr = self.run_command(["--mode", mode, "--json"])
+            data = self.assert_json(stdout, f"{mode} mode outputs valid JSON")
+            
+            if data:
+                # Check PolyScript v1.0 structure
+                self.assert_equal(data.get("polyscript"), "1.0", f"{mode} JSON has polyscript version")
+                self.assert_equal(data.get("mode"), mode, f"{mode} JSON has correct mode")
+                self.assert_equal(data.get("tool"), "MCPServerManager", f"{mode} JSON has correct tool")
+                self.assert_equal("status" in data, True, f"{mode} JSON has status field")
+                self.assert_equal("data" in data, True, f"{mode} JSON has data field")
+    
     def run_all_tests(self):
         """Run all tests"""
         print("Starting MCP Server Manager Test Suite")
@@ -289,6 +397,12 @@ class TestRunner:
         self.test_sandbox_checks()
         self.test_verbose_flag()
         self.test_polyscript_compliance()
+        self.test_bulk_operations()
+        self.test_backup_restore()
+        self.test_verbose_output()
+        self.test_scope_variations()
+        self.test_error_conditions()
+        self.test_json_structure()
         
         # Print summary
         print("\n" + "=" * 50)

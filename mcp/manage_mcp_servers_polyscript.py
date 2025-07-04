@@ -25,6 +25,85 @@ import atexit
 # Import PolyScript base framework
 from polyscript import PolyScriptBase
 
+# Import Configuration Manager
+from claude_config_manager import ClaudeConfigManager
+
+
+# Claude Code version compatibility
+CLAUDE_CODE_MIN_VERSION = "0.8.0"  # Minimum version supporting MCP
+CLAUDE_CODE_RECOMMENDED_VERSION = "1.0.0"  # Recommended version for full MCP support
+
+
+def parse_version(version_string: str) -> tuple:
+    """Parse a version string into a tuple of integers for comparison"""
+    try:
+        # Handle common version formats like "claude-cli 1.2.3" or "1.2.3"
+        version_part = version_string.split()[-1]  # Get last part (version number)
+        
+        # Remove 'v' prefix if present
+        if version_part.startswith('v'):
+            version_part = version_part[1:]
+        
+        # Split on dots and convert to integers
+        parts = version_part.split('.')
+        return tuple(int(part) for part in parts[:3])  # Take first 3 parts (major.minor.patch)
+    except (ValueError, IndexError):
+        # If parsing fails, return 0.0.0 to indicate unknown/invalid version
+        return (0, 0, 0)
+
+
+def compare_versions(version1: tuple, version2: tuple) -> int:
+    """Compare two version tuples. Returns: -1 if v1 < v2, 0 if equal, 1 if v1 > v2"""
+    # Pad versions to same length
+    max_len = max(len(version1), len(version2))
+    v1 = version1 + (0,) * (max_len - len(version1))
+    v2 = version2 + (0,) * (max_len - len(version2))
+    
+    if v1 < v2:
+        return -1
+    elif v1 > v2:
+        return 1
+    else:
+        return 0
+
+
+def check_claude_version_compatibility(version_string: str) -> dict:
+    """Check if Claude Code version is compatible with MCP functionality"""
+    parsed_version = parse_version(version_string)
+    min_version = parse_version(CLAUDE_CODE_MIN_VERSION)
+    recommended_version = parse_version(CLAUDE_CODE_RECOMMENDED_VERSION)
+    
+    result = {
+        "version": version_string,
+        "parsed_version": parsed_version,
+        "compatible": True,
+        "recommended": True,
+        "status": "excellent",
+        "message": "Claude Code version is fully compatible with MCP",
+        "action": None
+    }
+    
+    # Check if version is too old
+    if compare_versions(parsed_version, min_version) < 0:
+        result.update({
+            "compatible": False,
+            "recommended": False,
+            "status": "incompatible",
+            "message": f"Claude Code version {version_string} is too old for MCP support (minimum: {CLAUDE_CODE_MIN_VERSION})",
+            "action": f"Please upgrade Claude Code to version {CLAUDE_CODE_RECOMMENDED_VERSION} or newer"
+        })
+    # Check if version meets minimum but not recommended
+    elif compare_versions(parsed_version, recommended_version) < 0:
+        result.update({
+            "compatible": True,
+            "recommended": False,
+            "status": "warning",
+            "message": f"Claude Code version {version_string} has basic MCP support (recommended: {CLAUDE_CODE_RECOMMENDED_VERSION}+)",
+            "action": f"Consider upgrading to Claude Code {CLAUDE_CODE_RECOMMENDED_VERSION} for full MCP features"
+        })
+    
+    return result
+
 
 class Scope(Enum):
     """Configuration scopes for MCP servers"""
@@ -137,6 +216,10 @@ class MCPServerManager(PolyScriptBase):
         self.servers_json_path = Path(__file__).parent / "mcp_servers.json"
         self.available_servers: Dict[str, MCPServer] = {}
         self.backup_dir = self.home / ".mcp-backups"
+        
+        # Initialize configuration manager
+        self.config_manager = ClaudeConfigManager()
+        
         self._load_server_definitions()
     
     def get_description(self) -> str:
@@ -397,31 +480,9 @@ hierarchy management and conflict resolution."""
         return servers
     
     def _check_claude_json_issues(self) -> List[str]:
-        """Check for problematic ~/.claude.json configurations"""
-        issues = []
-        claude_json = self.home / ".claude.json"
-        
-        if claude_json.exists():
-            try:
-                with open(claude_json, 'r') as f:
-                    config = json.load(f)
-                
-                # Check for project overrides
-                projects = config.get("projects", {})
-                cwd = str(Path.cwd())
-                
-                if cwd in projects:
-                    project_config = projects[cwd]
-                    if "mcpServers" in project_config:
-                        if not project_config["mcpServers"]:
-                            issues.append("Empty mcpServers:{} override in ~/.claude.json hiding all servers")
-                        else:
-                            issues.append("Project-specific mcpServers in ~/.claude.json (should use .mcp.json)")
-                
-            except Exception as e:
-                issues.append(f"Error reading ~/.claude.json: {e}")
-        
-        return issues
+        """Check for problematic configurations using Config Manager"""
+        # Use the Config Manager's comprehensive issue detection
+        return self.config_manager.detect_issues()
     
     def _check_write_permission(self, path: Path) -> bool:
         """Check if we have write permission to a path"""
@@ -744,6 +805,83 @@ hierarchy management and conflict resolution."""
         # Return appropriate exit code
         return 1 if test_data["errors"] else 0
     
+    def _validate_server_config(self, server_name: str, server) -> Dict:
+        """
+        Validate a server configuration thoroughly.
+        
+        Args:
+            server_name: Name of the server
+            server: MCPServer object
+            
+        Returns:
+            Dictionary with validation results
+        """
+        validation = {
+            "status": "valid",
+            "command": server.command,
+            "checks": []
+        }
+        
+        issues = []
+        warnings = []
+        
+        # Check 1: Command executable accessibility
+        try:
+            import shutil
+            if not shutil.which(server.command):
+                issues.append(f"Command '{server.command}' not found in PATH")
+            else:
+                validation["checks"].append("command_accessible")
+        except Exception as e:
+            warnings.append(f"Could not check command accessibility: {e}")
+        
+        # Check 2: Arguments validation
+        if server.args:
+            if not isinstance(server.args, list):
+                issues.append("Arguments must be a list")
+            elif not all(isinstance(arg, str) for arg in server.args):
+                issues.append("All arguments must be strings")
+            else:
+                validation["checks"].append("args_valid")
+                validation["args"] = server.args
+        
+        # Check 3: Environment variables validation
+        if server.env:
+            if not isinstance(server.env, dict):
+                issues.append("Environment must be a dictionary")
+            elif not all(isinstance(k, str) and isinstance(v, str) for k, v in server.env.items()):
+                issues.append("Environment keys and values must be strings")
+            else:
+                validation["checks"].append("env_valid")
+                validation["env"] = list(server.env.keys())
+        
+        # Check 4: Special validation for known command types
+        if server.command == "npx":
+            if not server.args or len(server.args) < 2:
+                issues.append("npx command requires package name in arguments")
+            elif server.args[0] != "-y":
+                warnings.append("Consider using '-y' flag with npx for non-interactive installation")
+            else:
+                validation["checks"].append("npx_format_valid")
+        
+        # Check 5: Description validation
+        if server.description:
+            validation["description"] = server.description
+            validation["checks"].append("has_description")
+        else:
+            warnings.append("No description provided")
+        
+        # Determine overall status
+        if issues:
+            validation["status"] = "invalid"
+            validation["error"] = "; ".join(issues)
+        elif warnings:
+            validation["status"] = "warning"
+            validation["message"] = "; ".join(warnings)
+            validation["warnings"] = warnings
+        
+        return validation
+
     def execute_sandbox(self) -> int:
         """Sandbox mode - test server connectivity and dependencies"""
         # Prepare data structure for JSON output
@@ -836,7 +974,7 @@ hierarchy management and conflict resolution."""
                 self.output(f"  ✗ npx: {e}", error=True)
             return 1
         
-        # Test Claude CLI (optional)
+        # Test Claude CLI (optional) with version compatibility checking
         try:
             result = subprocess.run(
                 ["claude", "--version"],
@@ -846,24 +984,47 @@ hierarchy management and conflict resolution."""
             )
             if result.returncode == 0:
                 version = result.stdout.strip()
+                
+                # Check version compatibility
+                compatibility = check_claude_version_compatibility(version)
+                
                 sandbox_data["prerequisites"]["claude_cli"] = {
                     "status": "found",
                     "version": version,
-                    "required": False
+                    "required": False,
+                    "compatibility": compatibility
                 }
+                
                 if not self.args.json:
-                    self.output(f"  ✓ Claude CLI: {version}")
+                    # Display based on compatibility status
+                    if compatibility["status"] == "excellent":
+                        self.output(f"  ✓ Claude CLI: {version} (excellent)")
+                    elif compatibility["status"] == "warning":
+                        self.output(f"  ⚠ Claude CLI: {version} (basic MCP support)", error=False)
+                        self.output(f"    {compatibility['action']}", error=False)
+                    elif compatibility["status"] == "incompatible":
+                        self.output(f"  ✗ Claude CLI: {version} (incompatible)", error=True)
+                        self.output(f"    {compatibility['action']}", error=True)
+                        sandbox_data["summary"]["warnings"].append(f"Claude CLI version incompatible: {compatibility['message']}")
+                    
+                # Add warnings for non-excellent versions
+                if compatibility["status"] != "excellent":
+                    sandbox_data["summary"]["warnings"].append(compatibility["message"])
+                    
             else:
                 sandbox_data["prerequisites"]["claude_cli"] = {
                     "status": "not_found",
-                    "required": False
+                    "required": False,
+                    "compatibility": None
                 }
                 if not self.args.json:
                     self.output("  ⚠ Claude CLI: not found (optional)", error=False)
-        except Exception:
+        except Exception as e:
             sandbox_data["prerequisites"]["claude_cli"] = {
-                "status": "not_found",
-                "required": False
+                "status": "error",
+                "required": False,
+                "error": str(e),
+                "compatibility": None
             }
             if not self.args.json:
                 self.output("  ⚠ Claude CLI: not found (optional)", error=False)
@@ -938,13 +1099,21 @@ hierarchy management and conflict resolution."""
                     if not self.args.json:
                         self.output(f"  ✗ {server_name}: error checking package: {e}", error=True)
             else:
-                sandbox_data["servers"][server_name] = {
-                    "status": "custom",
-                    "command": server.command,
-                    "note": "Custom command not tested"
-                }
-                if not self.args.json:
-                    self.output(f"  ? {server_name}: custom command (not tested)")
+                # Enhanced validation for custom commands
+                validation_result = self._validate_server_config(server_name, server)
+                sandbox_data["servers"][server_name] = validation_result
+                
+                if validation_result["status"] == "valid":
+                    if not self.args.json:
+                        self.output(f"  ✓ {server_name}: configuration valid")
+                elif validation_result["status"] == "warning":
+                    if not self.args.json:
+                        self.output(f"  ⚠ {server_name}: {validation_result.get('message', 'warnings detected')}")
+                else:
+                    all_passed = False
+                    sandbox_data["summary"]["errors"].append(f"{server_name}: {validation_result.get('error', 'validation failed')}")
+                    if not self.args.json:
+                        self.output(f"  ✗ {server_name}: {validation_result.get('error', 'validation failed')}", error=True)
         
         # Check environment variables for servers that need them
         if not self.args.json:
