@@ -1,0 +1,7 @@
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles/polyscript.dir
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles/edit_cache.dir
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles/rebuild_cache.dir
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles/list_install_components.dir
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles/install.dir
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles/install/local.dir
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles/install/strip.dir

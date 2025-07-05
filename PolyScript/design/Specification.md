@@ -1,45 +1,44 @@
-# PolyScript Specification
+# PolyScript Specification v2.0
 
-## Contract-First Design Principles
+## Hardcoded Specification Principles
 
-PolyScript achieves language transcendence through behavioral contracts and design patterns:
+PolyScript achieves universal consistency through compile-time hardcoded specifications:
 
-1. **Behavioral Contracts**: Operations (Command pattern) and modes (Strategy pattern) define behavior
-2. **Declarative Configuration**: Rebadging and routing defined through configuration files
-3. **Interface Contracts**: All communication follows strict JSON contract specifications
-4. **Contract Discovery**: Tools expose capabilities through introspectable contracts
+1. **Behavioral Contracts**: Operations (CRUD) and modes (Simulate/Sandbox/Live) hardcoded in C++
+2. **Compile-Time Validation**: All specifications validated at compile time with `constexpr`
+3. **Zero Dependencies**: No external configuration files, JSON parsers, or YAML dependencies
+4. **Single Source of Truth**: libpolyscript.hpp contains the complete PolyScript specification
+5. **ABI Stability**: C++11+ ensures stable binary interface across all 16 supported languages
 
-Each language framework implements these patterns idiomatically while maintaining behavioral consistency.
+Each language wrapper calls libpolyscript functions while maintaining idiomatic CLI patterns.
 
 ## Operation Rebadging
 
-Tools expose CRUD operations with domain-specific names through declarative configuration:
+Tools expose CRUD operations with domain-specific names through compile-time code configuration:
 
-```yaml
-# .polyscript.yaml or embedded configuration
-expose:
-  - operation: create
-    mode: live
-    as: "compile"
-    
-  - operation: create  
-    mode: simulate
-    as: "dry-compile"
-    
-  - operation: read
-    mode: live
-    as: "status"
-    
-  - operation: update
-    mode: live
-    as: "optimize"
-    
-  - operation: delete
-    mode: live
-    as: "clean"
+```cpp
+// C++ Example - libpolyscript integration
+namespace MyTool {
+    constexpr RebadgeMapping REBADGES[] = {
+        {"compile", Operation::Create, Mode::Live},
+        {"dry-compile", Operation::Create, Mode::Simulate},
+        {"status", Operation::Read, Mode::Live},
+        {"optimize", Operation::Update, Mode::Live},
+        {"clean", Operation::Delete, Mode::Live}
+    };
+}
 ```
 
-This allows natural domain language while maintaining CRUD substrate.
+```csharp
+// C# Example - PolyScript.NET integration
+[PolyScriptTool]
+[Rebadge("compile", "create+live")]
+[Rebadge("dry-compile", "create+simulate")]
+[Rebadge("status", "read+live")]
+public class CompilerTool : IPolyScriptTool
+```
+
+This allows natural domain language while maintaining CRUD substrate with compile-time validation.
 
 ## CRUD Operations
 

@@ -1,0 +1,12 @@
+[package]
+name = "polyscript-sys"
+version = "0.1.0"
+edition = "2021"
+description = "Rust FFI bindings for libpolyscript"
+authors = ["Mathew Burkitt <mathew.burkitt@ditech.ai>"]
+
+[dependencies]
+libc = "0.2"
+
+[build-dependencies]
+cc = "1.0"

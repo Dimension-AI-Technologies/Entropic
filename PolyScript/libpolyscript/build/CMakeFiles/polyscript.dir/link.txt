@@ -1,0 +1,1 @@
+/usr/bin/c++ -dynamiclib -Wl,-headerpad_max_install_names -o libpolyscript.dylib -install_name @rpath/libpolyscript.dylib CMakeFiles/polyscript.dir/src/polyscript.cpp.o CMakeFiles/polyscript.dir/src/operations.cpp.o CMakeFiles/polyscript.dir/src/modes.cpp.o CMakeFiles/polyscript.dir/src/context.cpp.o CMakeFiles/polyscript.dir/src/discovery.cpp.o
