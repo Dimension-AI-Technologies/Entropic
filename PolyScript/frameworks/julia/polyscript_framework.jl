@@ -11,6 +11,90 @@ using ArgParse
 using JSON
 using Dates
 
+# FFI bindings for libpolyscript
+const LIBPOLYSCRIPT_PATHS = [
+    joinpath(@__DIR__, "..", "..", "libpolyscript", "build", "libpolyscript"),
+    "libpolyscript"  # System-wide installation
+]
+
+# Try to find and load libpolyscript
+global LIBPOLYSCRIPT_AVAILABLE = false
+global LIBPOLYSCRIPT_LIB = ""
+
+for lib_path in LIBPOLYSCRIPT_PATHS
+    try
+        # Test if we can load the library
+        ccall((:polyscript_can_mutate, lib_path), Bool, (Cint,), 2)
+        global LIBPOLYSCRIPT_LIB = lib_path
+        global LIBPOLYSCRIPT_AVAILABLE = true
+        break
+    catch e
+        continue
+    end
+end
+
+if !LIBPOLYSCRIPT_AVAILABLE
+    @warn "libpolyscript not found, using fallback implementations"
+end
+
+# Convert Julia enums to C integers for FFI calls
+operation_to_int(op::PolyScriptOperation) = Int32(op)
+mode_to_int(mode::PolyScriptMode) = Int32(mode)
+
+# Safe FFI wrappers with fallback
+function safe_ccall_can_mutate(mode::PolyScriptMode)::Bool
+    if LIBPOLYSCRIPT_AVAILABLE
+        try
+            return ccall((:polyscript_can_mutate, LIBPOLYSCRIPT_LIB), Bool, (Cint,), mode_to_int(mode))
+        catch e
+            @warn "FFI call failed, using fallback" exception=e
+        end
+    end
+    # Fallback implementation
+    return mode == live
+end
+
+function safe_ccall_should_validate(mode::PolyScriptMode)::Bool
+    if LIBPOLYSCRIPT_AVAILABLE
+        try
+            return ccall((:polyscript_should_validate, LIBPOLYSCRIPT_LIB), Bool, (Cint,), mode_to_int(mode))
+        catch e
+            @warn "FFI call failed, using fallback" exception=e
+        end
+    end
+    # Fallback implementation
+    return mode == sandbox
+end
+
+function safe_ccall_require_confirm(mode::PolyScriptMode, operation::PolyScriptOperation, force::Bool)::Bool
+    if force
+        return false
+    end
+    
+    if LIBPOLYSCRIPT_AVAILABLE
+        try
+            return ccall((:polyscript_require_confirm, LIBPOLYSCRIPT_LIB), Bool, (Cint, Cint), 
+                        mode_to_int(mode), operation_to_int(operation))
+        catch e
+            @warn "FFI call failed, using fallback" exception=e
+        end
+    end
+    # Fallback implementation
+    return mode == live && (operation == update || operation == delete)
+end
+
+function safe_ccall_is_safe_mode(mode::PolyScriptMode)::Bool
+    if LIBPOLYSCRIPT_AVAILABLE
+        try
+            return ccall((:polyscript_is_safe_mode, LIBPOLYSCRIPT_LIB), Bool, (Cint,), mode_to_int(mode))
+        catch e
+            @warn "FFI call failed, using fallback" exception=e
+        end
+    end
+    # Fallback implementation
+    return mode == simulate || mode == sandbox
+end
+
 export PolyScriptTool, PolyScriptContext, PolyScriptOperation, PolyScriptMode
 export execute_with_mode, run_tool
 
@@ -64,12 +148,11 @@ mutable struct PolyScriptContext
     end
 end
 
-# Computed properties
-can_mutate(ctx::PolyScriptContext) = ctx.mode == live
-should_validate(ctx::PolyScriptContext) = ctx.mode == sandbox
-require_confirm(ctx::PolyScriptContext) = ctx.mode == live && 
-    (ctx.operation == update || ctx.operation == delete) && !ctx.force
-is_safe_mode(ctx::PolyScriptContext) = ctx.mode == simulate || ctx.mode == sandbox
+# Computed properties using FFI with fallback
+can_mutate(ctx::PolyScriptContext) = safe_ccall_can_mutate(ctx.mode)
+should_validate(ctx::PolyScriptContext) = safe_ccall_should_validate(ctx.mode)
+require_confirm(ctx::PolyScriptContext) = safe_ccall_require_confirm(ctx.mode, ctx.operation, ctx.force)
+is_safe_mode(ctx::PolyScriptContext) = safe_ccall_is_safe_mode(ctx.mode)
 
 # Logging
 function log_message(ctx::PolyScriptContext, message::String, level::String="info")

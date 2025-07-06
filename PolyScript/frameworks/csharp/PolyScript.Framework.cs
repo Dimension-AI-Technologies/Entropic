@@ -15,37 +15,20 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using PolyScript.NET;
 
 namespace PolyScript.Framework
 {
-    /// <summary>
-    /// PolyScript CRUD operations
-    /// </summary>
-    public enum PolyScriptOperation
-    {
-        Create,
-        Read,
-        Update,
-        Delete
-    }
-
-    /// <summary>
-    /// PolyScript execution modes
-    /// </summary>
-    public enum PolyScriptMode
-    {
-        Simulate,
-        Sandbox,
-        Live
-    }
+    // PolyScript operations and modes are now provided by PolyScript.NET
+    // using PolyScript.NET.PolyScriptOperation and PolyScript.NET.PolyScriptMode
 
     /// <summary>
     /// PolyScript context passed to tool methods
     /// </summary>
     public class PolyScriptContext
     {
-        public PolyScriptOperation Operation { get; set; }
-        public PolyScriptMode Mode { get; set; }
+        public PolyScript.NET.PolyScriptOperation Operation { get; set; }
+        public PolyScript.NET.PolyScriptMode Mode { get; set; }
         public string? Resource { get; set; }
         public string? RebadgedAs { get; set; }
         public Dictionary<string, object> Options { get; set; }
@@ -67,11 +50,28 @@ namespace PolyScript.Framework
             Console = AnsiConsole.Console;
         }
 
-        public bool CanMutate() => Mode == PolyScriptMode.Live;
-        public bool ShouldValidate() => Mode == PolyScriptMode.Sandbox;
-        public bool RequireConfirm() => Mode == PolyScriptMode.Live && 
-            (Operation == PolyScriptOperation.Update || Operation == PolyScriptOperation.Delete) && !Force;
-        public bool IsSafeMode() => Mode != PolyScriptMode.Live;
+        private PolyScript.NET.PolyScriptContext? _libContext;
+
+        /// <summary>
+        /// Get or create the libpolyscript context for FFI calls
+        /// </summary>
+        private PolyScript.NET.PolyScriptContext GetLibContext()
+        {
+            if (_libContext == null)
+            {
+                var libOp = (PolyScript.NET.PolyScriptOperation)Operation;
+                var libMode = (PolyScript.NET.PolyScriptMode)Mode;
+                var toolName = OutputData.ContainsKey("tool") ? OutputData["tool"].ToString() : "CSharpTool";
+                _libContext = new PolyScript.NET.PolyScriptContext(libOp, libMode, toolName!);
+                _libContext.Force = Force;
+            }
+            return _libContext;
+        }
+
+        public bool CanMutate() => GetLibContext().CanMutate();
+        public bool ShouldValidate() => GetLibContext().ShouldValidate();
+        public bool RequireConfirm() => GetLibContext().RequireConfirm();
+        public bool IsSafeMode() => GetLibContext().IsSafeMode();
 
         public void Log(string message, string level = "info")
         {
@@ -231,7 +231,7 @@ namespace PolyScript.Framework
 
         [Description("Execution mode")]
         [CommandOption("--mode")]
-        public PolyScriptMode Mode { get; set; } = PolyScriptMode.Live;
+        public PolyScript.NET.PolyScriptMode Mode { get; set; } = PolyScript.NET.PolyScriptMode.Live;
 
         [Description("Enable verbose output")]
         [CommandOption("-v|--verbose")]
@@ -252,7 +252,7 @@ namespace PolyScript.Framework
     public abstract class PolyScriptCommand<TTool> : Command<PolyScriptSettings>
         where TTool : IPolyScriptTool, new()
     {
-        protected abstract PolyScriptOperation Operation { get; }
+        protected abstract PolyScript.NET.PolyScriptOperation Operation { get; }
         protected virtual string? RebadgedAs => null;
 
         public override int Execute(CommandContext context, PolyScriptSettings settings)
@@ -298,20 +298,20 @@ namespace PolyScript.Framework
 
         private object ExecuteWithMode(TTool tool, PolyScriptContext context)
         {
-            if (context.Mode == PolyScriptMode.Simulate)
+            if (context.Mode == PolyScript.NET.PolyScriptMode.Simulate)
             {
                 context.Log($"Simulating {context.Operation} operation", "debug");
                 
                 // Read operations can execute in simulate mode
-                if (context.Operation == PolyScriptOperation.Read)
+                if (context.Operation == PolyScript.NET.PolyScriptOperation.Read)
                     return tool.Read(context.Resource, context.Options, context);
 
                 // For mutating operations, describe what would happen
-                var actionVerbs = new Dictionary<PolyScriptOperation, string>
+                var actionVerbs = new Dictionary<PolyScript.NET.PolyScriptOperation, string>
                 {
-                    [PolyScriptOperation.Create] = "Would create",
-                    [PolyScriptOperation.Update] = "Would update",
-                    [PolyScriptOperation.Delete] = "Would delete"
+                    [PolyScript.NET.PolyScriptOperation.Create] = "Would create",
+                    [PolyScript.NET.PolyScriptOperation.Update] = "Would update",
+                    [PolyScript.NET.PolyScriptOperation.Delete] = "Would delete"
                 };
 
                 return new
@@ -321,7 +321,7 @@ namespace PolyScript.Framework
                     options = context.Options
                 };
             }
-            else if (context.Mode == PolyScriptMode.Sandbox)
+            else if (context.Mode == PolyScript.NET.PolyScriptMode.Sandbox)
             {
                 context.Log($"Testing prerequisites for {context.Operation}", "debug");
                 
@@ -371,10 +371,10 @@ namespace PolyScript.Framework
                 // Execute the actual CRUD method
                 return context.Operation switch
                 {
-                    PolyScriptOperation.Create => tool.Create(context.Resource, context.Options, context),
-                    PolyScriptOperation.Read => tool.Read(context.Resource, context.Options, context),
-                    PolyScriptOperation.Update => tool.Update(context.Resource, context.Options, context),
-                    PolyScriptOperation.Delete => tool.Delete(context.Resource, context.Options, context),
+                    PolyScript.NET.PolyScriptOperation.Create => tool.Create(context.Resource, context.Options, context),
+                    PolyScript.NET.PolyScriptOperation.Read => tool.Read(context.Resource, context.Options, context),
+                    PolyScript.NET.PolyScriptOperation.Update => tool.Update(context.Resource, context.Options, context),
+                    PolyScript.NET.PolyScriptOperation.Delete => tool.Delete(context.Resource, context.Options, context),
                     _ => throw new InvalidOperationException($"Unknown operation: {context.Operation}")
                 };
             }
@@ -387,7 +387,7 @@ namespace PolyScript.Framework
     public class CreateCommand<TTool> : PolyScriptCommand<TTool>
         where TTool : IPolyScriptTool, new()
     {
-        protected override PolyScriptOperation Operation => PolyScriptOperation.Create;
+        protected override PolyScript.NET.PolyScriptOperation Operation => PolyScript.NET.PolyScriptOperation.Create;
     }
 
     /// <summary>
@@ -396,7 +396,7 @@ namespace PolyScript.Framework
     public class ReadCommand<TTool> : PolyScriptCommand<TTool>
         where TTool : IPolyScriptTool, new()
     {
-        protected override PolyScriptOperation Operation => PolyScriptOperation.Read;
+        protected override PolyScript.NET.PolyScriptOperation Operation => PolyScript.NET.PolyScriptOperation.Read;
     }
 
     /// <summary>
@@ -405,7 +405,7 @@ namespace PolyScript.Framework
     public class UpdateCommand<TTool> : PolyScriptCommand<TTool>
         where TTool : IPolyScriptTool, new()
     {
-        protected override PolyScriptOperation Operation => PolyScriptOperation.Update;
+        protected override PolyScript.NET.PolyScriptOperation Operation => PolyScript.NET.PolyScriptOperation.Update;
     }
 
     /// <summary>
@@ -414,7 +414,7 @@ namespace PolyScript.Framework
     public class DeleteCommand<TTool> : PolyScriptCommand<TTool>
         where TTool : IPolyScriptTool, new()
     {
-        protected override PolyScriptOperation Operation => PolyScriptOperation.Delete;
+        protected override PolyScript.NET.PolyScriptOperation Operation => PolyScript.NET.PolyScriptOperation.Delete;
     }
 
     /// <summary>
@@ -488,7 +488,7 @@ namespace PolyScript.Framework
                 // var rebadging = LoadRebadging<TTool>();
                 // foreach (var (alias, (operation, mode)) in rebadging)
                 // {
-                //     var op = Enum.Parse<PolyScriptOperation>(operation, true);
+                //     var op = Enum.Parse<PolyScript.NET.PolyScriptOperation>(operation, true);
                 //     
                 //     // Need to create specific command types for rebadged commands
                 //     // config.AddCommand<RebadgedCommand<TTool>>(alias)

@@ -13,8 +13,12 @@ fn main() {
     let libpolyscript_dir = PathBuf::from("../libpolyscript");
     let build_dir = libpolyscript_dir.join("build");
     
+    // Make the path absolute
+    let absolute_build_dir = std::fs::canonicalize(&build_dir)
+        .unwrap_or_else(|_| build_dir);
+    
     // Tell cargo to look for shared libraries in the build directory
-    println!("cargo:rustc-link-search=native={}", build_dir.display());
+    println!("cargo:rustc-link-search=native={}", absolute_build_dir.display());
     
     // Link to libpolyscript
     println!("cargo:rustc-link-lib=dylib=polyscript");

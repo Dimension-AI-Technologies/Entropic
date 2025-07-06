@@ -17,6 +17,44 @@ import std.datetime;
 import std.conv;
 import std.traits;
 import std.typecons;
+import core.exception;
+
+// FFI bindings for libpolyscript
+extern(C) {
+    bool polyscript_can_mutate(int mode) nothrow @nogc;
+    bool polyscript_should_validate(int mode) nothrow @nogc;
+    bool polyscript_require_confirm(int mode, int operation) nothrow @nogc;
+    bool polyscript_is_safe_mode(int mode) nothrow @nogc;
+}
+
+// Convert D enums to C integers for FFI calls
+private int operationToInt(PolyScriptOperation op) pure nothrow @nogc {
+    final switch (op) {
+        case PolyScriptOperation.create: return 0;
+        case PolyScriptOperation.read: return 1;
+        case PolyScriptOperation.update: return 2;
+        case PolyScriptOperation.delete_: return 3;
+    }
+}
+
+private int modeToInt(PolyScriptMode mode) pure nothrow @nogc {
+    final switch (mode) {
+        case PolyScriptMode.simulate: return 0;
+        case PolyScriptMode.sandbox: return 1;
+        case PolyScriptMode.live: return 2;
+    }
+}
+
+// Safe FFI wrapper that catches exceptions and falls back to pure implementations
+private bool safeFFICall(bool delegate() nothrow @nogc ffiCall, bool fallback) nothrow {
+    try {
+        return ffiCall();
+    } catch (Exception e) {
+        return fallback;
+    } catch (Error e) {
+        return fallback;
+    }
+}
 
 /// CRUD operations
 enum PolyScriptOperation {
@@ -57,21 +95,34 @@ struct PolyScriptContext {
     }
     
     @property bool canMutate() const {
-        return mode == PolyScriptMode.live;
+        return safeFFICall(
+            () => polyscript_can_mutate(modeToInt(mode)),
+            mode == PolyScriptMode.live  // Fallback implementation
+        );
     }
     
     @property bool shouldValidate() const {
-        return mode == PolyScriptMode.sandbox;
+        return safeFFICall(
+            () => polyscript_should_validate(modeToInt(mode)),
+            mode == PolyScriptMode.sandbox  // Fallback implementation
+        );
     }
     
     @property bool requireConfirm() const {
-        return mode == PolyScriptMode.live && 
-               (operation == PolyScriptOperation.update || operation == PolyScriptOperation.delete_) &&
-               !force;
+        if (force) return false;  // Always handle force flag in D
+        
+        return safeFFICall(
+            () => polyscript_require_confirm(modeToInt(mode), operationToInt(operation)),
+            mode == PolyScriptMode.live && 
+            (operation == PolyScriptOperation.update || operation == PolyScriptOperation.delete_)  // Fallback
+        );
     }
     
     @property bool isSafeMode() const {
-        return mode == PolyScriptMode.simulate || mode == PolyScriptMode.sandbox;
+        return safeFFICall(
+            () => polyscript_is_safe_mode(modeToInt(mode)),
+            mode == PolyScriptMode.simulate || mode == PolyScriptMode.sandbox  // Fallback implementation
+        );
     }
     
     void log(string message, string level = "info") {

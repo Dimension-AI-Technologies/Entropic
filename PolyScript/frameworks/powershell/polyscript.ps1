@@ -13,26 +13,51 @@
     Author: Mathew Burkitt, Dimension Technologies <mathew.burkitt@ditech.ai>
 #>
 
-# Enum for CRUD operations
-enum Operation {
-    Create
-    Read
-    Update
-    Delete
+# Load PolyScript.NET assembly for FFI integration
+try {
+    $PolyScriptNETPath = Join-Path $PSScriptRoot "../../PolyScript.NET/bin/Debug/net8.0/PolyScript.NET.dll"
+    if (Test-Path $PolyScriptNETPath) {
+        Add-Type -Path $PolyScriptNETPath
+        $Global:PolyScriptNETAvailable = $true
+        Write-Verbose "PolyScript.NET loaded successfully"
+    } else {
+        $Global:PolyScriptNETAvailable = $false
+        Write-Warning "PolyScript.NET not found, using fallback implementations"
+    }
+} catch {
+    $Global:PolyScriptNETAvailable = $false
+    Write-Warning "Failed to load PolyScript.NET: $($_.Exception.Message)"
 }
 
-# Enum for execution modes
-enum ExecutionMode {
-    Simulate
-    Sandbox
-    Live
+# Enum for CRUD operations (using PolyScript.NET types if available)
+if ($Global:PolyScriptNETAvailable) {
+    # Use PolyScript.NET.PolyScriptOperation enum
+    $OperationType = [PolyScript.NET.PolyScriptOperation]
+    $ExecutionModeType = [PolyScript.NET.PolyScriptMode]
+} else {
+    # Fallback enum definitions
+    enum Operation {
+        Create
+        Read
+        Update
+        Delete
+    }
+
+    enum ExecutionMode {
+        Simulate
+        Sandbox
+        Live
+    }
+    
+    $OperationType = [Operation]
+    $ExecutionModeType = [ExecutionMode]
 }
 
 # Base class for PolyScript tools
 class PolyScriptBase {
     # Properties
-    [Operation]$Operation = [Operation]::Read
-    [ExecutionMode]$Mode = [ExecutionMode]::Live
+    $Operation 
+    $Mode 
     [string]$Resource = $null
     [bool]$Verbose = $false
     [bool]$Force = $false
@@ -50,7 +75,63 @@ class PolyScriptBase {
     
     # Constructor
     PolyScriptBase() {
+        $this.Operation = $OperationType::Read
+        $this.Mode = $ExecutionModeType::Live
         $this.OutputData.tool = $this.GetType().Name
+    }
+    
+    # Create libpolyscript context for FFI calls
+    hidden [object] GetLibContext() {
+        if ($Global:PolyScriptNETAvailable) {
+            $toolName = $this.GetType().Name
+            $libCtx = New-Object PolyScript.NET.PolyScriptContext($this.Operation, $this.Mode, $toolName)
+            $libCtx.Force = $this.Force
+            return $libCtx
+        }
+        return $null
+    }
+    
+    # Behavioral contract methods using FFI or fallback
+    [bool] CanMutate() {
+        if ($Global:PolyScriptNETAvailable) {
+            $libCtx = $this.GetLibContext()
+            return $libCtx.CanMutate()
+        } else {
+            # Fallback implementation
+            return $this.Mode -eq $ExecutionModeType::Live
+        }
+    }
+    
+    [bool] ShouldValidate() {
+        if ($Global:PolyScriptNETAvailable) {
+            $libCtx = $this.GetLibContext()
+            return $libCtx.ShouldValidate()
+        } else {
+            # Fallback implementation
+            return $this.Mode -eq $ExecutionModeType::Sandbox
+        }
+    }
+    
+    [bool] RequireConfirm() {
+        if ($Global:PolyScriptNETAvailable) {
+            $libCtx = $this.GetLibContext()
+            return $libCtx.RequireConfirm()
+        } else {
+            # Fallback implementation
+            return $this.Mode -eq $ExecutionModeType::Live -and 
+                   ($this.Operation -eq $OperationType::Update -or $this.Operation -eq $OperationType::Delete) -and
+                   (-not $this.Force)
+        }
+    }
+    
+    [bool] IsSafeMode() {
+        if ($Global:PolyScriptNETAvailable) {
+            $libCtx = $this.GetLibContext()
+            return $libCtx.IsSafeMode()
+        } else {
+            # Fallback implementation
+            return $this.Mode -eq $ExecutionModeType::Simulate -or $this.Mode -eq $ExecutionModeType::Sandbox
+        }
     }
     
     # Abstract methods (must be overridden)
@@ -120,8 +201,8 @@ class PolyScriptBase {
     # Main execution method
     [int] Run([hashtable]$Arguments) {
         # Parse standard arguments
-        $this.Operation = if ($Arguments.Operation) { [Operation]$Arguments.Operation } else { [Operation]::Read }
-        $this.Mode = if ($Arguments.Mode) { [ExecutionMode]$Arguments.Mode } else { [ExecutionMode]::Live }
+        $this.Operation = if ($Arguments.Operation) { $OperationType::($Arguments.Operation) } else { $OperationType::Read }
+        $this.Mode = if ($Arguments.Mode) { $ExecutionModeType::($Arguments.Mode) } else { $ExecutionModeType::Live }
         $this.Resource = $Arguments.Resource
         $this.Verbose = [bool]$Arguments.Verbose
         $this.Force = [bool]$Arguments.Force
@@ -154,16 +235,16 @@ class PolyScriptBase {
             $exitCode = 0
             
             switch ($this.Mode) {
-                Simulate {
-                    if ($this.Operation -eq [Operation]::Read) {
+                ($ExecutionModeType::Simulate) {
+                    if ($this.Operation -eq $OperationType::Read) {
                         # Read operations can execute in simulate mode
                         $exitCode = $this.Read($this.Resource, $options)
                     } else {
                         # For mutating operations, describe what would happen
                         $actionVerb = switch ($this.Operation) {
-                            Create { "Would create" }
-                            Update { "Would update" }
-                            Delete { "Would delete" }
+                            ($OperationType::Create) { "Would create" }
+                            ($OperationType::Update) { "Would update" }
+                            ($OperationType::Delete) { "Would delete" }
                         }
                         $resourceDesc = if ($this.Resource) { $this.Resource } else { "resource" }
                         $this.Output(@{
@@ -174,7 +255,7 @@ class PolyScriptBase {
                     }
                 }
                 
-                Sandbox {
+                ($ExecutionModeType::Sandbox) {
                     Write-Verbose "Testing prerequisites for $($this.Operation)"
                     $validations = @{
                         permissions = "verified"
@@ -188,9 +269,9 @@ class PolyScriptBase {
                     }, $false)
                 }
                 
-                Live {
-                    # Confirmation for destructive operations
-                    if ($this.Operation -in @([Operation]::Update, [Operation]::Delete) -and -not $this.Force) {
+                ($ExecutionModeType::Live) {
+                    # Confirmation for destructive operations using FFI or fallback
+                    if ($this.RequireConfirm()) {
                         $resourceDesc = if ($this.Resource) { $this.Resource } else { "resource" }
                         if (-not $this.Confirm("Are you sure you want to $($this.Operation.ToString().ToLower()) ${resourceDesc}?")) {
                             $this.OutputData.status = "cancelled"
@@ -201,10 +282,10 @@ class PolyScriptBase {
                     
                     # Execute the actual CRUD method
                     $exitCode = switch ($this.Operation) {
-                        Create { $this.Create($this.Resource, $options) }
-                        Read   { $this.Read($this.Resource, $options) }
-                        Update { $this.Update($this.Resource, $options) }
-                        Delete { $this.Delete($this.Resource, $options) }
+                        ($OperationType::Create) { $this.Create($this.Resource, $options) }
+                        ($OperationType::Read)   { $this.Read($this.Resource, $options) }
+                        ($OperationType::Update) { $this.Update($this.Resource, $options) }
+                        ($OperationType::Delete) { $this.Delete($this.Resource, $options) }
                     }
                 }
             }

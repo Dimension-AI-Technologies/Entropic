@@ -11,4 +11,8 @@
     <PackageReference Include="System.Text.Json" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../PolyScript.NET/PolyScript.NET.csproj" />
+  </ItemGroup>
+
 </Project>

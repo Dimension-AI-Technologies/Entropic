@@ -258,8 +258,17 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "clap",
+ "polyscript-sys",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "polyscript-sys"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "libc",
 ]
 
 [[package]]

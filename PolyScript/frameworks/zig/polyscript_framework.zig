@@ -8,6 +8,34 @@ const json = std.json;
 const process = std.process;
 const io = std.io;
 
+// FFI bindings for libpolyscript
+const c = @cImport({
+    @cInclude("polyscript.h");
+});
+
+// Convert Zig enums to C integers for FFI calls
+fn operationToInt(op: PolyScriptOperation) c_int {
+    return switch (op) {
+        .create => 0,
+        .read => 1,
+        .update => 2,
+        .delete => 3,
+    };
+}
+
+fn modeToInt(mode: PolyScriptMode) c_int {
+    return switch (mode) {
+        .simulate => 0,
+        .sandbox => 1,
+        .live => 2,
+    };
+}
+
+// Safe FFI wrapper that catches errors and falls back to pure implementations
+fn safeFFICall(comptime ReturnType: type, ffi_call: anytype, fallback: ReturnType) ReturnType {
+    return ffi_call catch fallback;
+}
+
 pub const PolyScriptOperation = enum {
     create,
     read,
@@ -68,21 +96,37 @@ pub const PolyScriptContext = struct {
     }
 
     pub fn canMutate(self: *const PolyScriptContext) bool {
-        return self.mode == .live;
+        return safeFFICall(
+            bool,
+            @call(.auto, c.polyscript_can_mutate, .{modeToInt(self.mode)}),
+            self.mode == .live  // Fallback implementation
+        );
     }
 
     pub fn shouldValidate(self: *const PolyScriptContext) bool {
-        return self.mode == .sandbox;
+        return safeFFICall(
+            bool,
+            @call(.auto, c.polyscript_should_validate, .{modeToInt(self.mode)}),
+            self.mode == .sandbox  // Fallback implementation
+        );
     }
 
     pub fn requireConfirm(self: *const PolyScriptContext) bool {
-        return self.mode == .live and 
-               (self.operation == .update or self.operation == .delete) and 
-               !self.force;
+        if (self.force) return false;  // Always handle force flag in Zig
+        
+        return safeFFICall(
+            bool,
+            @call(.auto, c.polyscript_require_confirm, .{ modeToInt(self.mode), operationToInt(self.operation) }),
+            self.mode == .live and (self.operation == .update or self.operation == .delete)  // Fallback
+        );
     }
 
     pub fn isSafeMode(self: *const PolyScriptContext) bool {
-        return self.mode == .simulate or self.mode == .sandbox;
+        return safeFFICall(
+            bool,
+            @call(.auto, c.polyscript_is_safe_mode, .{modeToInt(self.mode)}),
+            self.mode == .simulate or self.mode == .sandbox  // Fallback implementation
+        );
     }
 
     pub fn log(self: *const PolyScriptContext, message: []const u8, level: []const u8) !void {

@@ -1,0 +1,11 @@
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/bin/Debug/netstandard2.0/PolyScript.NET.deps.json
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/bin/Debug/netstandard2.0/PolyScript.NET.dll
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/bin/Debug/netstandard2.0/PolyScript.NET.pdb
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/obj/Debug/netstandard2.0/PolyScript.NET.csproj.AssemblyReference.cache
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/obj/Debug/netstandard2.0/PolyScript.NET.GeneratedMSBuildEditorConfig.editorconfig
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/obj/Debug/netstandard2.0/PolyScript.NET.AssemblyInfoInputs.cache
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/obj/Debug/netstandard2.0/PolyScript.NET.AssemblyInfo.cs
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/obj/Debug/netstandard2.0/PolyScript.NET.csproj.CoreCompileInputs.cache
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/obj/Debug/netstandard2.0/PolyScript.NET.sourcelink.json
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/obj/Debug/netstandard2.0/PolyScript.NET.dll
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/obj/Debug/netstandard2.0/PolyScript.NET.pdb

@@ -1,0 +1,6 @@
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/TestFFISimple.csproj.AssemblyReference.cache
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/TestFFISimple.GeneratedMSBuildEditorConfig.editorconfig
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/TestFFISimple.AssemblyInfoInputs.cache
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/TestFFISimple.AssemblyInfo.cs
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/TestFFISimple.csproj.CoreCompileInputs.cache
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/csharp/obj/Debug/net8.0/TestFFISimple.sourcelink.json

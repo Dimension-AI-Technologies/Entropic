@@ -7,7 +7,10 @@ defmodule PolyScript.Framework.MixProject do
       version: "0.1.0",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      compilers: [:elixir_make] ++ Mix.compilers(),
+      make_targets: ["all"],
+      make_clean: ["clean"]
     ]
   end
 
@@ -19,7 +22,8 @@ defmodule PolyScript.Framework.MixProject do
 
   defp deps do
     [
-      {:jason, "~> 1.4"}
+      {:jason, "~> 1.4"},
+      {:elixir_make, "~> 0.7", runtime: false}
     ]
   end
 end

@@ -1,0 +1,28 @@
+{
+    "name": "polyscript-framework",
+    "description": "PolyScript Framework for D",
+    "authors": ["Mathew Burkitt, Dimension Technologies <mathew.burkitt@ditech.ai>"],
+    "homepage": "https://github.com/doowell2/polyscript",
+    "license": "MIT",
+    "version": "0.1.0",
+    
+    "targetType": "library",
+    "sourcePaths": ["."],
+    
+    "libs": ["polyscript"],
+    "lflags": ["-L../../libpolyscript/build"],
+    
+    "configurations": [
+        {
+            "name": "library",
+            "targetType": "library"
+        },
+        {
+            "name": "test-compiler",
+            "targetType": "executable",
+            "mainSourceFile": "../test/test_compiler.d",
+            "libs": ["polyscript"],
+            "lflags": ["-L../../libpolyscript/build"]
+        }
+    ]
+}

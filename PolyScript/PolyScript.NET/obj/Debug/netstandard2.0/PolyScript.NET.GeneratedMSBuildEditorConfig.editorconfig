@@ -1,0 +1,8 @@
+is_global = true
+build_property.RootNamespace = PolyScript.NET
+build_property.ProjectDir = /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.CsWinRTUseWindowsUIXamlProjections = false
+build_property.EffectiveAnalysisLevelStyle = 
+build_property.EnableCodeStyleSeverity = 

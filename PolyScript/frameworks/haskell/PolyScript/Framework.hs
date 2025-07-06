@@ -11,6 +11,7 @@ Author: Mathew Burkitt, Dimension Technologies <mathew.burkitt@ditech.ai>
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
 
 module PolyScript.Framework
   ( -- * Core Types
@@ -47,6 +48,43 @@ import System.Environment (getArgs, getProgName)
 import System.Exit (exitFailure, exitSuccess)
 import System.IO (hFlush, stdout, stderr, hPutStrLn)
 import Options.Applicative
+import Foreign.C.Types (CInt(..), CBool(..))
+import Control.Exception (catch, SomeException)
+
+-- | FFI bindings for libpolyscript
+-- These functions may fail at runtime if libpolyscript is not available
+foreign import ccall unsafe "polyscript_can_mutate" 
+  c_polyscript_can_mutate :: CInt -> CBool
+
+foreign import ccall unsafe "polyscript_should_validate"
+  c_polyscript_should_validate :: CInt -> CBool
+
+foreign import ccall unsafe "polyscript_require_confirm"
+  c_polyscript_require_confirm :: CInt -> CInt -> CBool
+
+foreign import ccall unsafe "polyscript_is_safe_mode"
+  c_polyscript_is_safe_mode :: CInt -> CBool
+
+-- | Convert PolyScript types to C integers for FFI calls
+operationToInt :: PolyScriptOperation -> CInt
+operationToInt Create = 0
+operationToInt Read   = 1
+operationToInt Update = 2
+operationToInt Delete = 3
+
+modeToInt :: PolyScriptMode -> CInt
+modeToInt Simulate = 0
+modeToInt Sandbox  = 1
+modeToInt Live     = 2
+
+-- | Safe FFI wrappers that catch exceptions and fall back to pure implementations
+safeFFICall :: IO CBool -> Bool -> IO Bool
+safeFFICall ffiCall fallback = do
+  result <- catch (ffiCall >>= \(CBool b) -> return (b /= 0)) handler
+  return result
+  where
+    handler :: SomeException -> IO Bool
+    handler _ = return fallback
 
 -- | CRUD operations
 data PolyScriptOperation
@@ -121,20 +159,28 @@ class PolyScriptTool a where
   toolUpdate :: a -> Maybe Text -> [(Key, Aeson.Value)] -> PolyScriptContext -> IO (Either PolyScriptError Aeson.Value)
   toolDelete :: a -> Maybe Text -> [(Key, Aeson.Value)] -> PolyScriptContext -> IO (Either PolyScriptError Aeson.Value)
 
--- | Context utility functions
-canMutate :: PolyScriptContext -> Bool
-canMutate ctx = ctxMode ctx == Live
+-- | Context utility functions using FFI with fallback
+canMutate :: PolyScriptContext -> IO Bool
+canMutate ctx = safeFFICall 
+  (c_polyscript_can_mutate (modeToInt $ ctxMode ctx))
+  (ctxMode ctx == Live)  -- Fallback implementation
 
-shouldValidate :: PolyScriptContext -> Bool
-shouldValidate ctx = ctxMode ctx == Sandbox
+shouldValidate :: PolyScriptContext -> IO Bool
+shouldValidate ctx = safeFFICall
+  (c_polyscript_should_validate (modeToInt $ ctxMode ctx))
+  (ctxMode ctx == Sandbox)  -- Fallback implementation
 
-requireConfirm :: PolyScriptContext -> Bool
-requireConfirm ctx = ctxMode ctx == Live && 
-                     (ctxOperation ctx == Update || ctxOperation ctx == Delete) &&
-                     not (ctxForce ctx)
+requireConfirm :: PolyScriptContext -> IO Bool
+requireConfirm ctx 
+  | ctxForce ctx = return False  -- Always handle force flag in Haskell
+  | otherwise = safeFFICall
+      (c_polyscript_require_confirm (modeToInt $ ctxMode ctx) (operationToInt $ ctxOperation ctx))
+      (ctxMode ctx == Live && (ctxOperation ctx == Update || ctxOperation ctx == Delete))  -- Fallback
 
-isSafeMode :: PolyScriptContext -> Bool
-isSafeMode ctx = ctxMode ctx == Simulate || ctxMode ctx == Sandbox
+isSafeMode :: PolyScriptContext -> IO Bool
+isSafeMode ctx = safeFFICall
+  (c_polyscript_is_safe_mode (modeToInt $ ctxMode ctx))
+  (ctxMode ctx == Simulate || ctxMode ctx == Sandbox)  -- Fallback implementation
 
 -- | Log a message
 logMessage :: PolyScriptContext -> Text -> Text -> IO ()
@@ -204,7 +250,8 @@ executeWithMode tool ctx = do
     Live -> do
       logMessage ctx "debug" $ "Executing " <> T.pack (show $ ctxOperation ctx) <> " operation"
       
-      confirmed <- if requireConfirm ctx
+      needsConfirm <- requireConfirm ctx
+      confirmed <- if needsConfirm
         then confirm ctx $ "Are you sure you want to " <> T.pack (show $ ctxOperation ctx) <> " " <> fromMaybe "resource" (ctxResource ctx) <> "?"
         else return True
       

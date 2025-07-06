@@ -13,6 +13,10 @@ use std::error::Error;
 use std::fmt;
 use std::io::{self, Write};
 
+// Import libpolyscript FFI bindings
+extern crate polyscript_sys;
+use polyscript_sys::{Operation as LibOperation, Mode as LibMode, PolyScriptContext as LibContext};
+
 /// PolyScript CRUD operations
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]
 #[serde(rename_all = "lowercase")]
@@ -108,22 +112,44 @@ impl PolyScriptContext {
         }
     }
 
+    /// Convert to libpolyscript types and delegate behavioral queries
+    fn to_lib_context(&self) -> LibContext {
+        let lib_op = match self.operation {
+            PolyScriptOperation::Create => LibOperation::Create,
+            PolyScriptOperation::Read => LibOperation::Read,
+            PolyScriptOperation::Update => LibOperation::Update,
+            PolyScriptOperation::Delete => LibOperation::Delete,
+        };
+        
+        let lib_mode = match self.mode {
+            PolyScriptMode::Simulate => LibMode::Simulate,
+            PolyScriptMode::Sandbox => LibMode::Sandbox,
+            PolyScriptMode::Live => LibMode::Live,
+        };
+        
+        // Extract tool name from output_data
+        let tool_name = self.output_data.get("tool")
+            .and_then(|v| v.as_str())
+            .unwrap_or("RustTool")
+            .to_string();
+        
+        LibContext::new(lib_op, lib_mode, tool_name)
+    }
+
     pub fn can_mutate(&self) -> bool {
-        self.mode == PolyScriptMode::Live
+        self.to_lib_context().can_mutate()
     }
 
     pub fn should_validate(&self) -> bool {
-        self.mode == PolyScriptMode::Sandbox
+        self.to_lib_context().should_validate()
     }
 
     pub fn require_confirm(&self) -> bool {
-        self.mode == PolyScriptMode::Live
-            && matches!(self.operation, PolyScriptOperation::Update | PolyScriptOperation::Delete)
-            && !self.force
+        self.to_lib_context().require_confirm() && !self.force
     }
 
     pub fn is_safe_mode(&self) -> bool {
-        self.mode != PolyScriptMode::Live
+        self.to_lib_context().is_safe_mode()
     }
 
 
@@ -576,6 +602,140 @@ pub fn run<T: PolyScriptTool>(tool: T, args: Vec<String>) -> i32 {
             context.output(json!(format!("Error: {}", e)), true);
             context.finalize_output();
             1
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_ffi_behavioral_queries() {
+        // Test Simulate mode
+        let simulate_ctx = PolyScriptContext::new(
+            PolyScriptOperation::Create,
+            PolyScriptMode::Simulate,
+            Some("test.rs".to_string()),
+            None,
+            HashMap::new(),
+            false,
+            false,
+            false,
+            "FFITest",
+        );
+        
+        // Simulate mode: no mutations, no validation, safe mode
+        assert!(!simulate_ctx.can_mutate());
+        assert!(!simulate_ctx.should_validate());
+        assert!(simulate_ctx.is_safe_mode());
+        assert!(!simulate_ctx.require_confirm());
+        
+        // Test Sandbox mode
+        let sandbox_ctx = PolyScriptContext::new(
+            PolyScriptOperation::Update,
+            PolyScriptMode::Sandbox,
+            Some("test.rs".to_string()),
+            None,
+            HashMap::new(),
+            false,
+            false,
+            false,
+            "FFITest",
+        );
+        
+        // Sandbox mode: no mutations, validation enabled, safe mode
+        assert!(!sandbox_ctx.can_mutate());
+        assert!(sandbox_ctx.should_validate());
+        assert!(sandbox_ctx.is_safe_mode());
+        assert!(!sandbox_ctx.require_confirm());
+        
+        // Test Live mode
+        let live_ctx = PolyScriptContext::new(
+            PolyScriptOperation::Delete,
+            PolyScriptMode::Live,
+            Some("test.rs".to_string()),
+            None,
+            HashMap::new(),
+            false,
+            false,  // not forced
+            false,
+            "FFITest",
+        );
+        
+        // Live mode: mutations allowed, no validation, not safe, confirmation required
+        assert!(live_ctx.can_mutate());
+        assert!(!live_ctx.should_validate());
+        assert!(!live_ctx.is_safe_mode());
+        assert!(live_ctx.require_confirm());  // destructive operation without --force
+    }
+    
+    #[test]
+    fn test_ffi_vs_original_behavior() {
+        // This test validates that the FFI implementation matches the original hardcoded behavior
+        
+        // Test all operation/mode combinations
+        let operations = [
+            PolyScriptOperation::Create,
+            PolyScriptOperation::Read,
+            PolyScriptOperation::Update,
+            PolyScriptOperation::Delete,
+        ];
+        
+        let modes = [
+            PolyScriptMode::Simulate,
+            PolyScriptMode::Sandbox,
+            PolyScriptMode::Live,
+        ];
+        
+        for operation in &operations {
+            for mode in &modes {
+                let ctx = PolyScriptContext::new(
+                    *operation,
+                    *mode,
+                    Some("test.rs".to_string()),
+                    None,
+                    HashMap::new(),
+                    false,
+                    false,
+                    false,
+                    "FFITest",
+                );
+                
+                // Validate behavioral consistency
+                match mode {
+                    PolyScriptMode::Simulate => {
+                        assert!(!ctx.can_mutate(), "Simulate should not allow mutations");
+                        assert!(!ctx.should_validate(), "Simulate should not validate");
+                        assert!(ctx.is_safe_mode(), "Simulate should be safe");
+                    }
+                    PolyScriptMode::Sandbox => {
+                        assert!(!ctx.can_mutate(), "Sandbox should not allow mutations");
+                        assert!(ctx.should_validate(), "Sandbox should validate");
+                        assert!(ctx.is_safe_mode(), "Sandbox should be safe");
+                    }
+                    PolyScriptMode::Live => {
+                        assert!(ctx.can_mutate(), "Live should allow mutations");
+                        assert!(!ctx.should_validate(), "Live should not validate");
+                        assert!(!ctx.is_safe_mode(), "Live should not be safe");
+                    }
+                }
+                
+                // Test confirmation logic
+                let requires_confirmation = match (mode, operation) {
+                    (PolyScriptMode::Live, PolyScriptOperation::Update) => true,
+                    (PolyScriptMode::Live, PolyScriptOperation::Delete) => true,
+                    _ => false,
+                };
+                
+                assert_eq!(
+                    ctx.require_confirm(),
+                    requires_confirmation,
+                    "Confirmation requirement mismatch for {:?} + {:?}",
+                    operation,
+                    mode
+                );
+            }
         }
     }
 }

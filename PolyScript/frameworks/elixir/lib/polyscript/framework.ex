@@ -8,6 +8,85 @@ defmodule PolyScript.Framework do
   PolyScript Framework for Elixir - provides CRUD × Modes CLI architecture
   """
 
+  defmodule Nif do
+    @moduledoc """
+    Native Implemented Functions for libpolyscript integration
+    """
+    
+    @on_load :init_nif
+    
+    def init_nif do
+      # Try to load the NIF, but don't fail if it's not available
+      try do
+        nif_file = :filename.join(:code.priv_dir(:polyscript_framework), 'polyscript_nif')
+        :erlang.load_nif(nif_file, 0)
+      catch
+        _type, _error ->
+          IO.warn("libpolyscript NIF not found, using fallback implementations")
+          :ok
+      end
+    end
+    
+    # NIF function declarations with fallback implementations
+    def polyscript_can_mutate(_mode), do: :erlang.nif_error(:nif_not_loaded)
+    def polyscript_should_validate(_mode), do: :erlang.nif_error(:nif_not_loaded)
+    def polyscript_require_confirm(_mode, _operation), do: :erlang.nif_error(:nif_not_loaded)
+    def polyscript_is_safe_mode(_mode), do: :erlang.nif_error(:nif_not_loaded)
+    
+    # Safe wrappers that catch NIF errors and fall back
+    def safe_can_mutate(mode) do
+      try do
+        polyscript_can_mutate(mode_to_int(mode))
+      catch
+        :error, :nif_not_loaded -> mode == :live
+        _type, _error -> mode == :live
+      end
+    end
+    
+    def safe_should_validate(mode) do
+      try do
+        polyscript_should_validate(mode_to_int(mode))
+      catch
+        :error, :nif_not_loaded -> mode == :sandbox
+        _type, _error -> mode == :sandbox
+      end
+    end
+    
+    def safe_require_confirm(mode, operation, force) do
+      if force do
+        false
+      else
+        try do
+          polyscript_require_confirm(mode_to_int(mode), operation_to_int(operation))
+        catch
+          :error, :nif_not_loaded -> 
+            mode == :live and operation in [:update, :delete]
+          _type, _error -> 
+            mode == :live and operation in [:update, :delete]
+        end
+      end
+    end
+    
+    def safe_is_safe_mode(mode) do
+      try do
+        polyscript_is_safe_mode(mode_to_int(mode))
+      catch
+        :error, :nif_not_loaded -> mode in [:simulate, :sandbox]
+        _type, _error -> mode in [:simulate, :sandbox]
+      end
+    end
+    
+    # Convert Elixir atoms to C integers for NIF calls
+    defp mode_to_int(:simulate), do: 0
+    defp mode_to_int(:sandbox), do: 1
+    defp mode_to_int(:live), do: 2
+    
+    defp operation_to_int(:create), do: 0
+    defp operation_to_int(:read), do: 1
+    defp operation_to_int(:update), do: 2
+    defp operation_to_int(:delete), do: 3
+  end
+
   defmodule Context do
     @moduledoc """
     Context passed to all tool operations
@@ -30,18 +109,14 @@ defmodule PolyScript.Framework do
       messages: []
     ]
 
-    def can_mutate?(%__MODULE__{mode: :live}), do: true
-    def can_mutate?(_), do: false
+    def can_mutate?(%__MODULE__{mode: mode}), do: Nif.safe_can_mutate(mode)
 
-    def should_validate?(%__MODULE__{mode: :sandbox}), do: true
-    def should_validate?(_), do: false
+    def should_validate?(%__MODULE__{mode: mode}), do: Nif.safe_should_validate(mode)
 
-    def require_confirm?(%__MODULE__{mode: :live, operation: op, force: false}) 
-      when op in [:update, :delete], do: true
-    def require_confirm?(_), do: false
+    def require_confirm?(%__MODULE__{mode: mode, operation: operation, force: force}), 
+      do: Nif.safe_require_confirm(mode, operation, force)
 
-    def safe_mode?(%__MODULE__{mode: mode}) when mode in [:simulate, :sandbox], do: true
-    def safe_mode?(_), do: false
+    def safe_mode?(%__MODULE__{mode: mode}), do: Nif.safe_is_safe_mode(mode)
   end
 
   @doc """

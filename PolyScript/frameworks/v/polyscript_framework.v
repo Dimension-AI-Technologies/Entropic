@@ -10,6 +10,41 @@ import flag
 import os
 import time
 
+// FFI bindings for libpolyscript
+#flag -I../../libpolyscript/include
+#flag -L../../libpolyscript/build
+#flag -lpolyscript
+#include "polyscript.h"
+
+// C function declarations
+fn C.polyscript_can_mutate(mode int) bool
+fn C.polyscript_should_validate(mode int) bool
+fn C.polyscript_require_confirm(mode int, operation int) bool
+fn C.polyscript_is_safe_mode(mode int) bool
+
+// Convert V enums to C integers for FFI calls
+fn operation_to_int(op PolyScriptOperation) int {
+	return match op {
+		.create { 0 }
+		.read { 1 }
+		.update { 2 }
+		.delete { 3 }
+	}
+}
+
+fn mode_to_int(mode PolyScriptMode) int {
+	return match mode {
+		.simulate { 0 }
+		.sandbox { 1 }
+		.live { 2 }
+	}
+}
+
+// Safe FFI wrapper that catches panics and falls back to pure implementations
+fn safe_ffi_call(ffi_call fn() bool, fallback bool) bool {
+	return ffi_call() or { fallback }
+}
+
 // CRUD operations
 pub enum PolyScriptOperation {
 	create
@@ -62,23 +97,37 @@ pub fn new_context() PolyScriptContext {
 	}
 }
 
-// Context methods
+// Context methods using FFI with fallback
 pub fn (ctx PolyScriptContext) can_mutate() bool {
-	return ctx.mode == .live
+	return safe_ffi_call(
+		fn [ctx] () bool { return C.polyscript_can_mutate(mode_to_int(ctx.mode)) },
+		ctx.mode == .live  // Fallback implementation
+	)
 }
 
 pub fn (ctx PolyScriptContext) should_validate() bool {
-	return ctx.mode == .sandbox
+	return safe_ffi_call(
+		fn [ctx] () bool { return C.polyscript_should_validate(mode_to_int(ctx.mode)) },
+		ctx.mode == .sandbox  // Fallback implementation
+	)
 }
 
 pub fn (ctx PolyScriptContext) require_confirm() bool {
-	return ctx.mode == .live && 
-		(ctx.operation == .update || ctx.operation == .delete) && 
-		!ctx.force
+	if ctx.force { return false }  // Always handle force flag in V
+	
+	return safe_ffi_call(
+		fn [ctx] () bool { 
+			return C.polyscript_require_confirm(mode_to_int(ctx.mode), operation_to_int(ctx.operation)) 
+		},
+		ctx.mode == .live && (ctx.operation == .update || ctx.operation == .delete)  // Fallback
+	)
 }
 
 pub fn (ctx PolyScriptContext) is_safe_mode() bool {
-	return ctx.mode == .simulate || ctx.mode == .sandbox
+	return safe_ffi_call(
+		fn [ctx] () bool { return C.polyscript_is_safe_mode(mode_to_int(ctx.mode)) },
+		ctx.mode == .simulate || ctx.mode == .sandbox  // Fallback implementation
+	)
 }
 
 pub fn (mut ctx PolyScriptContext) log(message string, level string) {

@@ -13,11 +13,61 @@ import traceback
 from datetime import datetime
 from functools import wraps
 from typing import Any, Dict, Optional, List, Callable
+import ctypes
+from ctypes import cdll, c_int, c_bool
 try:
     import click
 except ImportError:
     print("Error: Click is required for PolyScript framework. Install with: pip install click")
     sys.exit(1)
+
+
+# Load libpolyscript for FFI calls
+def _find_libpolyscript():
+    """Find libpolyscript library with cross-platform support."""
+    import platform
+    
+    # Determine library extension based on platform
+    system = platform.system().lower()
+    if system == 'windows':
+        lib_extensions = ['.dll']
+    elif system == 'darwin':
+        lib_extensions = ['.dylib']
+    else:  # Linux and others
+        lib_extensions = ['.so']
+    
+    # Try relative paths first
+    base_dir = os.path.dirname(__file__)
+    lib_base_path = os.path.join(base_dir, '../../libpolyscript/build/libpolyscript')
+    
+    for ext in lib_extensions:
+        lib_path = lib_base_path + ext
+        if os.path.exists(lib_path):
+            return lib_path
+    
+    # Fallback to system library path
+    return 'libpolyscript'
+
+try:
+    lib_path = _find_libpolyscript()
+    libpolyscript = cdll.LoadLibrary(lib_path)
+    
+    # Define function signatures
+    libpolyscript.polyscript_can_mutate.argtypes = [c_int]
+    libpolyscript.polyscript_can_mutate.restype = c_bool
+    
+    libpolyscript.polyscript_should_validate.argtypes = [c_int] 
+    libpolyscript.polyscript_should_validate.restype = c_bool
+    
+    libpolyscript.polyscript_require_confirm.argtypes = [c_int, c_int]
+    libpolyscript.polyscript_require_confirm.restype = c_bool
+    
+    libpolyscript.polyscript_is_safe_mode.argtypes = [c_int]
+    libpolyscript.polyscript_is_safe_mode.restype = c_bool
+    
+except (OSError, AttributeError) as e:
+    print(f"Warning: Could not load libpolyscript, falling back to native implementation: {e}")
+    libpolyscript = None
 
 
 class PolyScriptContext:
@@ -48,21 +98,47 @@ class PolyScriptContext:
         if rebadged_as:
             self.output_data["rebadged_as"] = rebadged_as
     
+    def _mode_to_int(self) -> int:
+        """Convert mode string to C enum value"""
+        mode_map = {"simulate": 0, "sandbox": 1, "live": 2}
+        return mode_map.get(self.mode, 2)  # Default to live
+    
+    def _operation_to_int(self) -> int:
+        """Convert operation string to C enum value"""
+        op_map = {"create": 0, "read": 1, "update": 2, "delete": 3}
+        return op_map.get(self.operation, 0)  # Default to create
+    
     def can_mutate(self) -> bool:
         """Check if current mode allows mutations"""
-        return self.mode == "live"
+        if libpolyscript:
+            return bool(libpolyscript.polyscript_can_mutate(self._mode_to_int()))
+        else:
+            # Fallback to native implementation
+            return self.mode == "live"
     
     def should_validate(self) -> bool:
         """Check if current mode should validate"""
-        return self.mode == "sandbox"
+        if libpolyscript:
+            return bool(libpolyscript.polyscript_should_validate(self._mode_to_int()))
+        else:
+            # Fallback to native implementation
+            return self.mode == "sandbox"
     
     def require_confirm(self) -> bool:
         """Check if confirmation required for destructive operations"""
-        return self.mode == "live" and self.operation in ["update", "delete"] and not self.force
+        if libpolyscript:
+            return bool(libpolyscript.polyscript_require_confirm(self._mode_to_int(), self._operation_to_int())) and not self.force
+        else:
+            # Fallback to native implementation
+            return self.mode == "live" and self.operation in ["update", "delete"] and not self.force
     
     def is_safe_mode(self) -> bool:
         """Check if in a safe mode (simulate/sandbox)"""
-        return self.mode in ["simulate", "sandbox"]
+        if libpolyscript:
+            return bool(libpolyscript.polyscript_is_safe_mode(self._mode_to_int()))
+        else:
+            # Fallback to native implementation
+            return self.mode in ["simulate", "sandbox"]
     
     def log(self, message: str, level: str = "info"):
         """Log a message (respects verbose and JSON mode)"""

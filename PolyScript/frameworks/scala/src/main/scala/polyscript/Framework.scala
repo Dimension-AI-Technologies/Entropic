@@ -11,8 +11,81 @@ import scopt.OParser
 import play.api.libs.json._
 import java.time.Instant
 import scala.util.{Try, Success, Failure}
+import com.sun.jna.{Library, Native}
+import java.io.File
 
 object Framework {
+  
+  // JNA interface for libpolyscript
+  trait LibPolyScript extends Library {
+    def polyscript_can_mutate(mode: Int): Boolean
+    def polyscript_should_validate(mode: Int): Boolean  
+    def polyscript_require_confirm(mode: Int, operation: Int): Boolean
+    def polyscript_is_safe_mode(mode: Int): Boolean
+  }
+  
+  // FFI wrapper with graceful fallback
+  object PolyScriptFFI {
+    private var libpolyscript: Option[LibPolyScript] = None
+    
+    // Try to load libpolyscript from various locations
+    private val libPaths = Seq(
+      "../../libpolyscript/build/libpolyscript",
+      "libpolyscript"  // System-wide installation
+    )
+    
+    // Initialize FFI library
+    try {
+      var loaded = false
+      for (path <- libPaths if !loaded) {
+        try {
+          libpolyscript = Some(Native.load(path, classOf[LibPolyScript]))
+          loaded = true
+        } catch {
+          case _: UnsatisfiedLinkError => // Try next path
+        }
+      }
+      if (!loaded) {
+        System.err.println("Warning: libpolyscript not found, using fallback implementations")
+      }
+    } catch {
+      case e: Exception =>
+        System.err.println(s"Warning: Failed to load libpolyscript: ${e.getMessage}")
+    }
+    
+    // Convert Scala types to C integers for FFI calls
+    private def operationToInt(op: PolyScriptOperation): Int = op match {
+      case Create => 0
+      case Read => 1
+      case Update => 2
+      case Delete => 3
+    }
+    
+    private def modeToInt(mode: PolyScriptMode): Int = mode match {
+      case Simulate => 0
+      case Sandbox => 1
+      case Live => 2
+    }
+    
+    // Safe FFI wrappers with fallback
+    def canMutate(mode: PolyScriptMode): Boolean = {
+      libpolyscript.map(_.polyscript_can_mutate(modeToInt(mode))).getOrElse(mode == Live)
+    }
+    
+    def shouldValidate(mode: PolyScriptMode): Boolean = {
+      libpolyscript.map(_.polyscript_should_validate(modeToInt(mode))).getOrElse(mode == Sandbox)
+    }
+    
+    def requireConfirm(mode: PolyScriptMode, operation: PolyScriptOperation, force: Boolean): Boolean = {
+      if (force) false
+      else libpolyscript.map(_.polyscript_require_confirm(modeToInt(mode), operationToInt(operation)))
+        .getOrElse(mode == Live && (operation == Update || operation == Delete))
+    }
+    
+    def isSafeMode(mode: PolyScriptMode): Boolean = {
+      libpolyscript.map(_.polyscript_is_safe_mode(modeToInt(mode))).getOrElse(mode == Simulate || mode == Sandbox)
+    }
+  }
   
   // CRUD Operations
   sealed trait PolyScriptOperation
@@ -45,11 +118,10 @@ object Framework {
     ),
     var messages: List[String] = List.empty
   ) {
-    def canMutate: Boolean = mode == Live
-    def shouldValidate: Boolean = mode == Sandbox
-    def requireConfirm: Boolean = mode == Live && 
-      (operation == Update || operation == Delete) && !force
-    def isSafeMode: Boolean = mode == Simulate || mode == Sandbox
+    def canMutate: Boolean = PolyScriptFFI.canMutate(mode)
+    def shouldValidate: Boolean = PolyScriptFFI.shouldValidate(mode)
+    def requireConfirm: Boolean = PolyScriptFFI.requireConfirm(mode, operation, force)
+    def isSafeMode: Boolean = PolyScriptFFI.isSafeMode(mode)
     
     def log(message: String, level: String = "info"): Unit = {
       if (jsonOutput) {

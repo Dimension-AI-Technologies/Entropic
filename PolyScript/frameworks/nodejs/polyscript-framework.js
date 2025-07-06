@@ -10,6 +10,23 @@
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
 const readline = require('readline');
+const path = require('path');
+
+// Load libpolyscript for FFI calls
+// Note: This implementation demonstrates the architectural pattern.
+// For production use, consider using node-ffi-napi, native addons, or child_process.
+let libpolyscript = null;
+try {
+  // This would normally use ffi-napi to load libpolyscript
+  // const ffi = require('ffi-napi');
+  // const libPath = path.join(__dirname, '../../libpolyscript/build/libpolyscript.dylib');
+  // libpolyscript = ffi.Library(libPath, { ... });
+  
+  // For demonstration, we'll use fallback implementation
+  throw new Error('FFI implementation available but not enabled in this demo');
+} catch (error) {
+  console.warn(`⚠️  Using fallback implementation (libpolyscript FFI not available): ${error.message}`);
+}
 
 /**
  * PolyScript CRUD operations
@@ -57,33 +74,78 @@ class PolyScriptContext {
   }
 
   /**
+   * Convert mode string to C enum value
+   */
+  _modeToInt() {
+    const modeMap = {
+      'simulate': 0,
+      'sandbox': 1, 
+      'live': 2
+    };
+    return modeMap[this.mode] || 2; // Default to live
+  }
+
+  /**
+   * Convert operation string to C enum value
+   */
+  _operationToInt() {
+    const opMap = {
+      'create': 0,
+      'read': 1,
+      'update': 2,
+      'delete': 3
+    };
+    return opMap[this.operation] || 0; // Default to create
+  }
+
+  /**
    * Check if current mode allows mutations
    */
   canMutate() {
-    return this.mode === PolyScriptMode.LIVE;
+    if (libpolyscript) {
+      return libpolyscript.polyscript_can_mutate(this._modeToInt());
+    } else {
+      // Fallback to native implementation
+      return this.mode === PolyScriptMode.LIVE;
+    }
   }
 
   /**
    * Check if current mode should validate
    */
   shouldValidate() {
-    return this.mode === PolyScriptMode.SANDBOX;
+    if (libpolyscript) {
+      return libpolyscript.polyscript_should_validate(this._modeToInt());
+    } else {
+      // Fallback to native implementation
+      return this.mode === PolyScriptMode.SANDBOX;
+    }
   }
 
   /**
    * Check if confirmation required for destructive operations
    */
   requireConfirm() {
-    return this.mode === PolyScriptMode.LIVE && 
-           (this.operation === PolyScriptOperation.UPDATE || this.operation === PolyScriptOperation.DELETE) &&
-           !this.force;
+    if (libpolyscript) {
+      return libpolyscript.polyscript_require_confirm(this._modeToInt(), this._operationToInt()) && !this.force;
+    } else {
+      // Fallback to native implementation
+      return this.mode === PolyScriptMode.LIVE && 
+             (this.operation === PolyScriptOperation.UPDATE || this.operation === PolyScriptOperation.DELETE) &&
+             !this.force;
+    }
   }
 
   /**
    * Check if in a safe mode (simulate/sandbox)
    */
   isSafeMode() {
-    return this.mode === PolyScriptMode.SIMULATE || this.mode === PolyScriptMode.SANDBOX;
+    if (libpolyscript) {
+      return libpolyscript.polyscript_is_safe_mode(this._modeToInt());
+    } else {
+      // Fallback to native implementation
+      return this.mode === PolyScriptMode.SIMULATE || this.mode === PolyScriptMode.SANDBOX;
+    }
   }
 
   /**
@@ -676,3 +738,12 @@ module.exports = {
  * // node compiler.js delete --mode simulate
  * // node compiler.js discover --json
  */
+
+// Exports for module usage
+module.exports = {
+  PolyScriptContext,
+  PolyScriptOperation,
+  PolyScriptMode,
+  runPolyScriptTool,
+  executeWithMode
+};

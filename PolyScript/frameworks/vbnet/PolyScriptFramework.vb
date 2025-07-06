@@ -15,34 +15,19 @@ Imports System.Text.Json
 Imports System.Threading.Tasks
 Imports Spectre.Console
 Imports Spectre.Console.Cli
+Imports PolyScript.NET
 
 Namespace PolyScript.Framework
 
-    ''' <summary>
-    ''' PolyScript CRUD operations
-    ''' </summary>
-    Public Enum PolyScriptOperation
-        Create
-        Read
-        Update
-        Delete
-    End Enum
-
-    ''' <summary>
-    ''' PolyScript execution modes
-    ''' </summary>
-    Public Enum PolyScriptMode
-        Simulate
-        Sandbox
-        Live
-    End Enum
+    ' PolyScript operations and modes are now provided by PolyScript.NET
+    ' Using PolyScript.NET.PolyScriptOperation and PolyScript.NET.PolyScriptMode
 
     ''' <summary>
     ''' PolyScript context passed to tool methods
     ''' </summary>
     Public Class PolyScriptContext
-        Public Property Operation As PolyScriptOperation
-        Public Property Mode As PolyScriptMode
+        Public Property Operation As PolyScript.NET.PolyScriptOperation
+        Public Property Mode As PolyScript.NET.PolyScriptMode
         Public Property Resource As String
         Public Property RebadgedAs As String
         Public Property Verbose As Boolean
@@ -56,29 +41,34 @@ Namespace PolyScript.Framework
         }
         Public Property Messages As New List(Of String)()
 
+        ' Create libpolyscript context for FFI calls
+        Private Function GetLibContext() As PolyScript.NET.PolyScriptContext
+            Dim libCtx = New PolyScript.NET.PolyScriptContext(Operation, Mode, ToolName)
+            libCtx.Force = Force
+            Return libCtx
+        End Function
+
         Public ReadOnly Property CanMutate As Boolean
             Get
-                Return Mode = PolyScriptMode.Live
+                Return GetLibContext().CanMutate()
             End Get
         End Property
 
         Public ReadOnly Property ShouldValidate As Boolean
             Get
-                Return Mode = PolyScriptMode.Sandbox
+                Return GetLibContext().ShouldValidate()
             End Get
         End Property
 
         Public ReadOnly Property RequireConfirm As Boolean
             Get
-                Return Mode = PolyScriptMode.Live AndAlso 
-                       (Operation = PolyScriptOperation.Update OrElse Operation = PolyScriptOperation.Delete) AndAlso
-                       Not Force
+                Return GetLibContext().RequireConfirm()
             End Get
         End Property
 
         Public ReadOnly Property IsSafeMode As Boolean
             Get
-                Return Mode = PolyScriptMode.Simulate OrElse Mode = PolyScriptMode.Sandbox
+                Return GetLibContext().IsSafeMode()
             End Get
         End Property
 
@@ -201,7 +191,7 @@ Namespace PolyScript.Framework
 
         <Description("Execution mode")>
         <CommandOption("--mode")>
-        Public Property Mode As PolyScriptMode = PolyScriptMode.Live
+        Public Property Mode As PolyScript.NET.PolyScriptMode = PolyScript.NET.PolyScriptMode.Live
 
         <Description("Enable verbose output")>
         <CommandOption("-v|--verbose")>
@@ -222,7 +212,7 @@ Namespace PolyScript.Framework
     Public MustInherit Class PolyScriptCommand(Of TTool As {IPolyScriptTool, New})
         Inherits Command(Of PolyScriptSettings)
 
-        Protected MustOverride ReadOnly Property Operation As PolyScriptOperation
+        Protected MustOverride ReadOnly Property Operation As PolyScript.NET.PolyScriptOperation
         Protected Overridable ReadOnly Property RebadgedAs As String = Nothing
 
         Public Overrides Function Execute(context As CommandContext, settings As PolyScriptSettings) As Integer
@@ -266,10 +256,10 @@ Namespace PolyScript.Framework
 
         Private Function ExecuteWithMode(tool As TTool, context As PolyScriptContext) As Object
             Select Case context.Mode
-                Case PolyScriptMode.Simulate
+                Case PolyScript.NET.PolyScriptMode.Simulate
                     context.Log($"Simulating {context.Operation} operation", "debug")
                     
-                    If context.Operation = PolyScriptOperation.Read Then
+                    If context.Operation = PolyScript.NET.PolyScriptOperation.Read Then
                         Return tool.Read(context.Resource, New Dictionary(Of String, Object), context)
                     Else
                         Dim actionVerb = GetActionVerb(context.Operation)
@@ -280,7 +270,7 @@ Namespace PolyScript.Framework
                         }
                     End If
 
-                Case PolyScriptMode.Sandbox
+                Case PolyScript.NET.PolyScriptMode.Sandbox
                     context.Log($"Testing prerequisites for {context.Operation}", "debug")
                     
                     Dim validations = New Dictionary(Of String, Object) From {
@@ -295,7 +285,7 @@ Namespace PolyScript.Framework
                         {"ready", True}
                     }
 
-                Case PolyScriptMode.Live
+                Case PolyScript.NET.PolyScriptMode.Live
                     context.Log($"Executing {context.Operation} operation", "debug")
                     
                     If context.RequireConfirm Then
@@ -307,13 +297,13 @@ Namespace PolyScript.Framework
                     End If
 
                     Select Case context.Operation
-                        Case PolyScriptOperation.Create
+                        Case PolyScript.NET.PolyScriptOperation.Create
                             Return tool.Create(context.Resource, New Dictionary(Of String, Object), context)
-                        Case PolyScriptOperation.Read
+                        Case PolyScript.NET.PolyScriptOperation.Read
                             Return tool.Read(context.Resource, New Dictionary(Of String, Object), context)
-                        Case PolyScriptOperation.Update
+                        Case PolyScript.NET.PolyScriptOperation.Update
                             Return tool.Update(context.Resource, New Dictionary(Of String, Object), context)
-                        Case PolyScriptOperation.Delete
+                        Case PolyScript.NET.PolyScriptOperation.Delete
                             Return tool.Delete(context.Resource, New Dictionary(Of String, Object), context)
                         Case Else
                             Throw New InvalidOperationException($"Unknown operation: {context.Operation}")
@@ -321,13 +311,13 @@ Namespace PolyScript.Framework
             End Select
         End Function
 
-        Private Function GetActionVerb(operation As PolyScriptOperation) As String
+        Private Function GetActionVerb(operation As PolyScript.NET.PolyScriptOperation) As String
             Select Case operation
-                Case PolyScriptOperation.Create
+                Case PolyScript.NET.PolyScriptOperation.Create
                     Return "Would create"
-                Case PolyScriptOperation.Update
+                Case PolyScript.NET.PolyScriptOperation.Update
                     Return "Would update"
-                Case PolyScriptOperation.Delete
+                Case PolyScript.NET.PolyScriptOperation.Delete
                     Return "Would delete"
                 Case Else
                     Return "Would read"
@@ -339,9 +329,9 @@ Namespace PolyScript.Framework
     Public Class CreateCommand(Of TTool As {IPolyScriptTool, New})
         Inherits PolyScriptCommand(Of TTool)
         
-        Protected Overrides ReadOnly Property Operation As PolyScriptOperation
+        Protected Overrides ReadOnly Property Operation As PolyScript.NET.PolyScriptOperation
             Get
-                Return PolyScriptOperation.Create
+                Return PolyScript.NET.PolyScriptOperation.Create
             End Get
         End Property
     End Class
@@ -349,9 +339,9 @@ Namespace PolyScript.Framework
     Public Class ReadCommand(Of TTool As {IPolyScriptTool, New})
         Inherits PolyScriptCommand(Of TTool)
         
-        Protected Overrides ReadOnly Property Operation As PolyScriptOperation
+        Protected Overrides ReadOnly Property Operation As PolyScript.NET.PolyScriptOperation
             Get
-                Return PolyScriptOperation.Read
+                Return PolyScript.NET.PolyScriptOperation.Read
             End Get
         End Property
     End Class
@@ -359,9 +349,9 @@ Namespace PolyScript.Framework
     Public Class UpdateCommand(Of TTool As {IPolyScriptTool, New})
         Inherits PolyScriptCommand(Of TTool)
         
-        Protected Overrides ReadOnly Property Operation As PolyScriptOperation
+        Protected Overrides ReadOnly Property Operation As PolyScript.NET.PolyScriptOperation
             Get
-                Return PolyScriptOperation.Update
+                Return PolyScript.NET.PolyScriptOperation.Update
             End Get
         End Property
     End Class
@@ -369,9 +359,9 @@ Namespace PolyScript.Framework
     Public Class DeleteCommand(Of TTool As {IPolyScriptTool, New})
         Inherits PolyScriptCommand(Of TTool)
         
-        Protected Overrides ReadOnly Property Operation As PolyScriptOperation
+        Protected Overrides ReadOnly Property Operation As PolyScript.NET.PolyScriptOperation
             Get
-                Return PolyScriptOperation.Delete
+                Return PolyScript.NET.PolyScriptOperation.Delete
             End Get
         End Property
     End Class

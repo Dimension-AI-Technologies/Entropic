@@ -11,7 +11,75 @@ require 'thor'
 require 'json'
 require 'io/console'
 
+# Try to load FFI for libpolyscript integration
+begin
+  require 'ffi'
+  FFI_AVAILABLE = true
+rescue LoadError
+  FFI_AVAILABLE = false
+  warn "FFI gem not available, using fallback behavioral implementations"
+end
+
 module PolyScript
+  # FFI bindings for libpolyscript
+  if FFI_AVAILABLE
+    module LibPolyScript
+      extend FFI::Library
+      
+      # Try to find libpolyscript in common locations
+      lib_paths = [
+        File.join(__dir__, '../../libpolyscript/build/libpolyscript.so'),
+        File.join(__dir__, '../../libpolyscript/build/libpolyscript.dylib'),
+        'libpolyscript'  # System-wide installation
+      ]
+      
+      lib_loaded = false
+      lib_paths.each do |path|
+        begin
+          ffi_lib path
+          lib_loaded = true
+          break
+        rescue LoadError
+          next
+        end
+      end
+      
+      unless lib_loaded
+        warn "libpolyscript not found, using fallback implementations"
+        FFI_AVAILABLE = false
+      end
+      
+      if lib_loaded
+        # Function bindings
+        attach_function :polyscript_can_mutate, [:int], :bool
+        attach_function :polyscript_should_validate, [:int], :bool  
+        attach_function :polyscript_require_confirm, [:int, :int], :bool
+        attach_function :polyscript_is_safe_mode, [:int], :bool
+        
+        # Convert string modes to integers for FFI calls
+        def self.mode_to_int(mode)
+          case mode
+          when Mode::SIMULATE then 0
+          when Mode::SANDBOX then 1  
+          when Mode::LIVE then 2
+          else 2  # Default to live
+          end
+        end
+        
+        # Convert string operations to integers for FFI calls
+        def self.operation_to_int(operation)
+          case operation
+          when Operation::CREATE then 0
+          when Operation::READ then 1
+          when Operation::UPDATE then 2
+          when Operation::DELETE then 3
+          else 1  # Default to read
+          end
+        end
+      end
+    end
+  end
+
   # PolyScript CRUD operations
   module Operation
     CREATE = 'create'.freeze
@@ -54,24 +122,53 @@ module PolyScript
 
     # Check if current mode allows mutations
     def can_mutate?
-      @mode == Mode::LIVE
+      if FFI_AVAILABLE && LibPolyScript.respond_to?(:polyscript_can_mutate)
+        mode_int = LibPolyScript.mode_to_int(@mode)
+        LibPolyScript.polyscript_can_mutate(mode_int)
+      else
+        # Fallback implementation
+        @mode == Mode::LIVE
+      end
     end
 
     # Check if current mode should validate
     def should_validate?
-      @mode == Mode::SANDBOX
+      if FFI_AVAILABLE && LibPolyScript.respond_to?(:polyscript_should_validate)
+        mode_int = LibPolyScript.mode_to_int(@mode)
+        LibPolyScript.polyscript_should_validate(mode_int)
+      else
+        # Fallback implementation
+        @mode == Mode::SANDBOX
+      end
     end
 
     # Check if confirmation required for destructive operations
     def require_confirm?
-      @mode == Mode::LIVE && 
-      (@operation == Operation::UPDATE || @operation == Operation::DELETE) &&
-      !@force
+      if FFI_AVAILABLE && LibPolyScript.respond_to?(:polyscript_require_confirm)
+        mode_int = LibPolyScript.mode_to_int(@mode)
+        operation_int = LibPolyScript.operation_to_int(@operation)
+        
+        # FFI function doesn't consider force flag, so we handle it here
+        return false if @force
+        
+        LibPolyScript.polyscript_require_confirm(mode_int, operation_int)
+      else
+        # Fallback implementation
+        @mode == Mode::LIVE && 
+        (@operation == Operation::UPDATE || @operation == Operation::DELETE) &&
+        !@force
+      end
     end
 
     # Check if in a safe mode (simulate/sandbox)
     def safe_mode?
-      @mode == Mode::SIMULATE || @mode == Mode::SANDBOX
+      if FFI_AVAILABLE && LibPolyScript.respond_to?(:polyscript_is_safe_mode)
+        mode_int = LibPolyScript.mode_to_int(@mode)
+        LibPolyScript.polyscript_is_safe_mode(mode_int)
+      else
+        # Fallback implementation
+        @mode == Mode::SIMULATE || @mode == Mode::SANDBOX
+      end
     end
 
     # Log a message at the specified level

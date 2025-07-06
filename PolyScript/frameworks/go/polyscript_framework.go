@@ -7,12 +7,24 @@
 
 package polyscript
 
+/*
+#cgo LDFLAGS: -L../../libpolyscript/build -lpolyscript
+#cgo pkg-config: polyscript
+#include <stdbool.h>
+
+// C function declarations matching libpolyscript
+extern bool polyscript_can_mutate(int mode);
+extern bool polyscript_should_validate(int mode);
+extern bool polyscript_require_confirm(int mode, int operation);
+extern bool polyscript_is_safe_mode(int mode);
+*/
+import "C"
+
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -69,26 +81,49 @@ func NewContext(operation PolyScriptOperation, mode PolyScriptMode, resource str
 	}
 }
 
+// Helper functions to convert Go types to C enums
+func (ctx *PolyScriptContext) modeToC() C.int {
+	switch ctx.Mode {
+	case SimulateMode:
+		return C.int(0) // Simulate
+	case SandboxMode:
+		return C.int(1) // Sandbox
+	default:
+		return C.int(2) // Live
+	}
+}
+
+func (ctx *PolyScriptContext) operationToC() C.int {
+	switch ctx.Operation {
+	case CreateOp:
+		return C.int(0) // Create
+	case ReadOp:
+		return C.int(1) // Read
+	case UpdateOp:
+		return C.int(2) // Update
+	default:
+		return C.int(3) // Delete
+	}
+}
+
 // CanMutate returns true if the current mode allows mutations
 func (ctx *PolyScriptContext) CanMutate() bool {
-	return ctx.Mode == LiveMode
+	return bool(C.polyscript_can_mutate(ctx.modeToC()))
 }
 
 // ShouldValidate returns true if the current mode should validate
 func (ctx *PolyScriptContext) ShouldValidate() bool {
-	return ctx.Mode == SandboxMode
+	return bool(C.polyscript_should_validate(ctx.modeToC()))
 }
 
 // RequireConfirm returns true if confirmation is required
 func (ctx *PolyScriptContext) RequireConfirm() bool {
-	return ctx.Mode == LiveMode &&
-		(ctx.Operation == UpdateOp || ctx.Operation == DeleteOp) &&
-		!ctx.Force
+	return bool(C.polyscript_require_confirm(ctx.modeToC(), ctx.operationToC())) && !ctx.Force
 }
 
 // IsSafeMode returns true if in a safe mode (simulate/sandbox)
 func (ctx *PolyScriptContext) IsSafeMode() bool {
-	return ctx.Mode == SimulateMode || ctx.Mode == SandboxMode
+	return bool(C.polyscript_is_safe_mode(ctx.modeToC()))
 }
 
 // Log outputs a message at the specified level

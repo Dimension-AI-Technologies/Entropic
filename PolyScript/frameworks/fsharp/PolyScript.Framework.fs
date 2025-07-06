@@ -12,25 +12,16 @@ open System.Collections.Generic
 open System.Text.Json
 open System.IO
 open Argu
+open PolyScript.NET
 
-// PolyScript CRUD operations
-type PolyScriptOperation =
-    | Create
-    | Read
-    | Update
-    | Delete
-
-// PolyScript execution modes
-type PolyScriptMode =
-    | Simulate
-    | Sandbox
-    | Live
+// PolyScript operations and modes are now provided by PolyScript.NET
+// Using PolyScript.NET.PolyScriptOperation and PolyScript.NET.PolyScriptMode
 
 
 // PolyScript context for tool execution
 type PolyScriptContext = {
-    Operation: PolyScriptOperation
-    Mode: PolyScriptMode
+    Operation: PolyScript.NET.PolyScriptOperation
+    Mode: PolyScript.NET.PolyScriptMode
     Resource: string option
     RebadgedAs: string option
     Options: Dictionary<string, obj>
@@ -58,13 +49,17 @@ type PolyScriptContext = {
             data
     }
 
-    member this.CanMutate() = this.Mode = Live
-    member this.ShouldValidate() = this.Mode = Sandbox
-    member this.RequireConfirm() = 
-        this.Mode = Live && 
-        (this.Operation = Update || this.Operation = Delete) && 
-        not this.Force
-    member this.IsSafeMode() = this.Mode <> Live
+    // Create libpolyscript context for FFI calls
+    member private this.GetLibContext() =
+        let toolName = "FSharpTool" // Could extract from OutputData if needed
+        let libCtx = PolyScript.NET.PolyScriptContext(this.Operation, this.Mode, toolName)
+        libCtx.Force <- this.Force
+        libCtx
+
+    member this.CanMutate() = this.GetLibContext().CanMutate()
+    member this.ShouldValidate() = this.GetLibContext().ShouldValidate()
+    member this.RequireConfirm() = this.GetLibContext().RequireConfirm()
+    member this.IsSafeMode() = this.GetLibContext().IsSafeMode()
 
     member this.Log(message: string, ?level: string) =
         let level = defaultArg level "info"
@@ -170,7 +165,7 @@ type IPolyScriptTool =
 // Argu argument types for CRUD operations
 type CrudArguments =
     | [<MainCommand; ExactlyOnce>] Resource of resource: string
-    | [<AltCommandLine("-m")>] Mode of mode: PolyScriptMode
+    | [<AltCommandLine("-m")>] Mode of mode: PolyScript.NET.PolyScriptMode
     | [<AltCommandLine("-v")>] Verbose
     | [<AltCommandLine("-f")>] Force
     | Json
@@ -211,20 +206,20 @@ let loadRebadging<'T>() =
 // Execute CRUD method with mode wrapping
 let executeWithMode (tool: 'T when 'T :> IPolyScriptTool) (context: PolyScriptContext) =
     match context.Mode with
-    | Simulate ->
+    | PolyScript.NET.PolyScriptMode.Simulate ->
         context.Log($"Simulating {context.Operation} operation", "debug")
         
         // Read operations can execute in simulate mode
-        if context.Operation = Read then
+        if context.Operation = PolyScript.NET.PolyScriptOperation.Read then
             tool.Read context.Resource context.Options context
         else
             // For mutating operations, describe what would happen
             let actionVerbs = 
                 match context.Operation with
-                | Create -> "Would create"
-                | Update -> "Would update"
-                | Delete -> "Would delete"
-                | Read -> "Would read" // Should not reach here
+                | PolyScript.NET.PolyScriptOperation.Create -> "Would create"
+                | PolyScript.NET.PolyScriptOperation.Update -> "Would update"
+                | PolyScript.NET.PolyScriptOperation.Delete -> "Would delete"
+                | PolyScript.NET.PolyScriptOperation.Read -> "Would read" // Should not reach here
             
             dict [
                 ("simulation", true :> obj)
@@ -233,7 +228,7 @@ let executeWithMode (tool: 'T when 'T :> IPolyScriptTool) (context: PolyScriptCo
                 ("options", context.Options :> obj)
             ] :> obj
     
-    | Sandbox ->
+    | PolyScript.NET.PolyScriptMode.Sandbox ->
         context.Log($"Testing prerequisites for {context.Operation}", "debug")
         
         let validations = Dictionary<string, string>()
@@ -251,7 +246,7 @@ let executeWithMode (tool: 'T when 'T :> IPolyScriptTool) (context: PolyScriptCo
             ("ready", allPassed :> obj)
         ] :> obj
     
-    | Live ->
+    | PolyScript.NET.PolyScriptMode.Live ->
         context.Log($"Executing {context.Operation} operation", "debug")
         
         // Confirmation for destructive operations
@@ -267,21 +262,21 @@ let executeWithMode (tool: 'T when 'T :> IPolyScriptTool) (context: PolyScriptCo
             else
                 // Execute the actual CRUD method
                 match context.Operation with
-                | Create -> tool.Create context.Resource context.Options context
-                | Read -> tool.Read context.Resource context.Options context
-                | Update -> tool.Update context.Resource context.Options context
-                | Delete -> tool.Delete context.Resource context.Options context
+                | PolyScript.NET.PolyScriptOperation.Create -> tool.Create context.Resource context.Options context
+                | PolyScript.NET.PolyScriptOperation.Read -> tool.Read context.Resource context.Options context
+                | PolyScript.NET.PolyScriptOperation.Update -> tool.Update context.Resource context.Options context
+                | PolyScript.NET.PolyScriptOperation.Delete -> tool.Delete context.Resource context.Options context
         else
             // Execute the actual CRUD method
             match context.Operation with
-            | Create -> tool.Create context.Resource context.Options context
-            | Read -> tool.Read context.Resource context.Options context
-            | Update -> tool.Update context.Resource context.Options context
-            | Delete -> tool.Delete context.Resource context.Options context
+            | PolyScript.NET.PolyScriptOperation.Create -> tool.Create context.Resource context.Options context
+            | PolyScript.NET.PolyScriptOperation.Read -> tool.Read context.Resource context.Options context
+            | PolyScript.NET.PolyScriptOperation.Update -> tool.Update context.Resource context.Options context
+            | PolyScript.NET.PolyScriptOperation.Delete -> tool.Delete context.Resource context.Options context
 
 // Main execution function for CRUD operations
 let executeCrudOperation<'T when 'T :> IPolyScriptTool and 'T : (new : unit -> 'T)> 
-    (operation: PolyScriptOperation) 
+    (operation: PolyScript.NET.PolyScriptOperation) 
     (rebadgedAs: string option)
     (args: string[]) =
     
@@ -290,7 +285,7 @@ let executeCrudOperation<'T when 'T :> IPolyScriptTool and 'T : (new : unit -> '
     try
         let results = parser.Parse(args)
         let resource = results.TryGetResult(Resource)
-        let mode = results.GetResult(Mode, defaultValue = Live)
+        let mode = results.GetResult(Mode, defaultValue = PolyScript.NET.PolyScriptMode.Live)
         let verbose = results.Contains(CrudArguments.Verbose)
         let force = results.Contains(CrudArguments.Force)
         let jsonOutput = results.Contains(CrudArguments.Json)
@@ -371,18 +366,18 @@ let run<'T when 'T :> IPolyScriptTool and 'T : (new : unit -> 'T)> (args: string
         
         match args.[0] with
         | "--discover" -> executeDiscovery<'T> (args |> Array.skip 1)
-        | "create" -> executeCrudOperation<'T> Create None (args |> Array.skip 1)
-        | "read" | "list" -> executeCrudOperation<'T> Read None (args |> Array.skip 1)
-        | "update" -> executeCrudOperation<'T> Update None (args |> Array.skip 1)
-        | "delete" -> executeCrudOperation<'T> Delete None (args |> Array.skip 1)
+        | "create" -> executeCrudOperation<'T> PolyScript.NET.PolyScriptOperation.Create None (args |> Array.skip 1)
+        | "read" | "list" -> executeCrudOperation<'T> PolyScript.NET.PolyScriptOperation.Read None (args |> Array.skip 1)
+        | "update" -> executeCrudOperation<'T> PolyScript.NET.PolyScriptOperation.Update None (args |> Array.skip 1)
+        | "delete" -> executeCrudOperation<'T> PolyScript.NET.PolyScriptOperation.Delete None (args |> Array.skip 1)
         | cmd when rebadging.ContainsKey(cmd) ->
             let (operation, _mode) = rebadging.[cmd]
             let parsedOp = 
                 match operation with
-                | "create" -> Create
-                | "read" -> Read
-                | "update" -> Update
-                | "delete" -> Delete
+                | "create" -> PolyScript.NET.PolyScriptOperation.Create
+                | "read" -> PolyScript.NET.PolyScriptOperation.Read
+                | "update" -> PolyScript.NET.PolyScriptOperation.Update
+                | "delete" -> PolyScript.NET.PolyScriptOperation.Delete
                 | _ -> failwith $"Unknown operation: {operation}"
             executeCrudOperation<'T> parsedOp (Some cmd) (args |> Array.skip 1)
         | _ ->

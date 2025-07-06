@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PolyScript.Framework")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9658dc116f4b8b628dcfec20e7ebae2c2e6ac4de")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d4f5a4cf378777673c78911c25b7932b44377539")]
 [assembly: System.Reflection.AssemblyProductAttribute("PolyScript.Framework")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PolyScript.Framework")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
