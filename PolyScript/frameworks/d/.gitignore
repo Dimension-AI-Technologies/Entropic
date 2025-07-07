@@ -1,0 +1,66 @@
+# DUB
+.dub
+docs.json
+__dummy.html
+docs/
+/libpolyscript-d-test-*
+libpolyscript-d-test-*
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.exe
+dub.selections.json
+
+# Build artifacts
+*.o
+*.obj
+*.lst
+*.def
+*.map
+*.res
+*.ilk
+*.pdb
+*.tds
+*.exe
+*.dll
+*.so
+*.a
+*.lib
+
+# DMD compiler generated
+*.deps
+*.di
+
+# LDC compiler generated
+*.ll
+*.bc
+*.s
+
+# Code coverage
+*.lst
+*.trace
+
+# Documentation
+docs/
+ddoc/
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+*.sln.docstates
+*.tmp
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+
+# Temporary
+temp/
+tmp/

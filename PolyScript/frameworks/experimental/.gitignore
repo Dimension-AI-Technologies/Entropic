@@ -1,0 +1,60 @@
+# Build artifacts
+build/
+dist/
+target/
+bin/
+obj/
+
+# Dependencies
+node_modules/
+vendor/
+packages/
+deps/
+
+# IDE
+.vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+*.suo
+*.user
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*~
+*.log
+
+# Environment
+.env
+.venv
+env/
+venv/
+
+# Coverage
+coverage/
+*.cov
+*.lcov
+
+# Cache
+.cache/
+*.cache
+
+# Compiled files
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.exe
+*.class
+*.pyc
+*.pyo
+__pycache__/

@@ -1,0 +1,94 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Build directories
+build/
+Build/
+BUILD/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.make
+
+# Generated files
+*.cmake
+!CMakeLists.txt
+
+# IDE files
+.vscode/
+.vs/
+.idea/
+*.vcxproj*
+*.sln
+*.suo
+*.user
+
+# Debugging
+*.pdb
+*.ilk
+
+# Profiling
+*.psess
+*.vsp
+*.vspx
+
+# Code coverage
+*.gcov
+*.gcda
+*.gcno
+
+# Qt
+*.pro.user*
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qm
+
+# Temporary files
+*~
+*.swp
+*.swo
+*.tmp
+*.temp
+
+# OS generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

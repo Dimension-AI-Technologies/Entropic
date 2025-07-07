@@ -1,0 +1,70 @@
+dist
+dist-*
+cabal-dev
+*.o
+*.hi
+*.hie
+*.chi
+*.chs.h
+*.dyn_o
+*.dyn_hi
+.hpc
+.hsenv
+.cabal-sandbox/
+cabal.sandbox.config
+*.prof
+*.aux
+*.hp
+*.eventlog
+.stack-work/
+cabal.project.local
+cabal.project.local~
+.HTF/
+.ghc.environment.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Haddock documentation
+dist/doc/
+
+# Stack
+.stack-work/
+*~
+
+# GHC
+*.hi-boot
+*.o-boot
+
+# Cabal
+dist/
+dist-newstyle/
+build/
+.installed-conf
+*.buildlog
+
+# Nix
+result
+result-*
+
+# Emacs
+*~
+\#*
+.\#*
+
+# Vim
+*.swp
+*.swo
+.*.un~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini

@@ -1,0 +1,33 @@
+# PowerShell specific
+*.ps1xml
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Log files
+*.log
+
+# PowerShell Gallery
+*.nupkg
+
+# Module build artifacts
+bin/
+obj/
+
+# Test results
+TestResults/
+*.trx
