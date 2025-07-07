@@ -10,3 +10,6 @@
 /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/fsharp/obj/Debug/net8.0/refint/PolyScript.Framework.dll
 /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/fsharp/obj/Debug/net8.0/PolyScript.Framework.pdb
 /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/fsharp/obj/Debug/net8.0/ref/PolyScript.Framework.dll
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/fsharp/bin/Debug/net8.0/PolyScript.NET.dll
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/fsharp/bin/Debug/net8.0/PolyScript.NET.pdb
+/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/frameworks/fsharp/obj/Debug/net8.0/PolyScri.7E84E68A.Up2Date

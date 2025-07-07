@@ -1,0 +1,1 @@
+/usr/bin/cc -O3 -DNDEBUG -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/test_c_interface.dir/test_c_interface.c.o -o test_c_interface  -Wl,-rpath,/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build ../libpolyscript.dylib

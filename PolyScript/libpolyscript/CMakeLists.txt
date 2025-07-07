@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(libpolyscript VERSION 1.0.0 LANGUAGES CXX)
+project(libpolyscript VERSION 1.0.0 LANGUAGES CXX C)
 
 # C++14 requirement for constexpr functions
 set(CMAKE_CXX_STANDARD 14)

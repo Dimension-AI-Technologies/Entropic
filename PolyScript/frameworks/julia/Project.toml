@@ -1,11 +1,13 @@
 name = "PolyScriptFramework"
 uuid = "12345678-1234-5678-9abc-123456789abc"
-version = "0.1.0"
 authors = ["Mathew Burkitt <mathew.burkitt@ditech.ai>"]
+version = "0.1.0"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 
 [compat]
-julia = "1.6"
 ArgParse = "1.1"
+julia = "1.6"

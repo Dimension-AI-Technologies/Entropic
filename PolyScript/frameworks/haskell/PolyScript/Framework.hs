@@ -162,24 +162,24 @@ class PolyScriptTool a where
 -- | Context utility functions using FFI with fallback
 canMutate :: PolyScriptContext -> IO Bool
 canMutate ctx = safeFFICall 
-  (c_polyscript_can_mutate (modeToInt $ ctxMode ctx))
+  (return $ c_polyscript_can_mutate (modeToInt $ ctxMode ctx))
   (ctxMode ctx == Live)  -- Fallback implementation
 
 shouldValidate :: PolyScriptContext -> IO Bool
 shouldValidate ctx = safeFFICall
-  (c_polyscript_should_validate (modeToInt $ ctxMode ctx))
+  (return $ c_polyscript_should_validate (modeToInt $ ctxMode ctx))
   (ctxMode ctx == Sandbox)  -- Fallback implementation
 
 requireConfirm :: PolyScriptContext -> IO Bool
 requireConfirm ctx 
   | ctxForce ctx = return False  -- Always handle force flag in Haskell
   | otherwise = safeFFICall
-      (c_polyscript_require_confirm (modeToInt $ ctxMode ctx) (operationToInt $ ctxOperation ctx))
+      (return $ c_polyscript_require_confirm (modeToInt $ ctxMode ctx) (operationToInt $ ctxOperation ctx))
       (ctxMode ctx == Live && (ctxOperation ctx == Update || ctxOperation ctx == Delete))  -- Fallback
 
 isSafeMode :: PolyScriptContext -> IO Bool
 isSafeMode ctx = safeFFICall
-  (c_polyscript_is_safe_mode (modeToInt $ ctxMode ctx))
+  (return $ c_polyscript_is_safe_mode (modeToInt $ ctxMode ctx))
   (ctxMode ctx == Simulate || ctxMode ctx == Sandbox)  -- Fallback implementation
 
 -- | Log a message

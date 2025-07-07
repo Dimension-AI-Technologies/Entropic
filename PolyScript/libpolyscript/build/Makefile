@@ -65,6 +65,16 @@ CMAKE_BINARY_DIR = /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/l
 #=============================================================================
 # Targets provided globally by CMake.
 
+# Special rule for the target test
+test:
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Running tests..."
+	/usr/local/bin/ctest $(ARGS)
+.PHONY : test
+
+# Special rule for the target test
+test/fast: test
+.PHONY : test/fast
+
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --cyan "Running CMake cache editor..."
@@ -173,6 +183,45 @@ polyscript: cmake_check_build_system
 polyscript/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/polyscript.dir/build.make CMakeFiles/polyscript.dir/build
 .PHONY : polyscript/fast
+
+#=============================================================================
+# Target rules for targets named test_modes
+
+# Build rule for target.
+test_modes: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_modes
+.PHONY : test_modes
+
+# fast build rule for target.
+test_modes/fast:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_modes.dir/build.make tests/CMakeFiles/test_modes.dir/build
+.PHONY : test_modes/fast
+
+#=============================================================================
+# Target rules for targets named test_operations
+
+# Build rule for target.
+test_operations: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_operations
+.PHONY : test_operations
+
+# fast build rule for target.
+test_operations/fast:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_operations.dir/build.make tests/CMakeFiles/test_operations.dir/build
+.PHONY : test_operations/fast
+
+#=============================================================================
+# Target rules for targets named test_c_interface
+
+# Build rule for target.
+test_c_interface: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_c_interface
+.PHONY : test_c_interface
+
+# fast build rule for target.
+test_c_interface/fast:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_c_interface.dir/build.make tests/CMakeFiles/test_c_interface.dir/build
+.PHONY : test_c_interface/fast
 
 src/context.o: src/context.cpp.o
 .PHONY : src/context.o
@@ -306,7 +355,11 @@ help:
 	@echo "... install/strip"
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
+	@echo "... test"
 	@echo "... polyscript"
+	@echo "... test_c_interface"
+	@echo "... test_modes"
+	@echo "... test_operations"
 	@echo "... src/context.o"
 	@echo "... src/context.i"
 	@echo "... src/context.s"

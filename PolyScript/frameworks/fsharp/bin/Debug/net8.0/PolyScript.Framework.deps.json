@@ -10,6 +10,7 @@
         "dependencies": {
           "Argu": "6.2.4",
           "FSharp.Core": "9.0.202",
+          "PolyScript.NET": "1.0.0",
           "System.Text.Json": "9.0.0"
         },
         "runtime": {
@@ -139,6 +140,14 @@
             "fileVersion": "9.0.24.52809"
           }
         }
+      },
+      "PolyScript.NET/1.0.0": {
+        "runtime": {
+          "PolyScript.NET.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
       }
     }
   },
@@ -196,6 +205,11 @@
       "sha512": "sha512-js7+qAu/9mQvnhA4EfGMZNEzXtJCDxgkgj8ohuxq/Qxv+R56G+ljefhiJHOxTNiw54q8vmABCWUwkMulNdlZ4A==",
       "path": "system.text.json/9.0.0",
       "hashPath": "system.text.json.9.0.0.nupkg.sha512"
+    },
+    "PolyScript.NET/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
     }
   }
 }

@@ -1,7 +1,8 @@
 {
 	"InstallScripts" : 
 	[
-		"/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/cmake_install.cmake"
+		"/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/cmake_install.cmake",
+		"/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/tests/cmake_install.cmake"
 	],
 	"Parallel" : false
 }

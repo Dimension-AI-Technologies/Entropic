@@ -15,7 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../PolyScript.NET/PolyScript.NET.csproj" />
+    <ProjectReference Include="../../wrappers/dotnet/PolyScript.NET.csproj" />
   </ItemGroup>
 
 </Project>

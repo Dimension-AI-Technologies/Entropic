@@ -161,6 +161,16 @@
         "build": {
           "buildTransitive/net8.0/System.Text.Json.targets": {}
         }
+      },
+      "PolyScript.NET/1.0.0": {
+        "type": "project",
+        "framework": ".NETStandard,Version=v2.0",
+        "compile": {
+          "bin/placeholder/PolyScript.NET.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/PolyScript.NET.dll": {}
+        }
       }
     }
   },
@@ -413,12 +423,18 @@
         "system.text.json.nuspec",
         "useSharedDesignerContext.txt"
       ]
+    },
+    "PolyScript.NET/1.0.0": {
+      "type": "project",
+      "path": "../../wrappers/dotnet/PolyScript.NET.csproj",
+      "msbuildProject": "../../wrappers/dotnet/PolyScript.NET.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net8.0": [
       "Argu >= 6.2.4",
       "FSharp.Core >= 9.0.202",
+      "PolyScript.NET >= 1.0.0",
       "System.Text.Json >= 9.0.0"
     ]
   },
@@ -451,7 +467,11 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/PolyScript.NET.csproj": {
+              "projectPath": "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/PolyScript.NET.csproj"
+            }
+          }
         }
       },
       "restoreAuditProperties": {

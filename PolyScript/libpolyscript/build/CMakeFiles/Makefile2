@@ -64,19 +64,47 @@ CMAKE_BINARY_DIR = /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/l
 
 # The main recursive "all" target.
 all: CMakeFiles/polyscript.dir/all
+all: tests/all
 .PHONY : all
 
 # The main recursive "codegen" target.
 codegen: CMakeFiles/polyscript.dir/codegen
+codegen: tests/codegen
 .PHONY : codegen
 
 # The main recursive "preinstall" target.
-preinstall:
+preinstall: tests/preinstall
 .PHONY : preinstall
 
 # The main recursive "clean" target.
 clean: CMakeFiles/polyscript.dir/clean
+clean: tests/clean
 .PHONY : clean
+
+#=============================================================================
+# Directory level rules for directory tests
+
+# Recursive "all" directory target.
+tests/all: tests/CMakeFiles/test_modes.dir/all
+tests/all: tests/CMakeFiles/test_operations.dir/all
+tests/all: tests/CMakeFiles/test_c_interface.dir/all
+.PHONY : tests/all
+
+# Recursive "codegen" directory target.
+tests/codegen: tests/CMakeFiles/test_modes.dir/codegen
+tests/codegen: tests/CMakeFiles/test_operations.dir/codegen
+tests/codegen: tests/CMakeFiles/test_c_interface.dir/codegen
+.PHONY : tests/codegen
+
+# Recursive "preinstall" directory target.
+tests/preinstall:
+.PHONY : tests/preinstall
+
+# Recursive "clean" directory target.
+tests/clean: tests/CMakeFiles/test_modes.dir/clean
+tests/clean: tests/CMakeFiles/test_operations.dir/clean
+tests/clean: tests/CMakeFiles/test_c_interface.dir/clean
+.PHONY : tests/clean
 
 #=============================================================================
 # Target rules for target CMakeFiles/polyscript.dir
@@ -109,6 +137,102 @@ CMakeFiles/polyscript.dir/codegen:
 CMakeFiles/polyscript.dir/clean:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/polyscript.dir/build.make CMakeFiles/polyscript.dir/clean
 .PHONY : CMakeFiles/polyscript.dir/clean
+
+#=============================================================================
+# Target rules for target tests/CMakeFiles/test_modes.dir
+
+# All Build rule for target.
+tests/CMakeFiles/test_modes.dir/all: CMakeFiles/polyscript.dir/all
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_modes.dir/build.make tests/CMakeFiles/test_modes.dir/depend
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_modes.dir/build.make tests/CMakeFiles/test_modes.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles --progress-num=9,10 "Built target test_modes"
+.PHONY : tests/CMakeFiles/test_modes.dir/all
+
+# Build rule for subdir invocation for target.
+tests/CMakeFiles/test_modes.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles 8
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/test_modes.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles 0
+.PHONY : tests/CMakeFiles/test_modes.dir/rule
+
+# Convenience name for target.
+test_modes: tests/CMakeFiles/test_modes.dir/rule
+.PHONY : test_modes
+
+# codegen rule for target.
+tests/CMakeFiles/test_modes.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_modes.dir/build.make tests/CMakeFiles/test_modes.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles --progress-num=9,10 "Finished codegen for target test_modes"
+.PHONY : tests/CMakeFiles/test_modes.dir/codegen
+
+# clean rule for target.
+tests/CMakeFiles/test_modes.dir/clean:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_modes.dir/build.make tests/CMakeFiles/test_modes.dir/clean
+.PHONY : tests/CMakeFiles/test_modes.dir/clean
+
+#=============================================================================
+# Target rules for target tests/CMakeFiles/test_operations.dir
+
+# All Build rule for target.
+tests/CMakeFiles/test_operations.dir/all: CMakeFiles/polyscript.dir/all
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_operations.dir/build.make tests/CMakeFiles/test_operations.dir/depend
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_operations.dir/build.make tests/CMakeFiles/test_operations.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles --progress-num=11,12 "Built target test_operations"
+.PHONY : tests/CMakeFiles/test_operations.dir/all
+
+# Build rule for subdir invocation for target.
+tests/CMakeFiles/test_operations.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles 8
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/test_operations.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles 0
+.PHONY : tests/CMakeFiles/test_operations.dir/rule
+
+# Convenience name for target.
+test_operations: tests/CMakeFiles/test_operations.dir/rule
+.PHONY : test_operations
+
+# codegen rule for target.
+tests/CMakeFiles/test_operations.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_operations.dir/build.make tests/CMakeFiles/test_operations.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles --progress-num=11,12 "Finished codegen for target test_operations"
+.PHONY : tests/CMakeFiles/test_operations.dir/codegen
+
+# clean rule for target.
+tests/CMakeFiles/test_operations.dir/clean:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_operations.dir/build.make tests/CMakeFiles/test_operations.dir/clean
+.PHONY : tests/CMakeFiles/test_operations.dir/clean
+
+#=============================================================================
+# Target rules for target tests/CMakeFiles/test_c_interface.dir
+
+# All Build rule for target.
+tests/CMakeFiles/test_c_interface.dir/all: CMakeFiles/polyscript.dir/all
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_c_interface.dir/build.make tests/CMakeFiles/test_c_interface.dir/depend
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_c_interface.dir/build.make tests/CMakeFiles/test_c_interface.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles --progress-num=7,8 "Built target test_c_interface"
+.PHONY : tests/CMakeFiles/test_c_interface.dir/all
+
+# Build rule for subdir invocation for target.
+tests/CMakeFiles/test_c_interface.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles 8
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/test_c_interface.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles 0
+.PHONY : tests/CMakeFiles/test_c_interface.dir/rule
+
+# Convenience name for target.
+test_c_interface: tests/CMakeFiles/test_c_interface.dir/rule
+.PHONY : test_c_interface
+
+# codegen rule for target.
+tests/CMakeFiles/test_c_interface.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_c_interface.dir/build.make tests/CMakeFiles/test_c_interface.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build/CMakeFiles --progress-num=7,8 "Finished codegen for target test_c_interface"
+.PHONY : tests/CMakeFiles/test_c_interface.dir/codegen
+
+# clean rule for target.
+tests/CMakeFiles/test_c_interface.dir/clean:
+	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/test_c_interface.dir/build.make tests/CMakeFiles/test_c_interface.dir/clean
+.PHONY : tests/CMakeFiles/test_c_interface.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

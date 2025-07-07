@@ -6,5 +6,5 @@ CXX_DEFINES = -Dpolyscript_EXPORTS
 
 CXX_INCLUDES = -I/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/include
 
-CXX_FLAGS = -std=c++14 -fPIC -Wall -Wextra -Werror -Wno-unused-parameter
+CXX_FLAGS = -O3 -DNDEBUG -std=c++14 -fPIC -Wall -Wextra -Werror -Wno-unused-parameter
 

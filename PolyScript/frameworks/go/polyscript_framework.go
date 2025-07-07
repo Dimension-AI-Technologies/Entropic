@@ -9,7 +9,7 @@ package polyscript
 
 /*
 #cgo LDFLAGS: -L../../libpolyscript/build -lpolyscript
-#cgo pkg-config: polyscript
+#cgo CFLAGS: -I../../libpolyscript/include
 #include <stdbool.h>
 
 // C function declarations matching libpolyscript

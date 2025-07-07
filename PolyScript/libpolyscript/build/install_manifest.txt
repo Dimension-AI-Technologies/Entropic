@@ -1,0 +1,9 @@
+/usr/local/lib/libpolyscript.dylib
+/usr/local/include/polyscript/context.hpp
+/usr/local/include/polyscript/discovery.hpp
+/usr/local/include/polyscript/operations.hpp
+/usr/local/include/polyscript/modes.hpp
+/usr/local/include/polyscript/polyscript.hpp
+/usr/local/lib/cmake/polyscript/polyscript-config.cmake
+/usr/local/lib/cmake/polyscript/polyscript-config-release.cmake
+/usr/local/lib/cmake/polyscript/polyscript-config-version.cmake

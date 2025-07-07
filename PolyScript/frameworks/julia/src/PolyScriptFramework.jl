@@ -11,27 +11,45 @@ using ArgParse
 using JSON
 using Dates
 
+# CRUD operations
+@enum PolyScriptOperation begin
+    create
+    read
+    update
+    delete
+end
+
+# Execution modes
+@enum PolyScriptMode begin
+    simulate
+    sandbox
+    live
+end
+
 # FFI bindings for libpolyscript
-const LIBPOLYSCRIPT_PATHS = [
-    joinpath(@__DIR__, "..", "..", "libpolyscript", "build", "libpolyscript"),
-    "libpolyscript"  # System-wide installation
-]
+# Try system-wide installation first, then local build
+const LIBPOLYSCRIPT = "libpolyscript"
 
-# Try to find and load libpolyscript
-global LIBPOLYSCRIPT_AVAILABLE = false
-global LIBPOLYSCRIPT_LIB = ""
-
-for lib_path in LIBPOLYSCRIPT_PATHS
+# Check if libpolyscript is available
+function check_libpolyscript_available()
     try
-        # Test if we can load the library
-        ccall((:polyscript_can_mutate, lib_path), Bool, (Cint,), 2)
-        global LIBPOLYSCRIPT_LIB = lib_path
-        global LIBPOLYSCRIPT_AVAILABLE = true
-        break
+        ccall((:polyscript_can_mutate, LIBPOLYSCRIPT), Bool, (Cint,), 2)
+        return true
     catch e
-        continue
+        # Try alternate path
+        try 
+            lib_path = joinpath(@__DIR__, "..", "..", "..", "libpolyscript", "build", "libpolyscript")
+            if isfile(lib_path * ".dylib") || isfile(lib_path * ".so") || isfile(lib_path * ".dll")
+                # Can't use dynamic path in ccall, so we'll use the system one
+                return false
+            end
+        catch
+        end
+        return false
     end
 end
+
+const LIBPOLYSCRIPT_AVAILABLE = check_libpolyscript_available()
 
 if !LIBPOLYSCRIPT_AVAILABLE
     @warn "libpolyscript not found, using fallback implementations"
@@ -45,7 +63,7 @@ mode_to_int(mode::PolyScriptMode) = Int32(mode)
 function safe_ccall_can_mutate(mode::PolyScriptMode)::Bool
     if LIBPOLYSCRIPT_AVAILABLE
         try
-            return ccall((:polyscript_can_mutate, LIBPOLYSCRIPT_LIB), Bool, (Cint,), mode_to_int(mode))
+            return ccall((:polyscript_can_mutate, LIBPOLYSCRIPT), Bool, (Cint,), mode_to_int(mode))
         catch e
             @warn "FFI call failed, using fallback" exception=e
         end
@@ -57,7 +75,7 @@ end
 function safe_ccall_should_validate(mode::PolyScriptMode)::Bool
     if LIBPOLYSCRIPT_AVAILABLE
         try
-            return ccall((:polyscript_should_validate, LIBPOLYSCRIPT_LIB), Bool, (Cint,), mode_to_int(mode))
+            return ccall((:polyscript_should_validate, LIBPOLYSCRIPT), Bool, (Cint,), mode_to_int(mode))
         catch e
             @warn "FFI call failed, using fallback" exception=e
         end
@@ -73,7 +91,7 @@ function safe_ccall_require_confirm(mode::PolyScriptMode, operation::PolyScriptO
     
     if LIBPOLYSCRIPT_AVAILABLE
         try
-            return ccall((:polyscript_require_confirm, LIBPOLYSCRIPT_LIB), Bool, (Cint, Cint), 
+            return ccall((:polyscript_require_confirm, LIBPOLYSCRIPT), Bool, (Cint, Cint), 
                         mode_to_int(mode), operation_to_int(operation))
         catch e
             @warn "FFI call failed, using fallback" exception=e
@@ -86,7 +104,7 @@ end
 function safe_ccall_is_safe_mode(mode::PolyScriptMode)::Bool
     if LIBPOLYSCRIPT_AVAILABLE
         try
-            return ccall((:polyscript_is_safe_mode, LIBPOLYSCRIPT_LIB), Bool, (Cint,), mode_to_int(mode))
+            return ccall((:polyscript_is_safe_mode, LIBPOLYSCRIPT), Bool, (Cint,), mode_to_int(mode))
         catch e
             @warn "FFI call failed, using fallback" exception=e
         end
@@ -97,21 +115,6 @@ end
 
 export PolyScriptTool, PolyScriptContext, PolyScriptOperation, PolyScriptMode
 export execute_with_mode, run_tool
-
-# CRUD operations
-@enum PolyScriptOperation begin
-    create
-    read
-    update
-    delete
-end
-
-# Execution modes
-@enum PolyScriptMode begin
-    simulate
-    sandbox
-    live
-end
 
 # Context for operations
 mutable struct PolyScriptContext
@@ -236,14 +239,14 @@ abstract type PolyScriptTool end
 
 # Default implementations (to be overridden)
 description(::T) where T<:PolyScriptTool = "PolyScript tool"
-create(::T, resource, options, ctx) where T<:PolyScriptTool = 
-    error("create not implemented for $(typeof(T))")
-read(::T, resource, options, ctx) where T<:PolyScriptTool = 
-    error("read not implemented for $(typeof(T))")
-update(::T, resource, options, ctx) where T<:PolyScriptTool = 
-    error("update not implemented for $(typeof(T))")
-delete(::T, resource, options, ctx) where T<:PolyScriptTool = 
-    error("delete not implemented for $(typeof(T))")
+do_create(::T, resource, options, ctx) where T<:PolyScriptTool = 
+    error("do_create not implemented for $(typeof(T))")
+do_read(::T, resource, options, ctx) where T<:PolyScriptTool = 
+    error("do_read not implemented for $(typeof(T))")
+do_update(::T, resource, options, ctx) where T<:PolyScriptTool = 
+    error("do_update not implemented for $(typeof(T))")
+do_delete(::T, resource, options, ctx) where T<:PolyScriptTool = 
+    error("do_delete not implemented for $(typeof(T))")
 
 # Execute operation with mode wrapping
 function execute_with_mode(tool::PolyScriptTool, ctx::PolyScriptContext)
@@ -251,7 +254,7 @@ function execute_with_mode(tool::PolyScriptTool, ctx::PolyScriptContext)
         log_message(ctx, "Simulating $(ctx.operation) operation", "debug")
         
         if ctx.operation == read
-            return read(tool, ctx.resource, ctx.options, ctx)
+            return do_read(tool, ctx.resource, ctx.options, ctx)
         else
             action_verb = if ctx.operation == create
                 "Would create"
@@ -297,13 +300,13 @@ function execute_with_mode(tool::PolyScriptTool, ctx::PolyScriptContext)
         end
         
         if ctx.operation == create
-            return create(tool, ctx.resource, ctx.options, ctx)
+            return do_create(tool, ctx.resource, ctx.options, ctx)
         elseif ctx.operation == read
-            return read(tool, ctx.resource, ctx.options, ctx)
+            return do_read(tool, ctx.resource, ctx.options, ctx)
         elseif ctx.operation == update
-            return update(tool, ctx.resource, ctx.options, ctx)
+            return do_update(tool, ctx.resource, ctx.options, ctx)
         else  # delete
-            return delete(tool, ctx.resource, ctx.options, ctx)
+            return do_delete(tool, ctx.resource, ctx.options, ctx)
         end
     end
 end

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("PolyScript.NET P/Invoke wrapper for libpolyscript")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b50c3ececcb68de47362280a7d6d2b2405df5875")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b90d2eb6550a273f65bb8565336847c64a612332")]
 [assembly: System.Reflection.AssemblyProductAttribute("PolyScript.NET")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PolyScript.NET")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

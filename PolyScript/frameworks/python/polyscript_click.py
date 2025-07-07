@@ -515,8 +515,8 @@ if __name__ == "__main__":
         
         def add_arguments(self, cmd):
             """Add tool-specific arguments"""
-            cmd.add_option('--optimize', '-O', is_flag=True, help='Enable optimizations')
-            cmd.add_option('--output', '-o', help='Output file name')
+            cmd.params.append(click.Option(['--optimize', '-O'], is_flag=True, help='Enable optimizations'))
+            cmd.params.append(click.Option(['--output', '-o'], help='Output file name'))
         
         def create(self, resource, options, context):
             """Create operation - compile source files"""
