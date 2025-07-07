@@ -1,5 +1,0 @@
-cargo:rustc-link-search=native=/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/libpolyscript/build
-cargo:rustc-link-lib=dylib=polyscript
-cargo:rerun-if-changed=src/lib.rs
-cargo:rerun-if-changed=../libpolyscript/include/polyscript/polyscript.hpp
-cargo:rerun-if-changed=../libpolyscript/build/libpolyscript.dylib

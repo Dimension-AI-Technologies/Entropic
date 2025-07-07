@@ -29,8 +29,8 @@
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/PolyScript.NET.csproj": {
-                "projectPath": "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/PolyScript.NET.csproj"
+              "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/PolyScript.NET.csproj": {
+                "projectPath": "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/PolyScript.NET.csproj"
               }
             }
           }
@@ -84,14 +84,14 @@
         }
       }
     },
-    "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/PolyScript.NET.csproj": {
+    "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/PolyScript.NET.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/PolyScript.NET.csproj",
+        "projectUniqueName": "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/PolyScript.NET.csproj",
         "projectName": "PolyScript.NET",
-        "projectPath": "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/PolyScript.NET.csproj",
+        "projectPath": "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/PolyScript.NET.csproj",
         "packagesPath": "/Users/doowell2/.nuget/packages/",
-        "outputPath": "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/PolyScript.NET/obj/",
+        "outputPath": "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/obj/",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "/usr/local/share/dotnet/sdk/NuGetFallbackFolder"

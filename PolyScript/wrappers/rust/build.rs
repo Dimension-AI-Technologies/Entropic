@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 fn main() {
     // Get the libpolyscript path relative to this crate
-    let libpolyscript_dir = PathBuf::from("../libpolyscript");
+    let libpolyscript_dir = PathBuf::from("../../libpolyscript");
     let build_dir = libpolyscript_dir.join("build");
     
     // Make the path absolute
@@ -25,8 +25,8 @@ fn main() {
     
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=src/lib.rs");
-    println!("cargo:rerun-if-changed=../libpolyscript/include/polyscript/polyscript.hpp");
+    println!("cargo:rerun-if-changed=../../libpolyscript/include/polyscript/polyscript.hpp");
     
     // Tell cargo to invalidate if libpolyscript changes
-    println!("cargo:rerun-if-changed=../libpolyscript/build/libpolyscript.dylib");
+    println!("cargo:rerun-if-changed=../../libpolyscript/build/libpolyscript.dylib");
 }

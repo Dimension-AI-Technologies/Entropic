@@ -8,8 +8,10 @@
     ".NETCoreApp,Version=v8.0": {
       "PolyScript.Framework/1.0.0": {
         "dependencies": {
-          "PolyScript.Framework": "1.0.0",
-          "PolyScript.NET": "1.0.0"
+          "PolyScript.NET": "1.0.0",
+          "Spectre.Console": "0.48.0",
+          "Spectre.Console.Cli": "0.48.0",
+          "System.Text.Json": "9.0.0"
         },
         "runtime": {
           "PolyScript.Framework.dll": {}
