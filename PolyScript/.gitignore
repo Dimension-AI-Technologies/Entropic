@@ -1,4 +1,4 @@
-# Compiler intermediates and build artifacts
+# PolyScript Framework - Compiler intermediates and build artifacts for all supported languages
 
 # .NET (C#, F#, VB.NET)
 bin/
@@ -10,18 +10,48 @@ obj/
 *.suo
 *.cache
 project.lock.json
+*.nuget.dgspec.json
+*.nuget.g.props
+*.nuget.g.targets
+project.assets.json
+project.nuget.cache
+*.AssemblyInfo.*
+*.AssemblyInfoInputs.cache
+*.GeneratedMSBuildEditorConfig.editorconfig
+*.GlobalUsings.g.cs
+*.assets.cache
+*.csproj.AssemblyReference.cache
+*.csproj.CoreCompileInputs.cache
+*.csproj.FileListAbsolute.txt
+*.fsproj.AssemblyReference.cache
+*.fsproj.CoreCompileInputs.cache
+*.fsproj.FileListAbsolute.txt
+*.vbproj.AssemblyReference.cache
+*.vbproj.CoreCompileInputs.cache
+*.vbproj.FileListAbsolute.txt
+*.genruntimeconfig.cache
+*.sourcelink.json
+*.Up2Date
+apphost
+ref/
+refint/
 
-# Node.js
+# Node.js / JavaScript
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 package-lock.json
+.npm
+.node_repl_history
+*.tgz
+*.tar.gz
 
 # Rust
 target/
 **/*.rs.bk
 Cargo.lock
+.cargo/
 
 # Go
 *.exe
@@ -31,6 +61,7 @@ Cargo.lock
 *.dylib
 test_compiler
 test-compiler
+go.sum
 
 # Haskell
 dist/
@@ -39,14 +70,29 @@ dist-newstyle/
 *.hi
 *.o
 .ghc.environment.*
+cabal-dev/
+*.prof
+*.aux
+*.hp
+*.eventlog
 
-# Java/Scala
+# Java/Scala/Kotlin
 *.class
 *.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
 target/
 .metals/
 .bloop/
 project/target/
+project/project/
+.sbt
+.scala_dependencies
+.worksheet
 
 # Python
 __pycache__/
@@ -69,6 +115,14 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
 # Ruby
 *.gem
@@ -85,6 +139,7 @@ wheels/
 .bundle/
 vendor/bundle
 .byebug_history
+Gemfile.lock
 
 # Elixir
 /_build/
@@ -97,27 +152,36 @@ erl_crash.dump
 *.beam
 /config/*.secret.exs
 .elixir_ls/
+mix.lock
 
 # Julia
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
 deps/deps.jl
+.julia/
 
 # Zig
 zig-cache/
 zig-out/
+*.wasm
 
-# V
+# V Language
 *.tmp
 v.c
+*.exe
+*.so
+*.dylib
 
-# D
+# D Language
 *.obj
 *.lst
 *.map
 .dub/
 dub.selections.json
+dub.settings.json
+*.a
+*.lib
 
 # C/C++
 *.o
@@ -128,14 +192,88 @@ dub.selections.json
 *.exe
 build/
 cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cbp
+
+# PowerShell
+*.ps1xml
+
+# Assembly
+*.asm
+*.s
+*.S
+
+# Fortran
+*.mod
+*.smod
+
+# Swift
+.build/
+*.xcodeproj
+*.xcworkspace
+DerivedData/
+
+# Dart/Flutter
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+pubspec.lock
+
+# Lua
+luac.out
+
+# Perl
+blib/
+.build/
+_build/
+cover_db/
+inc/
+Build
+!Build/
+Build.bat
+.last_cover_stats
+Makefile.old
+nytprof.out
+pm_to_blib
+
+# PHP
+composer.lock
+vendor/
+
+# Common binary/executable patterns
+*.bin
+*.out
+*.app
+*.dSYM/
 
 # macOS
 .DS_Store
+.AppleDouble
+.LSOverride
 
 # Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
 
 # IDE files
 .vscode/
@@ -143,8 +281,27 @@ Desktop.ini
 *.swp
 *.swo
 *~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+.vs/
+
+# Log files
+*.log
+*.log.*
 
 # Temporary files
 *.tmp
 *.temp
-*.log
+*.bak
+*.swp
+*.swo
+
+# Test executables and binaries (common patterns)
+test_*
+*_test
+TestCompiler*
+test-compiler*
+testcompiler*
