@@ -1,307 +1,77 @@
-# PolyScript Framework - Compiler intermediates and build artifacts for all supported languages
+# PolyScript Framework - Cross-language build artifacts and general patterns
+# Note: Each language framework has its own detailed .gitignore for language-specific patterns
 
-# .NET (C#, F#, VB.NET)
-bin/
-obj/
-*.dll
-*.exe
-*.pdb
-*.user
-*.suo
-*.cache
-project.lock.json
-*.nuget.dgspec.json
-*.nuget.g.props
-*.nuget.g.targets
-project.assets.json
-project.nuget.cache
-*.AssemblyInfo.*
-*.AssemblyInfoInputs.cache
-*.GeneratedMSBuildEditorConfig.editorconfig
-*.GlobalUsings.g.cs
-*.assets.cache
-*.csproj.AssemblyReference.cache
-*.csproj.CoreCompileInputs.cache
-*.csproj.FileListAbsolute.txt
-*.fsproj.AssemblyReference.cache
-*.fsproj.CoreCompileInputs.cache
-*.fsproj.FileListAbsolute.txt
-*.vbproj.AssemblyReference.cache
-*.vbproj.CoreCompileInputs.cache
-*.vbproj.FileListAbsolute.txt
-*.genruntimeconfig.cache
-*.sourcelink.json
-*.Up2Date
-apphost
-ref/
-refint/
-
-# Node.js / JavaScript
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-.npm
-.node_repl_history
-*.tgz
-*.tar.gz
-
-# Rust
-target/
-**/*.rs.bk
-Cargo.lock
-.cargo/
-
-# Go
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-test_compiler
-test-compiler
-go.sum
-
-# Haskell
-dist/
-dist-newstyle/
-.stack-work/
-*.hi
-*.o
-.ghc.environment.*
-cabal-dev/
-*.prof
-*.aux
-*.hp
-*.eventlog
-
-# Java/Scala/Kotlin
-*.class
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
-target/
-.metals/
-.bloop/
-project/target/
-project/project/
-.sbt
-.scala_dependencies
-.worksheet
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-.coverage
-htmlcov/
-.tox/
-.pytest_cache/
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Ruby
-*.gem
-*.rbc
-/.config
-/coverage/
-/InstalledFiles
-/pkg/
-/spec/reports/
-/spec/examples.txt
-/test/tmp/
-/test/version_tmp/
-/tmp/
-.bundle/
-vendor/bundle
-.byebug_history
-Gemfile.lock
-
-# Elixir
-/_build/
-/cover/
-/deps/
-/doc/
-/.fetch
-erl_crash.dump
-*.ez
-*.beam
-/config/*.secret.exs
-.elixir_ls/
-mix.lock
-
-# Julia
-*.jl.cov
-*.jl.*.cov
-*.jl.mem
-deps/deps.jl
-.julia/
-
-# Zig
-zig-cache/
-zig-out/
-*.wasm
-
-# V Language
-*.tmp
-v.c
-*.exe
-*.so
-*.dylib
-
-# D Language
-*.obj
-*.lst
-*.map
-.dub/
-dub.selections.json
-dub.settings.json
-*.a
-*.lib
-
-# C/C++
-*.o
-*.a
-*.so
-*.dylib
-*.dll
-*.exe
-build/
-cmake-build-*/
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile
-*.cbp
-
-# PowerShell
-*.ps1xml
-
-# Assembly
-*.asm
-*.s
-*.S
-
-# Fortran
-*.mod
-*.smod
-
-# Swift
-.build/
-*.xcodeproj
-*.xcworkspace
-DerivedData/
-
-# Dart/Flutter
-.dart_tool/
-.packages
-.pub-cache/
-.pub/
-build/
-pubspec.lock
-
-# Lua
-luac.out
-
-# Perl
-blib/
-.build/
-_build/
-cover_db/
-inc/
-Build
-!Build/
-Build.bat
-.last_cover_stats
-Makefile.old
-nytprof.out
-pm_to_blib
-
-# PHP
-composer.lock
-vendor/
-
-# Common binary/executable patterns
-*.bin
-*.out
-*.app
-*.dSYM/
-
-# macOS
+# Cross-platform OS files
 .DS_Store
 .AppleDouble
 .LSOverride
-
-# Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
-*.cab
-*.msi
-*.msix
-*.msm
-*.msp
-*.lnk
-
-# Linux
 *~
 .fuse_hidden*
 .directory
 .Trash-*
 .nfs*
 
-# IDE files
+# Common IDE files (cross-language)
 .vscode/
 .idea/
+.vs/
 *.swp
 *.swo
-*~
 .project
 .classpath
 .settings/
 *.sublime-project
 *.sublime-workspace
-.vs/
 
-# Log files
+# Common build directories (that might appear at framework root level)
+build/
+dist/
+target/
+bin/
+obj/
+
+# Common log and temporary patterns
 *.log
-*.log.*
-
-# Temporary files
 *.tmp
 *.temp
 *.bak
-*.swp
-*.swo
 
-# Test executables and binaries (common patterns)
+# Test executables (common naming patterns across languages)
 test_*
 *_test
 TestCompiler*
 test-compiler*
 testcompiler*
+
+# Environment and config files
+.env
+.venv
+.env.local
+.env.*.local
+
+# Package manager lock files (when they appear at root)
+package-lock.json
+yarn.lock
+Cargo.lock
+go.sum
+composer.lock
+Gemfile.lock
+mix.lock
+Pipfile.lock
+poetry.lock
+
+# Coverage reports (cross-language)
+coverage/
+.coverage
+*.lcov
+*.cov
+htmlcov/
+
+# Documentation build artifacts
+docs/build/
+docs/site/
+_site/

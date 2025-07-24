@@ -1,0 +1,31 @@
+# Zig build artifacts
+zig-cache/
+zig-out/
+
+# Compiled binaries
+*.exe
+*.wasm
+*.so
+*.dylib
+*.dll
+*.o
+*.a
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.bak

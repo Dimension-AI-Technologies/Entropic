@@ -1,0 +1,39 @@
+# Scala/SBT build artifacts
+target/
+project/target/
+project/project/target/
+
+# SBT specific
+.sbt
+project/plugins/project/
+.scala_dependencies
+.worksheet
+
+# IDE
+.idea/
+.idea_modules/
+.bsp/
+.metals/
+.bloop/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# Scala compiler
+*.class
+*.tasty
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

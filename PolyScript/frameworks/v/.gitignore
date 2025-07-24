@@ -1,0 +1,31 @@
+# V Language build artifacts
+*.exe
+*.so
+*.dylib
+*.dll
+*.o
+*.a
+*.c
+v.c
+
+# V specific
+*.tmp
+*.mod
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.temp
+*.bak
