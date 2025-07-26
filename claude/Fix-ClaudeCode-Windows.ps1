@@ -2,13 +2,13 @@
 .SYNOPSIS
     Fixes Claude Code installation issues on Windows by managing multiple package managers
 .DESCRIPTION
-    This script detects Claude Code installations across npm, pnpm, winget, chocolatey, and scoop,
+    This script detects Claude Code installations across npm, pnpm, chocolatey, and scoop,
     removes duplicates, and ensures the latest version is installed via npm.
     By default runs in DRY mode - use -Live to execute changes.
 .NOTES
     Author: Claude Assistant
     Date: 2025-07-26
-    Version: 2.1 (Enhanced with winget support)
+    Version: 2.0 (Combined from v1 and v2)
 #>
 
 param(
@@ -31,7 +31,6 @@ function Get-ClaudeInstallations {
     $installations = @{
         npm = $null
         pnpm = $null
-        winget = $null
         chocolatey = $null
         scoop = $null
         paths = @()
@@ -90,23 +89,6 @@ function Get-ClaudeInstallations {
         Write-Verbose "No pnpm installation found"
     }
 
-    # Check winget installation
-    try {
-        $wingetList = winget list --id Anthropic.Claude --accept-source-agreements 2>$null
-        if ($wingetList -match 'Anthropic\.Claude\s+(\d+\.\d+\.\d+)') {
-            $installations.winget = $matches[1]
-            $installations.detailed += [PSCustomObject]@{
-                Type = "winget"
-                Path = "$env:LOCALAPPDATA\Microsoft\WindowsApps"
-                Source = "winget"
-                Version = $installations.winget
-            }
-            Write-Verbose "Found winget installation: $($installations.winget)"
-        }
-    } catch {
-        Write-Verbose "No winget installation found"
-    }
-
     # Check chocolatey installation
     try {
         $chocoList = choco list claude-code --local-only 2>$null
@@ -144,7 +126,7 @@ function Get-ClaudeInstallations {
     return $installations
 }
 
-Write-Info "=== Claude Code Fix Script for Windows (v2.1) ==="
+Write-Info "=== Claude Code Fix Script for Windows (v2.0) ==="
 Write-Info "Starting at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 
 if (-not $Live) {
@@ -166,7 +148,6 @@ $foundCount = ($installations.detailed | Where-Object { $_.Version }).Count
 Write-Info "Found installations:"
 if ($installations.npm) { Write-Info "  - npm: v$($installations.npm)"; $foundCount++ }
 if ($installations.pnpm) { Write-Info "  - pnpm: v$($installations.pnpm)" }
-if ($installations.winget) { Write-Info "  - winget: v$($installations.winget)" }
 if ($installations.chocolatey) { Write-Info "  - chocolatey: v$($installations.chocolatey)" }
 if ($installations.scoop) { Write-Info "  - scoop: v$($installations.scoop)" }
 
@@ -211,23 +192,6 @@ if ($installations.pnpm) {
     } else {
         Write-DryRun "Would uninstall pnpm version: $($installations.pnpm)"
         Write-DryRun "Command: pnpm uninstall -g @anthropic-ai/claude-code"
-    }
-}
-
-# Uninstall winget version
-if ($installations.winget) {
-    if ($Live) {
-        Write-Info "Uninstalling winget version..."
-        try {
-            $result = winget uninstall --id Anthropic.Claude --accept-source-agreements 2>&1
-            Write-Success "Removed winget installation"
-        } catch {
-            Write-Error "Failed to uninstall winget version: $_"
-            $uninstallSuccess = $false
-        }
-    } else {
-        Write-DryRun "Would uninstall winget version: $($installations.winget)"
-        Write-DryRun "Command: winget uninstall --id Anthropic.Claude"
     }
 }
 
