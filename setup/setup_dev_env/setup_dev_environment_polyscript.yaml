@@ -1,0 +1,159 @@
+# PolyScript Declaration for Development Environment Setup Tool
+# This file declares the tool's capabilities and operations
+
+polyscript_version: "1.0"
+tool:
+  name: "setup_dev_environment_polyscript"
+  description: "Cross-platform development environment setup tool with comprehensive tool installation"
+  version: "2.0.0"
+  author: "Mathew Burkitt"
+
+# Standard PolyScript modes
+modes:
+  status:
+    description: "Show current tool installation state"
+    safe: true
+    operations: ["read"]
+    
+  test:
+    description: "Simulate installation without making changes"
+    safe: true
+    operations: ["simulate"]
+    
+  sandbox:
+    description: "Test network connectivity and dependencies"
+    safe: true
+    operations: ["test_connectivity"]
+    
+  live:
+    description: "Actually install/update development tools"
+    safe: false
+    operations: ["install", "update", "configure"]
+
+# Tool-specific operations
+operations:
+  - name: "check_tools"
+    description: "Check which development tools are installed"
+    modes: ["status", "test", "sandbox", "live"]
+    
+  - name: "install_tools"
+    description: "Install missing development tools"
+    modes: ["live"]
+    requires_confirmation: true
+    
+  - name: "update_tools"
+    description: "Update outdated development tools"
+    modes: ["live"]
+    requires_confirmation: true
+    
+  - name: "test_connectivity"
+    description: "Test connectivity to package repositories"
+    modes: ["sandbox"]
+
+# Platform support
+platforms:
+  - name: "Windows"
+    supported: true
+    package_managers: ["winget", "chocolatey"]
+    
+  - name: "macOS"
+    supported: true
+    package_managers: ["homebrew"]
+    
+  - name: "Linux"
+    supported: true
+    package_managers: ["apt", "yum", "pacman"]
+    
+  - name: "WSL2"
+    supported: true
+    package_managers: ["apt"]
+    special_handling: true
+
+# Tools managed by this script
+tools:
+  - name: "Git"
+    description: "Version control system"
+    required: true
+    
+  - name: "GitHub CLI"
+    description: "GitHub command line interface"
+    required: false
+    
+  - name: "WSL2"
+    description: "Windows Subsystem for Linux 2"
+    required: false
+    platforms: ["Windows"]
+    
+  - name: "Ubuntu WSL"
+    description: "Ubuntu distribution for WSL"
+    required: false
+    platforms: ["Windows"]
+    dependencies: ["WSL2"]
+    
+  - name: "Node.js"
+    description: "JavaScript runtime"
+    required: true
+    
+  - name: "Claude Code"
+    description: "Anthropic's Claude CLI tool"
+    required: false
+    platforms: ["Linux", "macOS", "WSL2"]
+    dependencies: ["Node.js"]
+    
+  - name: "Gemini CLI"
+    description: "Google's Gemini CLI tool"
+    required: false
+    dependencies: ["Node.js"]
+    
+  - name: "Synergy"
+    description: "Mouse and keyboard sharing software"
+    required: false
+    platforms: ["Windows", "macOS"]
+    type: "gui"
+
+# Standard flags
+flags:
+  verbose:
+    description: "Show detailed output"
+    short: "v"
+    
+  force:
+    description: "Skip confirmations and apply fixes automatically"
+    short: "f"
+    
+  json:
+    description: "Output results in JSON format"
+    machine_readable: true
+
+# Output formats
+output:
+  default:
+    format: "human_readable"
+    includes: ["summary", "status_indicators", "recommendations"]
+    
+  json:
+    format: "structured"
+    schema: "polyscript_standard"
+    includes: ["mode", "operation", "status", "message", "data"]
+
+# Dependencies
+dependencies:
+  runtime:
+    - name: "Python"
+      version: ">=3.7"
+      
+  optional:
+    - name: "packaging"
+      description: "For semantic version comparison"
+      install: "pip install packaging"
+
+# Configuration
+configuration:
+  wsl2_auto_fix:
+    description: "Automatically fix common WSL2 environment issues"
+    default: true
+    
+  npm_user_directory:
+    description: "Use user-specific npm directory to avoid sudo"
+    default: true
+    path: "~/.npm-global"
