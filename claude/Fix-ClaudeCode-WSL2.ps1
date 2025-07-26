@@ -6,10 +6,12 @@
     Fix Claude Code installation issues in WSL2/Ubuntu
 .DESCRIPTION
     This script detects multiple Claude Code installations, removes surplus ones (pnpm),
-    updates the npm version, and ensures a clean installation.
+    updates the npm version, ensures a clean installation, and configures auto-updates 
+    for seamless maintenance.
     
     By default runs in DRY RUN mode showing what would be done.
     Use -Live flag to actually make changes.
+    Auto-update documentation: https://docs.anthropic.com/en/docs/claude-code/settings
 .PARAMETER Live
     Execute changes (default is dry run mode)
 .PARAMETER Verbose
@@ -50,6 +52,44 @@ function Write-Status {
     }
 }
 
+# Centralized command simulation mapping for DRY principle
+$script:simulationMap = @{
+    'claude --version' = "1.0.61 (Claude Code)"
+    'npm list -g.*claude-code.*--json' = '{"dependencies":{"@anthropic-ai/claude-code":{"version":"1.0.61"}}}'
+    'pnpm list -g.*claude-code.*--json' = '[{"name":"@anthropic-ai/claude-code","version":"1.0.61"}]'
+    'yarn global list.*claude-code' = ''  # No yarn installation
+    'which claude$' = "/home/doowell/.npm-global/bin/claude"
+    'which -a claude' = "/home/doowell/.npm-global/bin/claude"
+    'npm config get prefix' = "/home/doowell/.npm-global"
+    'npm view.*version' = "1.0.61"
+    'npm update -g.*claude-code' = "updated 1 package in 5s"
+    'npm install -g.*latest' = "added 12 packages in 6s"
+    'npm uninstall -g' = "removed 1 package in 3s"
+    'pnpm remove -g' = "Removed @anthropic-ai/claude-code"
+    'rm -f.*pnpm.*claude' = ""  # Silent removal
+    'hash -r' = ""  # Silent hash refresh
+    'npm cache clean' = "npm cache cleaned"
+    'test -f.*bashrc.*echo.*exists' = "exists"
+    'test -f.*zshrc.*echo.*exists' = ""  # zsh not installed
+    'test -f.*profile.*echo.*exists' = "exists"
+    'grep -q.*npm-global.*echo.*found' = ""  # PATH not yet configured
+    'echo.*Claude Code Fix Script' = ""  # Adding to shell config
+    'export PATH.*which claude' = "/home/doowell/.npm-global/bin/claude"
+    'ls -la /usr/bin/claude /bin/claude.*grep.*node_modules' = ""  # No system installation
+}
+
+# Helper function to get simulated output
+function Get-SimulatedOutput {
+    param([string]$Command)
+    
+    foreach ($pattern in $script:simulationMap.Keys) {
+        if ($Command -match $pattern) {
+            return $script:simulationMap[$pattern]
+        }
+    }
+    return ""
+}
+
 function Invoke-BashCommand {
     param(
         [string]$Command,
@@ -63,36 +103,9 @@ function Invoke-BashCommand {
     if (-not $Live) {
         Write-Status "DRY RUN: Would execute: $Command" "Warning"
         
-        # Simulate realistic output based on command
-        $simulatedOutput = switch -Regex ($Command) {
-            'claude --version' { "1.0.61 (Claude Code)" }
-            'npm list -g.*claude-code.*--json' { '{"dependencies":{"@anthropic-ai/claude-code":{"version":"1.0.61"}}}' }
-            'pnpm list -g.*claude-code.*--json' { '[{"name":"@anthropic-ai/claude-code","version":"1.0.61"}]' }
-            'yarn global list.*claude-code' { '' }  # No yarn installation
-            'which claude$' { "$HOME/.npm-global/bin/claude" }
-            'which -a claude' { "$HOME/.npm-global/bin/claude" }
-            'npm config get prefix' { "$HOME/.npm-global" }
-            'npm view.*version' { "1.0.61" }
-            'npm update -g.*claude-code' { "updated 1 package in 5s" }
-            'npm install -g.*latest' { "added 12 packages in 6s" }
-            'npm uninstall -g' { "removed 1 package in 3s" }
-            'pnpm remove -g' { "Removed @anthropic-ai/claude-code" }
-            'rm -f.*pnpm.*claude' { "" }  # Silent removal
-            'hash -r' { "" }  # Silent hash refresh
-            'npm cache clean' { "npm cache cleaned" }
-            'test -f.*bashrc.*echo.*exists' { "exists" }
-            'test -f.*zshrc.*echo.*exists' { "" }  # zsh not installed
-            'test -f.*profile.*echo.*exists' { "exists" }
-            'grep -q.*npm-global.*echo.*found' { "" }  # PATH not yet configured
-            'echo.*Claude Code Fix Script' { "" }  # Adding to shell config
-            'export PATH.*which claude' { "$HOME/.npm-global/bin/claude" }
-            'ls -la /usr/bin/claude /bin/claude.*grep.*node_modules' { "" }  # No system installation
-            default { "" }
-        }
-        
         return @{
             Success = $true
-            Output = $simulatedOutput
+            Output = Get-SimulatedOutput $Command
             Error = $null
         }
     }
@@ -200,6 +213,39 @@ function Get-ClaudeInstallations {
     return $installations
 }
 
+# Helper function for package removal
+function Remove-PackageManager {
+    param(
+        [string]$Manager,
+        [string]$Version
+    )
+    
+    Write-Status "Removing $Manager installation (v$Version)..." "Warning"
+    
+    $removalCommands = @{
+        "pnpm" = @(
+            @{ Command = "pnpm remove -g @anthropic-ai/claude-code"; Description = "Removing pnpm global package" },
+            @{ Command = "rm -f ~/.local/share/pnpm/*/node_modules/.bin/claude"; Description = "Removing pnpm claude binary" },
+            @{ Command = "rm -rf ~/.local/share/pnpm/*/node_modules/@anthropic-ai/claude-code"; Description = "Removing pnpm claude package" }
+        )
+        "yarn" = @(
+            @{ Command = "yarn global remove @anthropic-ai/claude-code"; Description = "Removing yarn global package" }
+        )
+    }
+    
+    $commands = $removalCommands[$Manager]
+    if ($commands) {
+        foreach ($cmd in $commands) {
+            $result = Invoke-BashCommand -Command $cmd.Command -Description $cmd.Description -IgnoreError
+            if ($result.Success -and $Manager -ne "pnpm") {
+                break  # For non-pnpm, stop after first successful command
+            }
+        }
+    }
+    
+    return $true
+}
+
 function Remove-SurplusInstallations {
     param(
         [array]$Installations
@@ -210,22 +256,8 @@ function Remove-SurplusInstallations {
     
     foreach ($install in $Installations) {
         if ($install.Manager -in $surplusManagers) {
-            Write-Status "Removing $($install.Manager) installation (v$($install.Version))..." "Warning"
-            
-            switch ($install.Manager) {
-                "pnpm" {
-                    $result = Invoke-BashCommand -Command "pnpm remove -g @anthropic-ai/claude-code" -Description "Removing pnpm global package" -IgnoreError
-                    if (-not $result.Success) {
-                        # Try alternative removal methods
-                        Invoke-BashCommand -Command "rm -f ~/.local/share/pnpm/*/node_modules/.bin/claude" -Description "Removing pnpm claude binary" -IgnoreError
-                        Invoke-BashCommand -Command "rm -rf ~/.local/share/pnpm/*/node_modules/@anthropic-ai/claude-code" -Description "Removing pnpm claude package" -IgnoreError
-                    }
-                }
-                "yarn" {
-                    Invoke-BashCommand -Command "yarn global remove @anthropic-ai/claude-code" -Description "Removing yarn global package" -IgnoreError
-                }
-            }
-            $removed = $true
+            $wasRemoved = Remove-PackageManager $install.Manager $install.Version
+            if ($wasRemoved) { $removed = $true }
         }
     }
     
@@ -237,20 +269,35 @@ function Remove-SurplusInstallations {
     return $removed
 }
 
+# Helper function for npm operations
+function Invoke-NpmOperation {
+    param(
+        [string]$Command,
+        [string]$Description,
+        [switch]$GetVersion
+    )
+    
+    $result = Invoke-BashCommand -Command $Command -Description $Description
+    
+    if ($result.Success -and $GetVersion) {
+        $versionResult = Invoke-BashCommand -Command "claude --version 2>/dev/null" -Description "Checking version" -IgnoreError
+        if ($versionResult.Success) {
+            $version = $versionResult.Output -replace '.*?(\d+\.\d+\.\d+).*', '$1'
+            return @{ Success = $true; Version = $version }
+        }
+    }
+    
+    return $result
+}
+
 function Update-ClaudeCode {
     Write-Status "Updating Claude Code via npm..." "Info"
     
-    # First try to update
-    $updateResult = Invoke-BashCommand -Command "npm update -g @anthropic-ai/claude-code" -Description "Updating npm package"
+    $updateResult = Invoke-NpmOperation "npm update -g @anthropic-ai/claude-code" "Updating npm package" -GetVersion
     
-    if ($updateResult.Success) {
-        # Get new version
-        $versionResult = Invoke-BashCommand -Command "claude --version 2>/dev/null" -Description "Checking updated version" -IgnoreError
-        if ($versionResult.Success) {
-            $version = $versionResult.Output -replace '.*?(\d+\.\d+\.\d+).*', '$1'
-            Write-Status "Successfully updated to v$version" "Success"
-            return $true
-        }
+    if ($updateResult.Success -and $updateResult.Version) {
+        Write-Status "Successfully updated to v$($updateResult.Version)" "Success"
+        return $true
     }
     
     return $false
@@ -259,29 +306,24 @@ function Update-ClaudeCode {
 function Reinstall-ClaudeCode {
     Write-Status "Update failed. Performing clean reinstall..." "Warning"
     
-    # Uninstall
-    Write-Status "Uninstalling existing npm installation..." "Info"
-    Invoke-BashCommand -Command "npm uninstall -g @anthropic-ai/claude-code" -Description "Removing npm package" -IgnoreError
+    # Define reinstall steps
+    $reinstallSteps = @(
+        @{ Command = "npm uninstall -g @anthropic-ai/claude-code"; Description = "Removing npm package" },
+        @{ Command = "npm cache clean --force"; Description = "Cleaning npm cache" },
+        @{ Command = "npm install -g @anthropic-ai/claude-code@latest"; Description = "Installing latest version" },
+        @{ Command = "hash -r"; Description = "Refreshing command hash table" }
+    )
     
-    # Clean npm cache
-    Write-Status "Cleaning npm cache..." "Info"
-    Invoke-BashCommand -Command "npm cache clean --force" -Description "Cleaning npm cache" -IgnoreError
+    # Execute reinstall steps
+    foreach ($step in $reinstallSteps) {
+        Invoke-BashCommand -Command $step.Command -Description $step.Description -IgnoreError
+    }
     
-    # Install latest
-    Write-Status "Installing latest Claude Code..." "Info"
-    $installResult = Invoke-BashCommand -Command "npm install -g @anthropic-ai/claude-code@latest" -Description "Installing latest version"
-    
-    if ($installResult.Success) {
-        # Refresh PATH
-        Invoke-BashCommand -Command "hash -r" -Description "Refreshing command hash table" -IgnoreError
-        
-        # Get new version
-        $versionResult = Invoke-BashCommand -Command "claude --version 2>/dev/null" -Description "Checking reinstalled version" -IgnoreError
-        if ($versionResult.Success) {
-            $version = $versionResult.Output -replace '.*?(\d+\.\d+\.\d+).*', '$1'
-            Write-Status "Successfully reinstalled v$version" "Success"
-            return $true
-        }
+    # Check final result
+    $versionResult = Invoke-NpmOperation "claude --version 2>/dev/null" "Checking reinstalled version" -GetVersion
+    if ($versionResult.Success -and $versionResult.Version) {
+        Write-Status "Successfully reinstalled v$($versionResult.Version)" "Success"
+        return $true
     }
     
     return $false
@@ -437,6 +479,30 @@ if ($finalCheck.Success) {
         }
     } elseif ($latestVersion -eq $claudeVersion) {
         Write-Status "You have the latest version!" "Success"
+    }
+    
+    # Configure auto-updates for WSL2 environment
+    Write-Status "Configuring Claude Code auto-updates for WSL2..." "Info"
+    if ($Live -and $claudeVersion -ne "simulated") {
+        try {
+            # Enable auto-updates for seamless maintenance
+            # Documentation: https://docs.anthropic.com/en/docs/claude-code/settings
+            $autoUpdateResult = & claude settings set autoUpdate true 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Status "✅ Auto-updates enabled successfully" "Success"
+                Write-Status "Claude will automatically update to new versions in WSL2" "Info"
+            } else {
+                Write-Status "⚠️ Could not enable auto-updates (command may not be available yet)" "Warning"
+            }
+        } catch {
+            Write-Status "⚠️ Auto-update configuration skipped: $($_.Exception.Message)" "Warning"
+        }
+        
+        Write-Status "📚 Auto-update settings documentation:" "Info"
+        Write-Status "https://docs.anthropic.com/en/docs/claude-code/settings" "Info"
+    } elseif (-not $Live) {
+        Write-Status "DRY RUN: Would configure auto-updates (claude settings set autoUpdate true)" "Info"
+        Write-Status "📚 Auto-update settings: https://docs.anthropic.com/en/docs/claude-code/settings" "Info"
     }
     
     if (-not $script:hasErrors) {

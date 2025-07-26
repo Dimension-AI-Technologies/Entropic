@@ -3,8 +3,10 @@
     Fixes Claude Code installation issues on Windows by managing multiple package managers
 .DESCRIPTION
     This script detects Claude Code installations across npm, pnpm, chocolatey, and scoop,
-    removes duplicates, and ensures the latest version is installed via npm.
+    removes duplicates, ensures the latest version is installed via npm, and configures
+    auto-updates for seamless maintenance.
     By default runs in DRY mode - use -Live to execute changes.
+    Auto-update documentation: https://docs.anthropic.com/en/docs/claude-code/settings
 .NOTES
     Author: Claude Assistant
     Date: 2025-07-26
@@ -19,12 +21,50 @@ param(
 $ErrorActionPreference = "Stop"
 $VerbosePreference = if ($Verbose) { "Continue" } else { "SilentlyContinue" }
 
-# Color functions for output
-function Write-Success { Write-Host $args[0] -ForegroundColor Green }
-function Write-Info { Write-Host $args[0] -ForegroundColor Cyan }
-function Write-Warning { Write-Host $args[0] -ForegroundColor Yellow }
-function Write-Error { Write-Host $args[0] -ForegroundColor Red }
-function Write-DryRun { Write-Host "[DRY RUN] $($args[0])" -ForegroundColor Magenta }
+# Unified status function with centralized configuration
+function Write-Status {
+    param(
+        [string]$Message,
+        [string]$Type = "Info"
+    )
+    
+    # Define type mappings for consistency and DRY principle
+    $typeConfig = @{
+        "Success" = @{ Color = "Green"; Icon = "✓" }
+        "Error"   = @{ Color = "Red"; Icon = "✗" }
+        "Warning" = @{ Color = "Yellow"; Icon = "⚠" }
+        "Info"    = @{ Color = "Cyan"; Icon = "ℹ" }
+        "DryRun"  = @{ Color = "Magenta"; Prefix = "[DRY RUN] " }
+    }
+    
+    $config = $typeConfig[$Type]
+    if (-not $config) {
+        $config = @{ Color = "White"; Icon = " " }
+    }
+    
+    $displayMessage = if ($config.Prefix) { "$($config.Prefix)$Message" } else { $Message }
+    $fullMessage = if ($config.Icon) { "$($config.Icon) $displayMessage" } else { $displayMessage }
+    
+    Write-Host $fullMessage -ForegroundColor $config.Color
+}
+
+# Legacy function wrappers for backwards compatibility
+function Write-Success { Write-Status $args[0] "Success" }
+function Write-Info { Write-Status $args[0] "Info" }
+function Write-Warning { Write-Status $args[0] "Warning" }
+function Write-Error { Write-Status $args[0] "Error" }
+function Write-DryRun { Write-Status $args[0] "DryRun" }
+
+# Helper function for step headers
+function Write-StepHeader {
+    param(
+        [string]$StepNumber,
+        [string]$StepTitle,
+        [string]$TotalSteps = "6"
+    )
+    
+    Write-Status "[Step $StepNumber/$TotalSteps] $StepTitle" "Info"
+}
 
 # Enhanced installation detection function from v2
 function Get-ClaudeInstallations {
@@ -139,7 +179,7 @@ if (-not $Live) {
 Write-Host ""
 
 # Step 1: Detect Claude Code installations
-Write-Info "[Step 1/6] Detecting Claude Code installations..."
+Write-StepHeader "1" "Detecting Claude Code installations"
 
 $installations = Get-ClaudeInstallations
 
@@ -174,143 +214,131 @@ if ($foundCount -eq 0 -and $installations.paths.Count -eq 0) {
 Write-Host ""
 
 # Step 2: Remove surplus installations (keep npm, remove others)
-Write-Info "[Step 2/6] Removing surplus installations (keeping npm)..."
+Write-StepHeader "2" "Removing surplus installations (keeping npm)"
 
 $uninstallSuccess = $true
 
-# Uninstall pnpm version
-if ($installations.pnpm) {
+# Helper function for npm operations
+function Invoke-NpmOperation {
+    param(
+        [string]$Operation,
+        [string]$Description
+    )
+    
     if ($Live) {
-        Write-Info "Uninstalling pnpm version..."
         try {
-            $result = pnpm uninstall -g @anthropic-ai/claude-code 2>&1
-            Write-Success "Removed pnpm installation"
+            Write-Info $Description
+            $result = Invoke-Expression "$Operation 2>&1"
+            
+            if ($LASTEXITCODE -eq 0) {
+                return @{ Success = $true; Output = $result }
+            } else {
+                throw "$Operation failed with exit code $LASTEXITCODE"
+            }
         } catch {
-            Write-Error "Failed to uninstall pnpm version: $_"
-            $uninstallSuccess = $false
+            return @{ Success = $false; Error = $_.ToString() }
         }
     } else {
-        Write-DryRun "Would uninstall pnpm version: $($installations.pnpm)"
-        Write-DryRun "Command: pnpm uninstall -g @anthropic-ai/claude-code"
+        Write-DryRun $Description
+        Write-DryRun "Command: $Operation"
+        return @{ Success = $true; Output = "Simulated success" }
     }
 }
 
-# Uninstall chocolatey version
-if ($installations.chocolatey) {
+# Helper function for package uninstallation
+function Uninstall-Package {
+    param(
+        [string]$PackageManager,
+        [string]$Version,
+        [string]$Command
+    )
+    
     if ($Live) {
-        Write-Info "Uninstalling chocolatey version..."
+        Write-Info "Uninstalling $PackageManager version..."
         try {
-            $result = choco uninstall claude-code -y 2>&1
-            Write-Success "Removed chocolatey installation"
+            $result = Invoke-Expression "$Command 2>&1"
+            Write-Success "Removed $PackageManager installation"
+            return $true
         } catch {
-            Write-Error "Failed to uninstall chocolatey version: $_"
-            $uninstallSuccess = $false
+            Write-Error "Failed to uninstall $PackageManager version: $_"
+            return $false
         }
     } else {
-        Write-DryRun "Would uninstall chocolatey version: $($installations.chocolatey)"
-        Write-DryRun "Command: choco uninstall claude-code -y"
+        Write-DryRun "Would uninstall $PackageManager version: $Version"
+        Write-DryRun "Command: $Command"
+        return $true
     }
 }
 
-# Uninstall scoop version
-if ($installations.scoop) {
-    if ($Live) {
-        Write-Info "Uninstalling scoop version..."
-        try {
-            $result = scoop uninstall claude-code 2>&1
-            Write-Success "Removed scoop installation"
-        } catch {
-            Write-Error "Failed to uninstall scoop version: $_"
+# Define uninstall commands for each package manager
+$uninstallCommands = @{
+    "pnpm" = "pnpm uninstall -g @anthropic-ai/claude-code"
+    "chocolatey" = "choco uninstall claude-code -y"
+    "scoop" = "scoop uninstall claude-code"
+}
+
+# Uninstall surplus package managers
+foreach ($manager in @("pnpm", "chocolatey", "scoop")) {
+    if ($installations[$manager]) {
+        $success = Uninstall-Package $manager $installations[$manager] $uninstallCommands[$manager]
+        if (-not $success) {
             $uninstallSuccess = $false
         }
-    } else {
-        Write-DryRun "Would uninstall scoop version: $($installations.scoop)"
-        Write-DryRun "Command: scoop uninstall claude-code"
     }
 }
 
 Write-Host ""
 
 # Step 3: Ensure proper npm installation
-Write-Info "[Step 3/6] Ensuring proper npm installation..."
+Write-StepHeader "3" "Ensuring proper npm installation"
 
-$updateSuccess = $false
-if ($Live) {
-    try {
-        # Install/update to latest
-        Write-Info "Installing/updating to latest version via npm..."
-        $result = npm install -g @anthropic-ai/claude-code@latest 2>&1
-        
-        if ($LASTEXITCODE -eq 0) {
-            $updateSuccess = $true
-            Write-Success "Successfully updated Claude Code via npm"
-        } else {
-            throw "npm install failed with exit code $LASTEXITCODE"
-        }
-    } catch {
-        Write-Error "Failed to update via npm: $_"
-        $updateSuccess = $false
-    }
+# Update Claude Code via npm
+$updateResult = Invoke-NpmOperation "npm install -g @anthropic-ai/claude-code@latest" "Installing/updating to latest version via npm..."
+$updateSuccess = $updateResult.Success
+
+if ($updateSuccess) {
+    Write-Success "Successfully updated Claude Code via npm"
 } else {
-    Write-DryRun "Would install/update latest version via npm"
-    Write-DryRun "Command: npm install -g @anthropic-ai/claude-code@latest"
-    $updateSuccess = $true
+    Write-Error "Failed to update via npm: $($updateResult.Error)"
 }
 
 Write-Host ""
 
 # Step 4: If update failed, perform clean reinstall
 if (-not $updateSuccess) {
-    Write-Warning "[Step 4/6] Update failed, performing clean reinstall..."
+    Write-StepHeader "4" "Update failed, performing clean reinstall"
     
-    if ($Live) {
-        # Uninstall
-        Write-Info "Uninstalling npm version..."
-        try {
-            $result = npm uninstall -g @anthropic-ai/claude-code 2>&1
-            Write-Success "Uninstalled npm version"
-        } catch {
-            Write-Error "Failed to uninstall: $_"
-        }
-        
-        # Clean npm cache
-        Write-Info "Cleaning npm cache..."
-        try {
-            $result = npm cache clean --force 2>&1
-            Write-Success "Cleaned npm cache"
-        } catch {
-            Write-Warning "Failed to clean cache: $_"
-        }
-        
-        # Reinstall
-        Write-Info "Reinstalling Claude Code..."
-        try {
-            $result = npm install -g @anthropic-ai/claude-code@latest 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                Write-Success "Reinstalled Claude Code"
-                $updateSuccess = $true
-            } else {
-                throw "Reinstall failed with exit code $LASTEXITCODE"
-            }
-        } catch {
-            Write-Error "Failed to reinstall: $_"
-            $updateSuccess = $false
-        }
+    # Perform clean reinstall using helper functions
+    $uninstallResult = Invoke-NpmOperation "npm uninstall -g @anthropic-ai/claude-code" "Uninstalling npm version..."
+    if ($uninstallResult.Success) {
+        Write-Success "Uninstalled npm version"
     } else {
-        Write-DryRun "Would perform clean uninstall and reinstall"
-        Write-DryRun "Commands: npm uninstall -g @anthropic-ai/claude-code"
-        Write-DryRun "          npm cache clean --force"
-        Write-DryRun "          npm install -g @anthropic-ai/claude-code@latest"
+        Write-Error "Failed to uninstall: $($uninstallResult.Error)"
+    }
+    
+    $cacheResult = Invoke-NpmOperation "npm cache clean --force" "Cleaning npm cache..."
+    if ($cacheResult.Success) {
+        Write-Success "Cleaned npm cache"
+    } else {
+        Write-Warning "Failed to clean cache: $($cacheResult.Error)"
+    }
+    
+    $reinstallResult = Invoke-NpmOperation "npm install -g @anthropic-ai/claude-code@latest" "Reinstalling Claude Code..."
+    if ($reinstallResult.Success) {
+        Write-Success "Reinstalled Claude Code"
         $updateSuccess = $true
+    } else {
+        Write-Error "Failed to reinstall: $($reinstallResult.Error)"
+        $updateSuccess = $false
     }
 } else {
-    Write-Info "[Step 4/6] Skipping reinstall (update was successful)"
+    Write-StepHeader "4" "Skipping reinstall (update was successful)"
 }
 
 Write-Host ""
 
 # Step 5: PATH cleanup and verification
-Write-Info "[Step 5/6] PATH cleanup and verification..."
+Write-StepHeader "5" "PATH cleanup and verification"
 
 # Get current PATH entries
 $userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
@@ -373,8 +401,7 @@ if ($pathIssues.Count -gt 0) {
 Write-Host ""
 
 # Step 6: Final verification and status report
-Write-Info "[Step 6/6] Final verification and status report"
-Write-Info "================================================"
+Write-StepHeader "6" "Final verification and status report"
 
 $finalVersion = $null
 $finalPath = $null
@@ -425,6 +452,32 @@ if ($finalVersion) {
         }
     } else {
         Write-DryRun "Would check for updates"
+    }
+    
+    # Configure auto-updates for Windows
+    Write-Host ""
+    Write-Info "Configuring Claude Code auto-updates for Windows..."
+    if ($Live -and $finalVersion -ne "simulated") {
+        try {
+            # Enable auto-updates for seamless maintenance
+            # Documentation: https://docs.anthropic.com/en/docs/claude-code/settings
+            $autoUpdateResult = & claude settings set autoUpdate true 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Success "✅ Auto-updates enabled successfully"
+                Write-Info "Claude will automatically update to new versions"
+            } else {
+                Write-Warning "⚠️ Could not enable auto-updates (command may not be available yet)"
+            }
+        } catch {
+            Write-Warning "⚠️ Auto-update configuration skipped: $($_.Exception.Message)"
+        }
+        
+        Write-Host ""
+        Write-Info "📚 Auto-update settings documentation:"
+        Write-Info "https://docs.anthropic.com/en/docs/claude-code/settings"
+    } elseif (-not $Live) {
+        Write-DryRun "Would configure auto-updates (claude settings set autoUpdate true)"
+        Write-Info "📚 Auto-update settings: https://docs.anthropic.com/en/docs/claude-code/settings"
     }
 } else {
     Write-Error "❌ Claude Code installation failed"
