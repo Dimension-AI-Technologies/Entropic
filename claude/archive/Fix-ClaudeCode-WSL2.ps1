@@ -3,6 +3,13 @@
 
 <#
 .SYNOPSIS
+    [DEPRECATED] Use Fix-ClaudeCode-Universal.ps1 or Fix-ClaudeCode-Universal-Spectre.ps1 instead
+.DESCRIPTION
+    This script is deprecated. Please use the Universal versions which support all platforms including WSL2.
+    - Fix-ClaudeCode-Universal.ps1 - Standard version
+    - Fix-ClaudeCode-Universal-Spectre.ps1 - Enhanced UI version
+    
+    Original description:
     Fix Claude Code installation issues in WSL2/Ubuntu
 .DESCRIPTION
     This script detects multiple Claude Code installations, removes surplus ones (pnpm),
@@ -24,7 +31,7 @@
     Executes actual changes to fix Claude Code
 .NOTES
     Run this script from within WSL2/Ubuntu using PowerShell Core
-    Version: 2.1 (Enhanced with system-wide detection and sudo handling)
+    Version: 3.0 (Data-driven configuration approach)
 #>
 
 param(
@@ -36,6 +43,62 @@ $ErrorActionPreference = "Stop"
 $VerbosePreference = if ($Verbose) { "Continue" } else { "SilentlyContinue" }
 $script:hasErrors = $false
 
+# Data-driven configuration for package managers in WSL2/Linux
+$script:PackageManagerConfigs = @{
+    npm = @{
+        Name = "npm"
+        Priority = 1  # Highest priority - preferred manager
+        CheckCommand = { npm list -g @anthropic-ai/claude-code --json 2>/dev/null | ConvertFrom-Json }
+        GetVersion = { param($result) $result.dependencies.'@anthropic-ai/claude-code'.version }
+        UninstallCommand = "npm uninstall -g @anthropic-ai/claude-code"
+        InstallCommand = "npm install -g @anthropic-ai/claude-code@latest"
+        CacheCleanCommand = "npm cache clean --force"
+        InstallPath = "$HOME/.npm-global"
+        ExecutablePaths = @("$HOME/.npm-global/bin/claude", "/usr/local/bin/claude")
+    }
+    pnpm = @{
+        Name = "pnpm"
+        Priority = 2
+        CheckCommand = { pnpm list -g @anthropic-ai/claude-code 2>/dev/null }
+        GetVersion = { param($result) if ($result -match '@anthropic-ai/claude-code\s+(\d+\.\d+\.\d+)') { $matches[1] } }
+        UninstallCommand = "pnpm remove -g @anthropic-ai/claude-code"
+        InstallCommand = "pnpm add -g @anthropic-ai/claude-code@latest"
+        InstallPath = "$HOME/.local/share/pnpm/global"
+        ExecutablePaths = @("$HOME/.local/share/pnpm/global/5/node_modules/.bin/claude")
+    }
+    yarn = @{
+        Name = "yarn"
+        Priority = 3
+        CheckCommand = { yarn global list 2>/dev/null | grep claude-code }
+        GetVersion = { param($result) if ($result -match '@anthropic-ai/claude-code@(\d+\.\d+\.\d+)') { $matches[1] } }
+        UninstallCommand = "yarn global remove @anthropic-ai/claude-code"
+        InstallCommand = "yarn global add @anthropic-ai/claude-code@latest"
+        InstallPath = "$HOME/.yarn/bin"
+        ExecutablePaths = @("$HOME/.yarn/bin/claude")
+    }
+}
+
+# Additional known installation paths that might interfere
+$script:KnownInstallationPaths = @(
+    @{
+        Path = "$HOME/.local/bin/claude"
+        Description = ".local/bin installation"
+        Source = "unknown"
+    },
+    @{
+        Path = "/usr/bin/claude"
+        Description = "System-wide installation"
+        Source = "system"
+        RequiresSudo = $true
+    },
+    @{
+        Path = "/usr/local/bin/claude"
+        Description = "Local system installation"
+        Source = "system"
+        RequiresSudo = $true
+    }
+)
+
 function Write-Status {
     param(
         [string]$Message,
@@ -44,10 +107,11 @@ function Write-Status {
     
     $timestamp = Get-Date -Format "HH:mm:ss"
     switch ($Type) {
-        "Success" { Write-Host "[$timestamp] ✓ $Message" -ForegroundColor Green }
-        "Error"   { Write-Host "[$timestamp] ✗ $Message" -ForegroundColor Red; $script:hasErrors = $true }
-        "Warning" { Write-Host "[$timestamp] ⚠ $Message" -ForegroundColor Yellow }
-        "Info"    { Write-Host "[$timestamp] ℹ $Message" -ForegroundColor Cyan }
+        "Success" { Write-Host "[$timestamp] [OK] $Message" -ForegroundColor Green }
+        "Error"   { Write-Host "[$timestamp] [X] $Message" -ForegroundColor Red; $script:hasErrors = $true }
+        "Warning" { Write-Host "[$timestamp] [!] $Message" -ForegroundColor Yellow }
+        "Info"    { Write-Host "[$timestamp] [i] $Message" -ForegroundColor Cyan }
+        "DryRun"  { Write-Host "[$timestamp] [TEST] $Message" -ForegroundColor Magenta }
         default   { Write-Host "[$timestamp]   $Message" }
     }
 }
@@ -140,75 +204,88 @@ function Invoke-BashCommand {
 function Get-ClaudeInstallations {
     Write-Status "Detecting Claude Code installations..." "Info"
     
-    $installations = @()
-    
-    # Check npm global installation
-    $npmCheck = Invoke-BashCommand -Command "npm list -g @anthropic-ai/claude-code --json 2>/dev/null" -Description "Checking npm global packages" -IgnoreError
-    if ($npmCheck.Success -and $npmCheck.Output) {
-        try {
-            $npmData = $npmCheck.Output | ConvertFrom-Json
-            if ($npmData.dependencies.'@anthropic-ai/claude-code') {
-                $version = $npmData.dependencies.'@anthropic-ai/claude-code'.version
-                $installations += @{
-                    Manager = "npm"
-                    Version = $version
-                    Path = "$(npm config get prefix)/bin/claude"
-                }
-                Write-Status "Found npm installation: v$version" "Info"
-            }
-        } catch {}
+    $installations = @{
+        managers = @{}  # Keyed by manager name
+        paths = @()
+        detailed = @()
     }
     
-    # Check pnpm global installation
-    $pnpmCheck = Invoke-BashCommand -Command "pnpm list -g @anthropic-ai/claude-code --json 2>/dev/null" -Description "Checking pnpm global packages" -IgnoreError
-    if ($pnpmCheck.Success -and $pnpmCheck.Output) {
+    # Check each configured package manager
+    foreach ($managerName in $script:PackageManagerConfigs.Keys) {
+        $config = $script:PackageManagerConfigs[$managerName]
+        Write-Verbose "Checking $managerName installation..."
+        
         try {
-            $pnpmData = $pnpmCheck.Output | ConvertFrom-Json
-            foreach ($pkg in $pnpmData) {
-                if ($pkg.dependencies.'@anthropic-ai/claude-code' -or $pkg.name -eq '@anthropic-ai/claude-code') {
-                    $version = $pkg.version -or $pkg.dependencies.'@anthropic-ai/claude-code'.version
-                    $installations += @{
-                        Manager = "pnpm"
+            $result = & $config.CheckCommand
+            if ($result) {
+                $version = & $config.GetVersion $result
+                if ($version) {
+                    $installations.managers[$managerName] = $version
+                    $installations.detailed += [PSCustomObject]@{
+                        Type = "$managerName-global"
+                        Source = $managerName
                         Version = $version
-                        Path = "$(pnpm config get global-dir)/node_modules/.bin/claude"
+                        Path = $config.InstallPath
+                        Priority = $config.Priority
                     }
-                    Write-Status "Found pnpm installation: v$version" "Info"
+                    Write-Status "Found $managerName installation: v$version" "Info"
                 }
             }
-        } catch {}
-    }
-    
-    # Check yarn global installation
-    $yarnCheck = Invoke-BashCommand -Command "yarn global list --json 2>/dev/null | grep claude-code" -Description "Checking yarn global packages" -IgnoreError
-    if ($yarnCheck.Success -and $yarnCheck.Output) {
-        try {
-            $yarnData = $yarnCheck.Output | ConvertFrom-Json
-            if ($yarnData.data.trees -and ($yarnData.data.trees | Where-Object { $_.name -like "*claude-code*" })) {
-                $yarnPkg = $yarnData.data.trees | Where-Object { $_.name -like "*claude-code*" } | Select-Object -First 1
-                $version = $yarnPkg.name -replace '.*@', ''
-                $installations += @{
-                    Manager = "yarn"
-                    Version = $version
-                    Path = "$(yarn global bin)/claude"
-                }
-                Write-Status "Found yarn installation: v$version" "Info"
-            }
-        } catch {}
+        } catch {
+            Write-Verbose "No $managerName installation found or check failed: $_"
+        }
     }
     
     # Check which claude is in PATH
-    $whichResult = Invoke-BashCommand -Command "which claude 2>/dev/null" -Description "Finding claude in PATH" -IgnoreError
+    $whichResult = Invoke-BashCommand -Command "which -a claude 2>/dev/null" -Description "Finding claude in PATH" -IgnoreError
     if ($whichResult.Success -and $whichResult.Output) {
-        $activePath = $whichResult.Output.Trim()
-        Write-Status "Active claude binary: $activePath" "Info"
-        
-        # Try to get version
-        $versionResult = Invoke-BashCommand -Command "claude --version 2>/dev/null" -Description "Getting active version" -IgnoreError
-        if ($versionResult.Success) {
-            $activeVersion = $versionResult.Output -replace '.*?(\d+\.\d+\.\d+).*', '$1'
-            Write-Status "Active version: v$activeVersion" "Info"
+        $installations.paths = $whichResult.Output -split "`n" | Where-Object { $_ }
+        foreach ($path in $installations.paths) {
+            # Determine source based on path patterns from configs
+            $source = "unknown"
+            foreach ($manager in $script:PackageManagerConfigs.GetEnumerator()) {
+                if ($path -match $manager.Key -or ($manager.Value.ExecutablePaths | Where-Object { $path -eq $_ })) {
+                    $source = $manager.Key
+                    break
+                }
+            }
+            
+            $installations.detailed += [PSCustomObject]@{
+                Type = "PATH"
+                Path = $path
+                Source = $source
+                Priority = if ($source -ne "unknown" -and $script:PackageManagerConfigs[$source]) { 
+                    $script:PackageManagerConfigs[$source].Priority 
+                } else { 99 }
+            }
+        }
+        Write-Status "Found claude in PATH: $($installations.paths -join ', ')" "Info"
+    }
+    
+    # Check for additional known installation paths
+    foreach ($knownPath in $script:KnownInstallationPaths) {
+        if (Test-Path $knownPath.Path) {
+            $installations.detailed += [PSCustomObject]@{
+                Type = "standalone"
+                Path = $knownPath.Path
+                Source = $knownPath.Source
+                Description = $knownPath.Description
+                RequiresSudo = $knownPath.RequiresSudo
+                Priority = 100  # Lowest priority for removal
+            }
+            Write-Status "Found $($knownPath.Description) at: $($knownPath.Path)" "Warning"
         }
     }
+    
+    # Try to get active version
+    $versionResult = Invoke-BashCommand -Command "claude --version 2>/dev/null" -Description "Getting active version" -IgnoreError
+    if ($versionResult.Success) {
+        $activeVersion = $versionResult.Output -replace '.*?(\d+\.\d+\.\d+).*', '$1'
+        Write-Status "Active version: v$activeVersion" "Info"
+    }
+    
+    # Sort detailed installations by priority
+    $installations.detailed = $installations.detailed | Sort-Object Priority
     
     return $installations
 }
@@ -222,42 +299,87 @@ function Remove-PackageManager {
     
     Write-Status "Removing $Manager installation (v$Version)..." "Warning"
     
-    $removalCommands = @{
-        "pnpm" = @(
-            @{ Command = "pnpm remove -g @anthropic-ai/claude-code"; Description = "Removing pnpm global package" },
-            @{ Command = "rm -f ~/.local/share/pnpm/*/node_modules/.bin/claude"; Description = "Removing pnpm claude binary" },
-            @{ Command = "rm -rf ~/.local/share/pnpm/*/node_modules/@anthropic-ai/claude-code"; Description = "Removing pnpm claude package" }
-        )
-        "yarn" = @(
-            @{ Command = "yarn global remove @anthropic-ai/claude-code"; Description = "Removing yarn global package" }
-        )
-    }
-    
-    $commands = $removalCommands[$Manager]
-    if ($commands) {
-        foreach ($cmd in $commands) {
-            $result = Invoke-BashCommand -Command $cmd.Command -Description $cmd.Description -IgnoreError
-            if ($result.Success -and $Manager -ne "pnpm") {
-                break  # For non-pnpm, stop after first successful command
+    $config = $script:PackageManagerConfigs[$Manager]
+    if ($config) {
+        $result = Invoke-BashCommand -Command $config.UninstallCommand -Description "Removing $Manager global package"
+        if ($result.Success) {
+            Write-Status "Removed $Manager installation" "Success"
+            
+            # Additional cleanup for pnpm
+            if ($Manager -eq "pnpm") {
+                Invoke-BashCommand -Command "rm -f ~/.local/share/pnpm/*/node_modules/.bin/claude" -Description "Removing pnpm claude binary" -IgnoreError
+                Invoke-BashCommand -Command "rm -rf ~/.local/share/pnpm/*/node_modules/@anthropic-ai/claude-code" -Description "Removing pnpm claude package" -IgnoreError
             }
+            
+            return $true
+        } else {
+            Write-Status "Failed to remove $Manager installation" "Error"
+            return $false
         }
     }
     
-    return $true
+    return $false
 }
 
 function Remove-SurplusInstallations {
     param(
-        [array]$Installations
+        [hashtable]$Installations
     )
     
-    $surplusManagers = @("pnpm", "yarn")
     $removed = $false
     
-    foreach ($install in $Installations) {
-        if ($install.Manager -in $surplusManagers) {
-            $wasRemoved = Remove-PackageManager $install.Manager $install.Version
-            if ($wasRemoved) { $removed = $true }
+    # Determine preferred package manager (highest priority installed)
+    $preferredManager = $null
+    $lowestPriority = 999
+    
+    foreach ($manager in $Installations.managers.GetEnumerator()) {
+        $config = $script:PackageManagerConfigs[$manager.Key]
+        if ($config -and $config.Priority -lt $lowestPriority) {
+            $preferredManager = $manager.Key
+            $lowestPriority = $config.Priority
+        }
+    }
+    
+    # Default to npm if nothing installed
+    if (-not $preferredManager) {
+        $preferredManager = "npm"
+    }
+    
+    Write-Status "Keeping $preferredManager as preferred package manager" "Info"
+    
+    # Remove standalone installations first
+    $standaloneInstalls = $Installations.detailed | Where-Object { $_.Type -eq "standalone" }
+    foreach ($standalone in $standaloneInstalls) {
+        if ($standalone.RequiresSudo) {
+            Write-Status "System-wide installation detected - requires manual sudo removal" "Warning"
+            Write-Host "   [!]  $($standalone.Description) detected at $($standalone.Path)" -ForegroundColor Yellow
+            Write-Host "   Please run: sudo rm $($standalone.Path)" -ForegroundColor Cyan
+            Write-Host "   Then re-run this script." -ForegroundColor Yellow
+            if ($Live) {
+                exit 1
+            }
+        } else {
+            Write-Status "Removing $($standalone.Description)..." "Warning"
+            if ($Live) {
+                $result = Invoke-BashCommand -Command "rm -f $($standalone.Path)" -Description "Removing $($standalone.Description)" -IgnoreError
+                if ($result.Success) {
+                    Write-Status "Removed $($standalone.Description)" "Success"
+                    $removed = $true
+                }
+            } else {
+                Write-Status "Would remove $($standalone.Description): $($standalone.Path)" "DryRun"
+            }
+        }
+    }
+    
+    # Remove all package managers except preferred
+    foreach ($manager in $Installations.managers.GetEnumerator()) {
+        if ($manager.Key -ne $preferredManager) {
+            $config = $script:PackageManagerConfigs[$manager.Key]
+            if ($config) {
+                $wasRemoved = Remove-PackageManager $manager.Key $manager.Value
+                if ($wasRemoved) { $removed = $true }
+            }
         }
     }
     
@@ -339,6 +461,16 @@ function Get-LatestVersion {
 }
 
 # Main execution
+# Show deprecation warning
+Write-Host "`n=== DEPRECATED SCRIPT ===" -ForegroundColor Red
+Write-Host "This script is deprecated. Please use one of the following instead:" -ForegroundColor Yellow
+Write-Host "  - Fix-ClaudeCode-Universal.ps1 (standard version)" -ForegroundColor Yellow
+Write-Host "  - Fix-ClaudeCode-Universal-Spectre.ps1 (enhanced UI version)" -ForegroundColor Yellow
+Write-Host "" -ForegroundColor Yellow
+Write-Host "The Universal scripts support Windows, WSL2, Linux, and macOS." -ForegroundColor Yellow
+Write-Host "Press Ctrl+C to cancel or wait 10 seconds to continue anyway..." -ForegroundColor Yellow
+Start-Sleep -Seconds 10
+
 Write-Host "`n=== Claude Code WSL2/Ubuntu Fix Script ===" -ForegroundColor Magenta
 Write-Host "This script will fix Claude Code installation issues in WSL2`n" -ForegroundColor Gray
 

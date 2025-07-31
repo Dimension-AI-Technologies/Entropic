@@ -2,33 +2,38 @@
 
 This directory contains PowerShell scripts to diagnose and fix Claude Code installation issues across different environments.
 
-## Scripts Overview
+## Current Script
 
-| Script | Description |
-|--------|-------------|
-| `Fix-ClaudeCode-Universal.ps1` | Cross-platform script supporting Windows, WSL2, Linux, and macOS |
-| `Fix-ClaudeCode-Universal-Spectre.ps1` | Enhanced UI version with Spectre.Console tables and formatting |
-| `Fix-ClaudeCode-WSL2.ps1` | WSL2/Linux-specific version with Unix path handling |
-| `Fix-ClaudeCode-Windows.ps1` | Windows-specific version with native PowerShell features |
+| Script | Description | Status |
+|--------|-------------|---------|
+| `Fix-ClaudeCode.ps1` | Universal cross-platform script with optional Spectre.Console UI | ✅ **ACTIVE** |
+
+## Deprecated Scripts
+
+| Script | Description | Status |
+|--------|-------------|---------|
+| `Fix-ClaudeCode-Windows.ps1` | Windows-specific version | ⚠️ **DEPRECATED** - Use Fix-ClaudeCode.ps1 |
+| `Fix-ClaudeCode-WSL2.ps1` | WSL2/Linux-specific version | ⚠️ **DEPRECATED** - Use Fix-ClaudeCode.ps1 |
+| `Fix-ClaudeCode-Universal-Spectre.ps1` | Separate Spectre UI version | ⚠️ **MERGED** - Use Fix-ClaudeCode.ps1 with -UseSpectre |
 
 ## Quick Start
 
-### For Most Users
+### Standard Mode
 ```powershell
-# Universal script (recommended)
-.\Fix-ClaudeCode-Universal.ps1 -Live
+# Preview what will be fixed (dry run)
+.\Fix-ClaudeCode.ps1
 
-# Enhanced UI version
-.\Fix-ClaudeCode-Universal-Spectre.ps1 -Live
+# Actually fix the issues
+.\Fix-ClaudeCode.ps1 -Live
 ```
 
-### Platform-Specific Options
+### Enhanced UI Mode (Spectre.Console)
 ```powershell
-# Windows only
-.\Fix-ClaudeCode-Windows.ps1 -Live
+# Preview with beautiful formatted output
+.\Fix-ClaudeCode.ps1 -UseSpectre
 
-# WSL2 environment
-.\Fix-ClaudeCode-WSL2.ps1 -Live
+# Fix with enhanced UI
+.\Fix-ClaudeCode.ps1 -Live -UseSpectre
 ```
 
 ## Common Usage Patterns
@@ -36,19 +41,19 @@ This directory contains PowerShell scripts to diagnose and fix Claude Code insta
 ### Dry Run (Safe - No Changes)
 ```powershell
 # Preview what would be fixed without making changes
-.\Fix-ClaudeCode-Universal.ps1
+.\Fix-ClaudeCode.ps1
 ```
 
 ### Live Fix (Execute Changes)
 ```powershell
 # Actually fix the issues
-.\Fix-ClaudeCode-Universal.ps1 -Live
+.\Fix-ClaudeCode.ps1 -Live
 ```
 
 ### Verbose Output
 ```powershell
 # Get detailed diagnostic information
-.\Fix-ClaudeCode-Universal.ps1 -Live -Verbose
+.\Fix-ClaudeCode.ps1 -Live -Verbose
 ```
 
 ## What These Scripts Fix
@@ -78,47 +83,54 @@ This directory contains PowerShell scripts to diagnose and fix Claude Code insta
 
 **"Claude command not found"**
 ```powershell
-.\Fix-ClaudeCode-Universal.ps1 -Live
+.\Fix-ClaudeCode.ps1 -Live
 ```
 
 **"Multiple Claude versions detected"**
 ```powershell
 # The scripts automatically remove duplicates and keep the best version
-.\Fix-ClaudeCode-Universal.ps1 -Live
+.\Fix-ClaudeCode.ps1 -Live
 ```
 
 **"Permission denied"**
 ```powershell
 # Run PowerShell as Administrator
 # Right-click PowerShell → "Run as Administrator"
-.\Fix-ClaudeCode-Universal.ps1 -Live
+.\Fix-ClaudeCode.ps1 -Live
 ```
 
 **"Script execution disabled"**
 ```powershell
 # Enable script execution
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-.\Fix-ClaudeCode-Universal.ps1 -Live
+.\Fix-ClaudeCode.ps1 -Live
 ```
 
-### Script Selection Guide
+### Script Parameters
 
-| Situation | Recommended Script |
-|-----------|-------------------|
-| **General use** | `Fix-ClaudeCode-Universal.ps1` |
-| **Enhanced UI experience** | `Fix-ClaudeCode-Universal-Spectre.ps1` |
-| **Windows only** | `Fix-ClaudeCode-Windows.ps1` |
-| **WSL2 specific issues** | `Fix-ClaudeCode-WSL2.ps1` |
-| **Cross-platform dev** | `Fix-ClaudeCode-Universal.ps1` |
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `-Live` | Execute changes (default is dry run) | `.\Fix-ClaudeCode.ps1 -Live` |
+| `-UseSpectre` | Enable Spectre.Console rich UI | `.\Fix-ClaudeCode.ps1 -UseSpectre` |
+| `-Verbose` | Show detailed diagnostic output | `.\Fix-ClaudeCode.ps1 -Live -Verbose` |
+| `-NonInteractive` | Don't prompt for elevation (with -UseSpectre) | `.\Fix-ClaudeCode.ps1 -Live -UseSpectre -NonInteractive` |
+| `-Help` or `-?` | Show detailed help | `.\Fix-ClaudeCode.ps1 -?` |
 
-### Enhanced UI Version
+### Spectre.Console UI Mode
 
-The `Fix-ClaudeCode-Universal-Spectre.ps1` script provides improved visual output:
+The `-UseSpectre` parameter enables enhanced visual output:
 
-- Rich colored output with formatted tables
-- Automatic installation of PoshSpectreConsole module if needed
-- Falls back to standard output if Spectre.Console unavailable
-- Same functionality as Universal script with better presentation
+- **Rich formatting**: Colored tables, rules, and structured output
+- **Auto-installation**: Installs PwshSpectreConsole module if needed
+- **Graceful fallback**: Reverts to standard output if unavailable
+- **Elevation handling**: Prompts for Administrator when needed (Windows)
+- **UTF-8 support**: Best viewed in Windows Terminal or modern terminals
+
+#### Spectre-Specific Features
+- Formatted tables for configuration display
+- Colored status messages with markup support
+- Section headers with visual rules
+- Progress indicators (when available)
 
 ## Safety Features
 
@@ -138,17 +150,19 @@ All scripts run in **dry-run mode** by default - they show what would be changed
 ## Development Notes
 
 ### Script Versions
-- **Universal** - Latest comprehensive version with environment detection
-- **Windows** - Stable Windows-specific version with enhanced PATH cleanup
-- **WSL2** - Specialized for Windows Subsystem for Linux scenarios
+- **Universal v5.0** - Unified script with optional Spectre.Console UI
+  - Standard mode for clean, simple output
+  - Spectre mode for enhanced visual presentation
+  - Full cross-platform support (Windows, WSL2, Linux, macOS)
+  - Consolidated all functionality from previous versions
 
 ### Testing
 ```powershell
 # Always test in dry-run mode first
-.\Fix-ClaudeCode-Universal.ps1
+.\Fix-ClaudeCode.ps1
 
 # Check what would be changed, then execute
-.\Fix-ClaudeCode-Universal.ps1 -Live
+.\Fix-ClaudeCode.ps1 -Live
 ```
 
 ### Auto-Update Configuration
@@ -174,13 +188,19 @@ When modifying these scripts:
 
 ```powershell
 # Most common usage - fix everything safely
-.\Fix-ClaudeCode-Universal.ps1 -Live
+.\Fix-ClaudeCode.ps1 -Live
+
+# Enhanced UI mode
+.\Fix-ClaudeCode.ps1 -Live -UseSpectre
 
 # Detailed diagnostics
-.\Fix-ClaudeCode-Universal.ps1 -Live -Verbose
+.\Fix-ClaudeCode.ps1 -Live -Verbose
 
 # Just see what's wrong (no changes)
-.\Fix-ClaudeCode-Universal.ps1
+.\Fix-ClaudeCode.ps1
+
+# Get help
+.\Fix-ClaudeCode.ps1 -?
 ```
 
 **Need help?** Run any script without parameters to see what issues would be fixed, then add `-Live` to execute the fixes.

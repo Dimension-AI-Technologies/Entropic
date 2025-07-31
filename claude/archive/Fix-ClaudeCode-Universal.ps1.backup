@@ -1,0 +1,957 @@
+#!/usr/bin/env pwsh
+#Requires -Version 7.0
+
+<#
+.SYNOPSIS
+    Universal Claude Code fix script for Windows, WSL2/Linux, and macOS
+.DESCRIPTION
+    This cross-platform script detects Claude Code installations across multiple package managers,
+    removes outdated/surplus installations, ensures the latest version is installed via npm,
+    and configures auto-updates for seamless maintenance.
+    
+    Supports:
+    - Windows: npm, pnpm, chocolatey, scoop
+    - WSL2/Linux: npm, pnpm, yarn, system-wide sudo installations
+    - macOS: npm, pnpm, yarn, Homebrew, MacPorts
+    
+    By default runs in DRY mode - use -Live to execute changes.
+    Auto-update documentation: https://docs.anthropic.com/en/docs/claude-code/settings
+.PARAMETER Live
+    Execute changes (default is dry run mode)
+.PARAMETER Verbose
+    Enable verbose output for debugging
+.EXAMPLE
+    ./Fix-ClaudeCode-Universal.ps1
+    Runs in dry mode, showing what would be done
+.EXAMPLE
+    ./Fix-ClaudeCode-Universal.ps1 -Live -Verbose
+    Executes actual changes with detailed output
+.NOTES
+    Author: Claude Assistant
+    Date: 2025-07-31
+    Version: 4.0 (Data-driven universal cross-platform)
+    Requires: PowerShell Core 7.0+ for cross-platform support
+#>
+
+param(
+    [switch]$Live,
+    [switch]$Verbose,
+    [Alias('?')]
+    [switch]$Help
+)
+
+# Show help if requested
+if ($Help) {
+    Get-Help $MyInvocation.MyCommand.Path -Detailed
+    exit 0
+}
+
+$ErrorActionPreference = "Stop"
+$VerbosePreference = if ($Verbose) { "Continue" } else { "SilentlyContinue" }
+$script:hasErrors = $false
+
+# Platform detection
+$IsWindowsOS = $IsWindows -or ($env:OS -eq "Windows_NT")
+$IsMacOSDetected = $IsMacOS  # PowerShell Core built-in variable
+$IsLinuxOS = $IsLinux -and -not $IsMacOSDetected  # Distinguish Linux from macOS
+$IsWSL = $IsLinuxOS -and (Test-Path "/proc/version") -and (Get-Content "/proc/version" -ErrorAction SilentlyContinue | Select-String "microsoft|WSL")
+
+# Data-driven configuration for package managers across platforms
+$script:PackageManagerConfigs = @{
+    npm = @{
+        Name = "npm"
+        Priority = 1  # Highest priority - preferred manager
+        Platforms = @("Windows", "Linux", "macOS", "WSL")
+        CheckCommand = { npm list -g @anthropic-ai/claude-code --json 2>$null | ConvertFrom-Json }
+        GetVersion = { param($result) $result.dependencies.'@anthropic-ai/claude-code'.version }
+        UninstallCommand = "npm uninstall -g @anthropic-ai/claude-code"
+        InstallCommand = "npm install -g @anthropic-ai/claude-code@latest"
+        CacheCleanCommand = "npm cache clean --force"
+        InstallPaths = @{
+            Windows = "$env:APPDATA\npm"
+            Linux = "$HOME/.npm-global"
+            macOS = "/usr/local/lib/node_modules"
+            WSL = "$HOME/.npm-global"
+        }
+        ExecutablePaths = @{
+            Windows = @("$env:APPDATA\npm\claude.cmd", "$env:APPDATA\npm\claude")
+            Linux = @("$HOME/.npm-global/bin/claude", "/usr/local/bin/claude")
+            macOS = @("/usr/local/bin/claude", "$HOME/.npm-global/bin/claude")
+            WSL = @("$HOME/.npm-global/bin/claude", "/usr/local/bin/claude")
+        }
+    }
+    pnpm = @{
+        Name = "pnpm"
+        Priority = 2
+        Platforms = @("Windows", "Linux", "macOS", "WSL")
+        CheckCommand = { pnpm list -g @anthropic-ai/claude-code 2>$null }
+        GetVersion = { param($result) if ($result -match '@anthropic-ai/claude-code\s+(\d+\.\d+\.\d+)') { $matches[1] } }
+        UninstallCommand = "pnpm uninstall -g @anthropic-ai/claude-code"
+        InstallCommand = "pnpm add -g @anthropic-ai/claude-code@latest"
+        InstallPaths = @{
+            Windows = "$env:LOCALAPPDATA\pnpm\global"
+            Linux = "$HOME/.local/share/pnpm/global"
+            macOS = "$HOME/Library/pnpm/global"
+            WSL = "$HOME/.local/share/pnpm/global"
+        }
+        ExecutablePaths = @{
+            Windows = @("$env:LOCALAPPDATA\pnpm\claude.cmd")
+            Linux = @("$HOME/.local/share/pnpm/global/5/node_modules/.bin/claude")
+            macOS = @("$HOME/Library/pnpm/global/5/node_modules/.bin/claude")
+            WSL = @("$HOME/.local/share/pnpm/global/5/node_modules/.bin/claude")
+        }
+    }
+    yarn = @{
+        Name = "yarn"
+        Priority = 3
+        Platforms = @("Linux", "macOS", "WSL")
+        CheckCommand = { yarn global list 2>$null | Select-String "@anthropic-ai/claude-code" }
+        GetVersion = { param($result) if ($result -match '@anthropic-ai/claude-code@(\d+\.\d+\.\d+)') { $matches[1] } }
+        UninstallCommand = "yarn global remove @anthropic-ai/claude-code"
+        InstallCommand = "yarn global add @anthropic-ai/claude-code@latest"
+        InstallPaths = @{
+            Linux = "$HOME/.yarn/bin"
+            macOS = "$HOME/.yarn/bin"
+            WSL = "$HOME/.yarn/bin"
+        }
+        ExecutablePaths = @{
+            Linux = @("$HOME/.yarn/bin/claude")
+            macOS = @("$HOME/.yarn/bin/claude")
+            WSL = @("$HOME/.yarn/bin/claude")
+        }
+    }
+    chocolatey = @{
+        Name = "chocolatey"
+        Priority = 4
+        Platforms = @("Windows")
+        CheckCommand = { choco list claude-code --local-only 2>$null }
+        GetVersion = { param($result) if ($result -match 'claude-code\s+(\d+\.\d+\.\d+)') { $matches[1] } }
+        UninstallCommand = "choco uninstall claude-code -y"
+        InstallCommand = "choco install claude-code -y"
+        InstallPaths = @{
+            Windows = "C:\ProgramData\chocolatey\bin"
+        }
+        ExecutablePaths = @{
+            Windows = @("C:\ProgramData\chocolatey\bin\claude.exe")
+        }
+    }
+    scoop = @{
+        Name = "scoop"
+        Priority = 5
+        Platforms = @("Windows")
+        CheckCommand = { scoop list claude-code 2>$null }
+        GetVersion = { param($result) if ($result -match 'claude-code\s+(\d+\.\d+\.\d+)') { $matches[1] } }
+        UninstallCommand = "scoop uninstall claude-code"
+        InstallCommand = "scoop install claude-code"
+        InstallPaths = @{
+            Windows = "$env:USERPROFILE\scoop\shims"
+        }
+        ExecutablePaths = @{
+            Windows = @("$env:USERPROFILE\scoop\shims\claude.exe")
+        }
+    }
+    homebrew = @{
+        Name = "homebrew"
+        Priority = 3
+        Platforms = @("macOS")
+        CheckCommand = { brew list claude-code 2>$null }
+        GetVersion = { param($result) brew info claude-code 2>$null | Select-String "claude-code: stable (\d+\.\d+\.\d+)" | ForEach-Object { $_.Matches[0].Groups[1].Value } }
+        UninstallCommand = "brew uninstall claude-code"
+        InstallCommand = "brew install claude-code"
+        InstallPaths = @{
+            macOS = "/usr/local/bin"
+        }
+        ExecutablePaths = @{
+            macOS = @("/usr/local/bin/claude", "/opt/homebrew/bin/claude")
+        }
+    }
+    macports = @{
+        Name = "macports"
+        Priority = 4
+        Platforms = @("macOS")
+        CheckCommand = { port installed claude-code 2>$null }
+        GetVersion = { param($result) if ($result -match 'claude-code @(\d+\.\d+\.\d+)') { $matches[1] } }
+        UninstallCommand = "sudo port uninstall claude-code"
+        InstallCommand = "sudo port install claude-code"
+        InstallPaths = @{
+            macOS = "/opt/local/bin"
+        }
+        ExecutablePaths = @{
+            macOS = @("/opt/local/bin/claude")
+        }
+    }
+}
+
+# Additional known installation paths that might interfere
+$script:KnownInstallationPaths = @(
+    @{
+        Path = { if ($IsWindowsOS) { "$env:USERPROFILE\.local\bin\claude.exe" } else { "$HOME/.local/bin/claude" } }
+        Description = ".local/bin installation"
+        Source = "unknown"
+        Platforms = @("Windows", "Linux", "macOS", "WSL")
+    },
+    @{
+        Path = { "/usr/bin/claude" }
+        Description = "System-wide installation"
+        Source = "system"
+        Platforms = @("Linux", "WSL")
+    },
+    @{
+        Path = { "$env:ProgramFiles\Claude\claude.exe" }
+        Description = "Program Files installation"
+        Source = "installer"
+        Platforms = @("Windows")
+    }
+)
+
+# Helper function to get current platform name
+function Get-CurrentPlatform {
+    if ($IsWindowsOS) { return "Windows" }
+    elseif ($IsWSL) { return "WSL" }
+    elseif ($IsMacOSDetected) { return "macOS" }
+    else { return "Linux" }
+}
+
+# Enhanced status functions with centralized configuration
+function Write-Status {
+    param(
+        [string]$Message,
+        [string]$Type = "Info"
+    )
+    
+    $timestamp = Get-Date -Format "HH:mm:ss"
+    $platform = Get-PlatformLabel
+    
+    # Define type mappings for consistency and DRY principle
+    $typeConfig = @{
+        "Success" = @{ Icon = "[OK]"; Color = "Green" }
+        "Error"   = @{ Icon = "[X]"; Color = "Red"; SetError = $true }
+        "Warning" = @{ Icon = "[!]"; Color = "Yellow" }
+        "Info"    = @{ Icon = "[i]"; Color = "Cyan" }
+        "DryRun"  = @{ Icon = "[TEST]"; Color = "Magenta"; Prefix = "[DRY RUN] " }
+    }
+    
+    $config = $typeConfig[$Type]
+    if (-not $config) {
+        $config = @{ Icon = " "; Color = "White" }
+    }
+    
+    $displayMessage = if ($config.Prefix) { "$($config.Prefix)$Message" } else { $Message }
+    Write-Host "[$timestamp][$platform] $($config.Icon) $displayMessage" -ForegroundColor $config.Color
+    
+    if ($config.SetError) {
+        $script:hasErrors = $true
+    }
+}
+
+# Helper function for platform detection
+function Get-PlatformLabel {
+    if ($IsWindowsOS) { return "WIN" }
+    elseif ($IsWSL) { return "WSL" }
+    elseif ($IsMacOSDetected) { return "MAC" }
+    else { return "LIN" }
+}
+
+# Helper function for step headers
+function Write-StepHeader {
+    param(
+        [string]$StepNumber,
+        [string]$StepTitle
+    )
+    
+    Write-Status "Step $StepNumber/7: $StepTitle" "Info"
+}
+
+# Cross-platform command execution
+function Invoke-PlatformCommand {
+    param(
+        [string]$Command,
+        [string]$Description,
+        [switch]$IgnoreError,
+        [switch]$Silent
+    )
+    
+    if (-not $Silent) {
+        Write-Verbose "Executing: $Description"
+        Write-Verbose "Command: $Command"
+    }
+    
+    if (-not $Live) {
+        Write-Status "Would execute: $Command" "DryRun"
+        
+        # Platform-specific simulation
+        $simulatedOutput = if ($IsWindowsOS) {
+            switch -Regex ($Command) {
+                'claude --version' { "1.0.61 (Claude Code)" }
+                'npm list -g.*claude-code.*--json' { '{"dependencies":{"@anthropic-ai/claude-code":{"version":"1.0.61"}}}' }
+                'where\.exe claude' { "$env:APPDATA\npm\claude.cmd" }
+                'npm config get prefix' { "$env:APPDATA\npm" }
+                'choco list claude-code' { "" }  # No chocolatey
+                'scoop list claude-code' { "" }  # No scoop
+                default { "" }
+            }
+        } else {
+            switch -Regex ($Command) {
+                'claude --version' { "1.0.61 (Claude Code)" }
+                'npm list -g.*claude-code.*--json' { '{"dependencies":{"@anthropic-ai/claude-code":{"version":"1.0.61"}}}' }
+                'which claude' { "$HOME/.npm-global/bin/claude" }
+                'npm config get prefix' { "$HOME/.npm-global" }
+                'ls -la /usr/bin/claude.*grep.*node_modules' { "" }  # No system installation
+                default { "" }
+            }
+        }
+        
+        return @{
+            Success = $true
+            Output = $simulatedOutput
+            Error = $null
+        }
+    }
+    
+    try {
+        if ($IsWindowsOS) {
+            # Windows: Direct PowerShell execution
+            $output = Invoke-Expression "$Command 2>&1"
+            $success = $LASTEXITCODE -eq 0
+        } else {
+            # Linux/WSL: Bash execution
+            $output = bash -c "$Command" 2>&1
+            $success = $LASTEXITCODE -eq 0
+        }
+        
+        if (-not $success -and -not $IgnoreError) {
+            throw "Command failed with exit code $LASTEXITCODE"
+        }
+        
+        return @{
+            Success = $success
+            Output = $output
+            Error = if (-not $success) { $output } else { $null }
+        }
+    }
+    catch {
+        if (-not $IgnoreError) {
+            Write-Status "Failed: $_" "Error"
+            $script:hasErrors = $true
+        }
+        return @{
+            Success = $false
+            Output = $null
+            Error = $_.ToString()
+        }
+    }
+}
+
+# Legacy wrapper for compatibility
+function Get-ClaudeInstallationsLegacy {
+    $installations = Get-ClaudeInstallations
+    $legacy = @{
+        paths = $installations.paths
+        detailed = $installations.detailed
+    }
+    
+    # Map new structure to old for compatibility
+    foreach ($manager in $installations.managers.GetEnumerator()) {
+        $legacy[$manager.Key] = $manager.Value
+    }
+    
+    # Check for system-wide installations
+    $systemInstalls = $installations.detailed | Where-Object { $_.Source -eq "system" }
+    if ($systemInstalls) {
+        $legacy.systemwide = "detected"
+    }
+    
+    return $legacy
+}
+
+# Cross-platform installation detection using data-driven approach
+function Get-ClaudeInstallations {
+    Write-Status "Detecting Claude Code installations..." "Info"
+    
+    $installations = @{
+        managers = @{}  # Keyed by manager name
+        paths = @()
+        detailed = @()
+    }
+    
+    $currentPlatform = Get-CurrentPlatform
+    
+    # Check each configured package manager
+    foreach ($managerName in $script:PackageManagerConfigs.Keys) {
+        $config = $script:PackageManagerConfigs[$managerName]
+        
+        # Skip if not supported on current platform
+        if ($config.Platforms -notcontains $currentPlatform) {
+            continue
+        }
+        
+        Write-Verbose "Checking $managerName installation..."
+        
+        try {
+            $result = & $config.CheckCommand
+            if ($result) {
+                $version = & $config.GetVersion $result
+                if ($version) {
+                    $installations.managers[$managerName] = $version
+                    $installPath = $config.InstallPaths[$currentPlatform]
+                    if ($installPath -is [ScriptBlock]) {
+                        $installPath = & $installPath
+                    }
+                    
+                    $installations.detailed += [PSCustomObject]@{
+                        Type = "$managerName-global"
+                        Platform = $currentPlatform
+                        Source = $managerName
+                        Version = $version
+                        Path = $installPath
+                        Priority = $config.Priority
+                    }
+                    Write-Status "Found $managerName installation: v$version" "Info"
+                }
+            }
+        } catch {
+            Write-Verbose "No $managerName installation found or check failed: $_"
+        }
+    }
+    
+    # Check where command for PATH installations
+    $whereCmd = if ($IsWindowsOS) { "where.exe claude 2>nul" } else { "which claude 2>/dev/null" }
+    $pathCheck = Invoke-PlatformCommand $whereCmd "Finding claude in PATH" -IgnoreError -Silent
+    if ($pathCheck.Success -and $pathCheck.Output) {
+        $installations.paths = $pathCheck.Output -split "`r?`n" | Where-Object { $_ }
+        foreach ($path in $installations.paths) {
+            # Determine source based on path patterns from configs
+            $source = "unknown"
+            foreach ($manager in $script:PackageManagerConfigs.GetEnumerator()) {
+                $execPaths = $manager.Value.ExecutablePaths[$currentPlatform]
+                if ($execPaths -and ($execPaths | Where-Object { $path -like "*$_*" })) {
+                    $source = $manager.Key
+                    break
+                }
+            }
+            
+            $installations.detailed += [PSCustomObject]@{
+                Type = "PATH"
+                Platform = $currentPlatform
+                Path = $path
+                Source = $source
+                Priority = if ($source -ne "unknown" -and $script:PackageManagerConfigs[$source]) { 
+                    $script:PackageManagerConfigs[$source].Priority 
+                } else { 99 }
+            }
+        }
+        Write-Status "Found claude in PATH: $($installations.paths -join ', ')" "Info"
+    }
+    
+    # Check for additional known installation paths
+    foreach ($knownPath in $script:KnownInstallationPaths) {
+        if ($knownPath.Platforms -notcontains $currentPlatform) {
+            continue
+        }
+        
+        $pathToCheck = if ($knownPath.Path -is [ScriptBlock]) { & $knownPath.Path } else { $knownPath.Path }
+        if (Test-Path $pathToCheck) {
+            $installations.detailed += [PSCustomObject]@{
+                Type = "standalone"
+                Platform = $currentPlatform
+                Path = $pathToCheck
+                Source = $knownPath.Source
+                Description = $knownPath.Description
+                Priority = 100  # Lowest priority for removal
+            }
+            Write-Status "Found $($knownPath.Description) at: $pathToCheck" "Warning"
+        }
+    }
+    
+    # Sort detailed installations by priority
+    $installations.detailed = $installations.detailed | Sort-Object Priority
+    
+    return $installations
+}
+
+# Helper function for package removal
+function Remove-Package {
+    param(
+        [string]$Manager,
+        [string]$Version,
+        [string]$Command
+    )
+    
+    Write-Status "Removing $Manager installation..." "Warning"
+    if ($Live) {
+        $result = Invoke-PlatformCommand $Command "Removing $Manager package"
+        if ($result.Success) {
+            Write-Status "Removed $Manager installation" "Success"
+            return $true
+        }
+    } else {
+        Write-Status "Would remove $Manager installation v$Version" "DryRun"
+        return $true
+    }
+    return $false
+}
+
+# Cross-platform removal using data-driven approach
+function Remove-SurplusInstallations {
+    param([hashtable]$Installations)
+    
+    $removed = $false
+    $currentPlatform = Get-CurrentPlatform
+    
+    # Determine preferred package manager (highest priority installed)
+    $preferredManager = $null
+    $lowestPriority = 999
+    
+    foreach ($manager in $Installations.managers.GetEnumerator()) {
+        $config = $script:PackageManagerConfigs[$manager.Key]
+        if ($config -and $config.Priority -lt $lowestPriority) {
+            $preferredManager = $manager.Key
+            $lowestPriority = $config.Priority
+        }
+    }
+    
+    # Default to npm if nothing installed
+    if (-not $preferredManager) {
+        $preferredManager = "npm"
+    }
+    
+    Write-Status "Keeping $preferredManager as preferred package manager" "Info"
+    
+    # Remove standalone installations first
+    $standaloneInstalls = $Installations.detailed | Where-Object { $_.Type -eq "standalone" }
+    foreach ($standalone in $standaloneInstalls) {
+        Write-Status "Removing $($standalone.Description)..." "Warning"
+        if ($Live) {
+            try {
+                Remove-Item $standalone.Path -Force -ErrorAction Stop
+                Write-Status "Removed $($standalone.Description)" "Success"
+                $removed = $true
+            } catch {
+                Write-Status "Failed to remove $($standalone.Description): $_" "Error"
+            }
+        } else {
+            Write-Status "Would remove $($standalone.Description): $($standalone.Path)" "DryRun"
+        }
+    }
+    
+    # Remove all package managers except preferred
+    foreach ($manager in $Installations.managers.GetEnumerator()) {
+        if ($manager.Key -ne $preferredManager) {
+            $config = $script:PackageManagerConfigs[$manager.Key]
+            if ($config) {
+                $wasRemoved = Remove-Package $manager.Key $manager.Value $config.UninstallCommand
+                if ($wasRemoved) { $removed = $true }
+            }
+        }
+    }
+    
+    # Handle system-wide installation special case
+    $systemInstalls = $Installations.detailed | Where-Object { $_.Source -eq "system" }
+    if ($systemInstalls) {
+        Write-Status "System-wide installation detected - requires manual sudo removal" "Warning"
+        Write-Host "   [!]  System-wide Claude installation detected" -ForegroundColor Yellow
+        Write-Host "   Please run: sudo npm uninstall -g @anthropic-ai/claude-code" -ForegroundColor Cyan
+        Write-Host "   Then re-run this script." -ForegroundColor Yellow
+        if ($Live) {
+            exit 1
+        }
+    }
+    
+    return $removed
+}
+
+# Universal package manager operations
+function Update-ClaudeCode {
+    param(
+        [string]$PreferredManager = "npm"
+    )
+    
+    $config = $script:PackageManagerConfigs[$PreferredManager]
+    if (-not $config) {
+        Write-Status "Unknown package manager: $PreferredManager" "Error"
+        return $false
+    }
+    
+    Write-Status "Updating Claude Code via $PreferredManager..." "Info"
+    
+    if ($Live) {
+        $result = Invoke-PlatformCommand $config.InstallCommand "Installing/updating Claude Code"
+        if ($result.Success) {
+            Write-Status "Successfully updated Claude Code via $PreferredManager" "Success"
+            return $true
+        } else {
+            Write-Status "Failed to update via npm" "Error"
+            return $false
+        }
+    } else {
+        Write-Status "Would install/update via npm" "DryRun"
+        return $true
+    }
+}
+
+function Test-FinalInstallation {
+    Write-Status "Verifying final installation..." "Info"
+    
+    if ($Live) {
+        $versionCheck = Invoke-PlatformCommand "claude --version 2>/dev/null" "Checking final version" -IgnoreError
+        if ($versionCheck.Success -and $versionCheck.Output -match '(\d+\.\d+\.\d+)') {
+            $version = $matches[1]
+            Write-Status "Final version: $version" "Success"
+            
+            $pathCmd = if ($IsWindowsOS) { "where.exe claude" } else { "which claude" }
+            $pathCheck = Invoke-PlatformCommand "$pathCmd 2>/dev/null" "Finding final path" -IgnoreError
+            if ($pathCheck.Success) {
+                $path = $pathCheck.Output.Trim()
+                Write-Status "Final path: $path" "Info"
+            }
+            
+            return @{ Version = $version; Path = $path }
+        } else {
+            Write-Status "Failed to verify installation" "Error"
+            return $null
+        }
+    } else {
+        Write-Status "Would verify installation" "DryRun"
+        return @{ Version = "1.0.61"; Path = "simulated" }
+    }
+}
+
+# Helper function for platform name
+function Get-PlatformName {
+    if ($IsWindowsOS) { return "Windows" }
+    elseif ($IsWSL) { return "WSL2" }
+    elseif ($IsMacOSDetected) { return "macOS" }
+    else { return "Linux" }
+}
+
+# Main execution
+$platformName = Get-PlatformName
+
+Write-Host "`n=== Universal Claude Code Fix Script (v4.0 - Data-Driven) ===" -ForegroundColor Magenta
+Write-Host "Platform: $platformName" -ForegroundColor Gray
+Write-Host "PowerShell: $($PSVersionTable.PSVersion)" -ForegroundColor Gray
+
+if (-not $Live) {
+    Write-Host "`n[!] DRY RUN MODE - No changes will be made" -ForegroundColor Yellow
+    Write-Host "    To execute changes, run with -Live flag" -ForegroundColor Gray
+} else {
+    Write-Host "`n[*] LIVE MODE - Changes will be executed" -ForegroundColor Red
+}
+Write-Host ""
+
+# Step 1: Detect installations
+Write-StepHeader "1" "Detecting Claude Code installations"
+$installations = Get-ClaudeInstallations
+
+if ($installations.detailed.Count -eq 0) {
+    Write-Status "No installations found - will install fresh via npm" "Warning"
+} else {
+    Write-Status "Found $($installations.detailed.Count) installation(s):" "Info"
+    $installations.detailed | ForEach-Object {
+        Write-Status "  - $($_.Type) v$($_.Version) [$($_.Platform)] at $($_.Path)" "Info"
+    }
+}
+
+Write-Host ""
+
+# Step 2: Remove surplus installations
+Write-StepHeader "2" "Removing surplus installations"
+$removed = Remove-SurplusInstallations -Installations $installations
+
+if ($removed) {
+    Write-Status "Surplus installations removed" "Success"
+    Start-Sleep -Seconds 2
+} else {
+    Write-Status "No surplus installations to remove" "Success"
+}
+
+Write-Host ""
+
+# Step 3: Ensure installation with preferred package manager
+Write-StepHeader "3" "Ensuring proper installation"
+
+# Determine preferred manager
+$preferredManager = $null
+$lowestPriority = 999
+
+foreach ($manager in $installations.managers.GetEnumerator()) {
+    $config = $script:PackageManagerConfigs[$manager.Key]
+    if ($config -and $config.Priority -lt $lowestPriority) {
+        $preferredManager = $manager.Key
+        $lowestPriority = $config.Priority
+    }
+}
+
+# Default to npm if nothing installed
+if (-not $preferredManager) {
+    $preferredManager = "npm"
+}
+
+Write-Status "Using $preferredManager as package manager" "Info"
+$updateSuccess = Update-ClaudeCode -PreferredManager $preferredManager
+
+Write-Host ""
+
+# Step 4: Verify the update and force reinstall if needed
+Write-StepHeader "4" "Verifying update and ensuring latest version"
+
+# Check if we have the latest version after update
+$needsReinstall = $false
+if ($Live) {
+    try {
+        # Get currently installed version
+        $currentVersionCheck = Invoke-PlatformCommand "claude --version 2>/dev/null" "Checking current version" -IgnoreError
+        if ($currentVersionCheck.Success -and $currentVersionCheck.Output -match '(\d+\.\d+\.\d+)') {
+            $currentVersion = $matches[1]
+            Write-Status "Current version after update: $currentVersion" "Info"
+        }
+        
+        # Get latest available version
+        $latestVersion = $null
+        if ($preferredManager -eq "npm") {
+            $npmViewResult = Invoke-PlatformCommand "npm view @anthropic-ai/claude-code version 2>/dev/null" "Getting latest npm version" -IgnoreError
+            if ($npmViewResult.Success) {
+                $latestVersion = $npmViewResult.Output.Trim()
+            }
+        }
+        
+        if ($latestVersion) {
+            Write-Status "Latest available version: $latestVersion" "Info"
+            
+            # Compare versions
+            if ($currentVersion -ne $latestVersion) {
+                Write-Status "Version mismatch detected - forcing clean reinstall" "Warning"
+                $needsReinstall = $true
+            } else {
+                Write-Status "Successfully updated to latest version" "Success"
+            }
+        }
+    } catch {
+        Write-Status "Could not verify version - forcing reinstall to be safe" "Warning"
+        $needsReinstall = $true
+    }
+} else {
+    Write-Status "Would verify version and check if reinstall is needed" "DryRun"
+}
+
+# Perform clean reinstall if needed or if initial update failed
+if (-not $updateSuccess -or $needsReinstall) {
+    Write-Status "Performing clean reinstall to ensure latest version..." "Warning"
+    
+    $config = $script:PackageManagerConfigs[$preferredManager]
+    
+    # Uninstall
+    $uninstallResult = Invoke-PlatformCommand $config.UninstallCommand "Uninstalling $preferredManager version"
+    if ($uninstallResult.Success) {
+        Write-Status "Uninstalled $preferredManager version" "Success"
+    } else {
+        Write-Status "Failed to uninstall: $($uninstallResult.Error)" "Error"
+    }
+    
+    # Clean cache if available
+    if ($config.CacheCleanCommand) {
+        $cacheResult = Invoke-PlatformCommand $config.CacheCleanCommand "Cleaning $preferredManager cache"
+        if ($cacheResult.Success) {
+            Write-Status "Cleaned $preferredManager cache" "Success"
+        } else {
+            Write-Status "Failed to clean cache: $($cacheResult.Error)" "Warning"
+        }
+    }
+    
+    # Reinstall
+    $reinstallResult = Invoke-PlatformCommand $config.InstallCommand "Reinstalling Claude Code"
+    if ($reinstallResult.Success) {
+        Write-Status "Reinstalled Claude Code" "Success"
+        $updateSuccess = $true
+    } else {
+        Write-Status "Failed to reinstall: $($reinstallResult.Error)" "Error"
+        $updateSuccess = $false
+    }
+}
+
+Write-Host ""
+
+# Step 5: PATH cleanup and shell configuration
+Write-StepHeader "5" "PATH cleanup and configuration"
+
+# Windows PATH cleanup
+if ($IsWindowsOS) {
+    Write-Status "Checking Windows PATH configuration..." "Info"
+    
+    if (-not $Live) {
+        Write-Status "Would check and fix Windows PATH order" "DryRun"
+    } else {
+        # Get current PATH entries
+        $userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
+        $systemPath = [Environment]::GetEnvironmentVariable("PATH", "Machine")
+        $currentPath = $env:PATH
+        
+        # Find package manager paths
+        $pathEntries = $currentPath -split ';' | Where-Object { $_ }
+        $managerPaths = @{}
+    
+        # Find paths for all configured package managers
+        foreach ($manager in $script:PackageManagerConfigs.GetEnumerator()) {
+            $pattern = if ($manager.Key -eq "npm") { '\\npm(?:\\|$)' } else { "\\$($manager.Key)(?:\\|$)" }
+            $path = $pathEntries | Where-Object { $_ -match $pattern -and ($manager.Key -eq "npm" -or $_ -notmatch 'npm') } | Select-Object -First 1
+            if ($path) {
+                $managerPaths[$manager.Key] = @{
+                    Path = $path
+                    Index = [array]::IndexOf($pathEntries, $path)
+                    Priority = $manager.Value.Priority
+                }
+            }
+        }
+    
+        # Check PATH order and fix if needed
+        $pathIssues = @()
+        $preferredPath = $managerPaths[$preferredManager]
+    
+        # Check if any lower priority manager appears before the preferred one
+        foreach ($mp in $managerPaths.GetEnumerator()) {
+            if ($mp.Key -ne $preferredManager -and $mp.Value.Index -ne -1 -and $preferredPath.Index -ne -1) {
+                if ($mp.Value.Index -lt $preferredPath.Index -and $mp.Value.Priority -gt $preferredPath.Priority) {
+                    $pathIssues += "$($mp.Key) path comes before $preferredManager path"
+                }
+            }
+        }
+    
+        if ($pathIssues.Count -gt 0) {
+            Write-Status "PATH issues found: $($pathIssues -join ', ')" "Warning"
+            
+            try {
+                # Get user PATH entries and remove all package manager paths except preferred
+                $userPathEntries = $userPath -split ';' | Where-Object { $_ }
+                $cleanedEntries = $userPathEntries | Where-Object { 
+                    $keep = $true
+                    foreach ($manager in $script:PackageManagerConfigs.Keys) {
+                        if ($manager -ne $preferredManager -and $_ -match $manager) {
+                            $keep = $false
+                            break
+                        }
+                    }
+                    $keep
+                }
+                
+                # Ensure preferred manager path is first
+                $preferredConfig = $script:PackageManagerConfigs[$preferredManager]
+                $preferredInstallPath = $preferredConfig.InstallPaths[$currentPlatform]
+                if ($preferredPath) {
+                    $newUserPath = @($preferredPath.Path) + ($cleanedEntries | Where-Object { $_ -ne $preferredPath.Path })
+                } else {
+                    $newUserPath = @($preferredInstallPath) + $cleanedEntries
+                }
+                
+                $newUserPathString = $newUserPath -join ';'
+                [Environment]::SetEnvironmentVariable("PATH", $newUserPathString, "User")
+                $env:PATH = $newUserPathString + ';' + $systemPath
+                
+                Write-Status "Fixed PATH order - $preferredManager now has priority" "Success"
+            } catch {
+                Write-Status "Failed to fix PATH: $_" "Error"
+            }
+        } else {
+            Write-Status "PATH order is correct - $preferredManager has priority" "Success"
+        }
+    }
+}
+
+# Unix/WSL shell configuration
+if ($IsLinuxOS -or $IsWSL) {
+    if (-not $Live) {
+        Write-Status "Would update shell configurations (.bashrc, .zshrc, .profile)" "DryRun"
+    } else {
+        Write-Status "Updating shell configurations..." "Info"
+        
+        # Get npm global bin path
+        $npmPrefix = Invoke-PlatformCommand "npm config get prefix" "Getting npm prefix" -IgnoreError
+        if ($npmPrefix.Success) {
+            $npmBinPath = "$($npmPrefix.Output.Trim())/bin"
+            Write-Status "NPM global bin path: $npmBinPath" "Info"
+            
+            # Update shell configs to prioritize npm global bin
+            $shellConfigs = @("~/.bashrc", "~/.zshrc", "~/.profile")
+            $pathExportLine = "export PATH=`"${npmBinPath}:`$PATH`""
+            
+            foreach ($config in $shellConfigs) {
+                $configExists = Invoke-PlatformCommand "test -f $config && echo 'exists'" "Checking $config" -IgnoreError
+                if ($configExists.Output -eq 'exists') {
+                    # Check if PATH export already exists
+                    $pathExists = Invoke-PlatformCommand "grep -q '$npmBinPath' $config && echo 'found'" "Checking PATH in $config" -IgnoreError
+                    
+                    if ($pathExists.Output -ne 'found') {
+                        Write-Status "Adding npm global bin to PATH in $config" "Info"
+                        $addPathCmd = "echo '' >> $config && echo '# Added by Claude Code Fix Script' >> $config && echo '$pathExportLine' >> $config"
+                        Invoke-PlatformCommand $addPathCmd "Updating PATH in $config"
+                    } else {
+                        Write-Status "PATH already configured in $config" "Success"
+                    }
+                }
+            }
+            
+            # Update current session PATH
+            Write-Status "Updated PATH for current session" "Info"
+            Write-Status "Restart your shell or run: export PATH=`"${npmBinPath}:`$PATH`"" "Info"
+        }
+    }
+}
+
+Write-Host ""
+
+# Step 6: Final verification
+Write-StepHeader "6" "Final verification"
+$finalResult = Test-FinalInstallation
+
+Write-Host ""
+
+# Step 7: Final status
+Write-StepHeader "7" "Final Status Report"
+
+if ($finalResult -and $finalResult.Version) {
+    Write-Status "Claude Code is installed and working" "Success"
+    Write-Status "Platform: $platformName" "Info"
+    Write-Status "Version: $($finalResult.Version)" "Success"
+    if ($finalResult.Path -and $finalResult.Path -ne "simulated") {
+        Write-Status "Location: $($finalResult.Path)" "Info"
+    }
+    
+    # Configure auto-updates
+    Write-Status "Configuring Claude Code auto-updates..." "Info"
+    if ($Live -and $finalResult.Version -ne "simulated") {
+        try {
+            # Enable auto-updates for seamless maintenance
+            # Documentation: https://docs.anthropic.com/en/docs/claude-code/settings
+            $autoUpdateResult = & claude settings set autoUpdate true 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Status "Auto-updates enabled successfully" "Success"
+                Write-Status "Claude will automatically update to new versions" "Info"
+            } else {
+                Write-Status "Could not enable auto-updates (command may not be available yet)" "Warning"
+            }
+        } catch {
+            Write-Status "Auto-update configuration skipped: $($_.Exception.Message)" "Warning"
+        }
+        
+        Write-Status "Auto-update settings documentation:" "Info"
+        Write-Status "https://docs.anthropic.com/en/docs/claude-code/settings" "Info"
+    } elseif (-not $Live) {
+        Write-Status "DRY RUN: Would configure auto-updates (claude settings set autoUpdate true)" "Info"
+        Write-Status "Auto-update settings: https://docs.anthropic.com/en/docs/claude-code/settings" "Info"
+    }
+    
+    if (-not $script:hasErrors) {
+        Write-Host "`n[OK] Claude Code has been successfully fixed!" -ForegroundColor Green
+        if (-not $Live) {
+            Write-Host "[!]  This was a DRY RUN - run with -Live to execute changes" -ForegroundColor Yellow
+        }
+        exit 0
+    } else {
+        Write-Host "`n[!] Claude Code is working but some errors occurred" -ForegroundColor Yellow
+        exit 1
+    }
+} else {
+    Write-Status "Claude Code installation failed" "Error"
+    Write-Status "Please manually install with: npm install -g @anthropic-ai/claude-code@latest" "Warning"
+    Write-Host "`n[X] Failed to fix Claude Code installation" -ForegroundColor Red
+    exit 1
+}
