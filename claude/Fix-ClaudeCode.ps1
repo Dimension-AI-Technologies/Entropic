@@ -977,6 +977,24 @@ function Get-ClaudeInstallations {
     
     if ($whichResult.Success -and $whichResult.Output) {
         $installations.paths = $whichResult.Output -split "`r?`n" | Where-Object { $_ }
+        
+        # On Windows, filter out .cmd duplicates to avoid double-counting
+        if ($IsWindowsOS) {
+            $seenBasePaths = @{}
+            $filteredPaths = @()
+            
+            foreach ($path in $installations.paths) {
+                $basePath = $path -replace '\.cmd$', ''
+                if (-not $seenBasePaths.ContainsKey($basePath)) {
+                    $seenBasePaths[$basePath] = $true
+                    $filteredPaths += $path
+                } else {
+                    Write-Verbose "Skipping duplicate: $path (base path already seen)"
+                }
+            }
+            $installations.paths = $filteredPaths
+        }
+        
         foreach ($path in $installations.paths) {
             Write-Status "Found claude in PATH: $path" "Info"
             
