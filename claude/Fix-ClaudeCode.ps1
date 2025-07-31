@@ -1405,6 +1405,7 @@ if ($IsWindowsOS) {
                 $cleanedPath = $userPath
                 foreach ($manager in $script:PackageManagerConfigs.Keys) {
                     if ($manager -ne $preferredManager) {
+                        Write-Verbose "Removing $manager entries from PATH"
                         $cleanedPath = Remove-PathEntry -Pattern $manager -PathString $cleanedPath
                     }
                 }
@@ -1413,15 +1414,22 @@ if ($IsWindowsOS) {
                 $preferredConfig = $script:PackageManagerConfigs[$preferredManager]
                 $preferredInstallPath = $preferredConfig.InstallPaths[$currentPlatform]
                 
+                Write-Verbose "Adding $preferredInstallPath to beginning of PATH"
                 # Add preferred path at the beginning
                 $newUserPath = Add-PathEntry -PathEntry $preferredInstallPath -PathString $cleanedPath -Prepend
                 
                 # Set the new PATH
+                Write-Verbose "Updating user PATH environment variable"
                 Set-UserPath -NewPath $newUserPath
                 
                 Write-Status "Fixed PATH order - $preferredManager now has priority" "Success"
             } catch {
-                Write-Status "Failed to fix PATH: $_" "Error"
+                $errorDetails = $_.Exception.Message
+                $errorType = $_.Exception.GetType().Name
+                Write-Status "Failed to fix PATH - $errorType`: $errorDetails" "Error"
+                Write-Verbose "Full error: $_"
+                Write-Status "Continuing with remaining steps despite PATH error" "Warning"
+                # Don't exit - let the script continue
             }
         } else {
             Write-Status "PATH order is correct - $preferredManager has priority" "Success"
