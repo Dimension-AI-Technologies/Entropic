@@ -1135,12 +1135,24 @@ function Update-ClaudeCode {
     Write-Status "Updating Claude Code via $PreferredManager..." "Info"
     
     if ($Live) {
+        # Show the actual command being run
+        Write-Status "Running: $($config.InstallCommand)" "Info"
+        
         $result = Invoke-PlatformCommand $config.InstallCommand "Installing/updating Claude Code"
         if ($result.Success) {
             Write-Status "Successfully updated Claude Code via $PreferredManager" "Success"
+            
+            # Check if it was already up-to-date
+            if ($result.Output -match "up to date" -or $result.Output -match "already up-to-date") {
+                Write-Status "Claude Code was already at the latest version" "Info"
+            } elseif ($result.Output -match "updated.*(\d+) package") {
+                Write-Status "Updated $($matches[1]) package(s)" "Info"
+            }
+            
             return $true
         } else {
-            Write-Status "Failed to update via npm" "Error"
+            Write-Status "Failed to update via $PreferredManager" "Error"
+            Write-Verbose "Error: $($result.Error)"
             return $false
         }
     } else {
@@ -1616,7 +1628,6 @@ if (-not $Live) {
         Path = "Not verified in dry run"  # Don't make up paths we haven't checked!
     }
 } else {
-    Write-Status "Verifying final installation..." "Info"
     $finalResult = Test-FinalInstallation
 }
 
@@ -1666,7 +1677,19 @@ if ($finalResult -and $finalResult.Version) {
             } else {
                 Stop-Job -Job $autoUpdateJob
                 Remove-Job -Job $autoUpdateJob -Force
-                Write-Status "Auto-update configuration timed out - claude settings command may be hanging" "Warning"
+                Write-Status "Auto-update configuration timed out after 10 seconds" "Warning"
+                Write-Status "This can happen if:" "Info"
+                Write-Status "  - Claude Code is still initializing after installation" "Info"
+                Write-Status "  - The settings command is not yet available" "Info"
+                Write-Status "  - Network connectivity issues are present" "Info"
+                Write-Status "" "Info"
+                Write-Status "To manually enable auto-updates later, run:" "Info"
+                Write-Status "  claude settings set autoUpdate true" "Info"
+                Write-Status "" "Info"
+                Write-Status "If the command continues to fail, try:" "Info"
+                Write-Status "  1. Restart your terminal/shell" "Info"
+                Write-Status "  2. Run 'claude --version' to verify installation" "Info"
+                Write-Status "  3. Check Claude Code logs for any initialization errors" "Info"
             }
         } catch {
             Write-Status "Auto-update configuration skipped: $($_.Exception.Message)" "Warning"
