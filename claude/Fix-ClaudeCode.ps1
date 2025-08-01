@@ -877,10 +877,10 @@ function Invoke-PlatformCommand {
         
         # Simulate some common commands for dry run
         $simulatedOutput = switch -Regex ($Command) {
-            "where\.exe claude" { "C:\Users\$env:USERNAME\AppData\Roaming\npm\claude.cmd" }
-            "which claude" { "/home/$env:USER/.npm-global/bin/claude" }
             "claude --version" { "1.0.61" }
             "npm list.*claude" { '{"dependencies":{"@anthropic-ai/claude-code":{"version":"1.0.61"}}}' }
+            "git --version" { "git version 2.50.1" }
+            "gh --version" { "gh version 2.76.2 (2025-07-30)" }
             default { "" }
         }
         
@@ -892,19 +892,9 @@ function Invoke-PlatformCommand {
     }
     
     try {
-        if ($IsWindowsOS -and $Command -notmatch "^(bash|sh|pwd|which|test|grep|echo|export)") {
-            # Windows native commands
-            $output = cmd /c "$Command 2>&1"
-            $success = $LASTEXITCODE -eq 0
-        } else {
-            # Unix-style commands (use bash on Windows for consistency)
-            if ($IsWindowsOS) {
-                $output = bash -c "$Command" 2>&1
-            } else {
-                $output = bash -c "$Command" 2>&1
-            }
-            $success = $LASTEXITCODE -eq 0
-        }
+        # Use PowerShell for all commands instead of platform-specific shells
+        $output = Invoke-Expression $Command 2>&1
+        $success = $LASTEXITCODE -eq 0
         
         if (-not $success -and -not $IgnoreError) {
             throw "Command failed with exit code $LASTEXITCODE"
@@ -971,54 +961,45 @@ function Get-ClaudeInstallations {
         }
     }
     
-    # Check which claude is in PATH
-    $pathCmd = if ($IsWindowsOS) { "where.exe claude 2>nul" } else { "which claude 2>/dev/null" }
-    $whichResult = Invoke-PlatformCommand $pathCmd "Finding claude in PATH" -IgnoreError
-    
-    if ($whichResult.Success -and $whichResult.Output) {
-        $installations.paths = $whichResult.Output -split "`r?`n" | Where-Object { $_ }
-        
-        # On Windows, filter out .cmd duplicates to avoid double-counting
-        if ($IsWindowsOS) {
-            $seenBasePaths = @{}
-            $filteredPaths = @()
+    # Check which claude is in PATH using PowerShell's cross-platform Get-Command
+    Write-Verbose "Finding claude in PATH using Get-Command..."
+    try {
+        $claudeCommands = Get-Command -Name claude -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
+        if ($claudeCommands) {
+            $installations.paths = @($claudeCommands) | Where-Object { $_ }
+            
+            # Get-Command already returns unique results, no need for duplicate filtering
             
             foreach ($path in $installations.paths) {
-                $basePath = $path -replace '\.cmd$', ''
-                if (-not $seenBasePaths.ContainsKey($basePath)) {
-                    $seenBasePaths[$basePath] = $true
-                    $filteredPaths += $path
-                } else {
-                    Write-Verbose "Skipping duplicate: $path (base path already seen)"
+                Write-Status "Found claude in PATH: $path" "Info"
+                
+                # Determine source based on path
+                $source = "unknown"
+                foreach ($manager in $script:PackageManagerConfigs.GetEnumerator()) {
+                    $execPaths = $manager.Value.ExecutablePaths[$currentPlatform]
+                    if ($execPaths -and ($execPaths | Where-Object { $path -like "*$_*" })) {
+                        $source = $manager.Key
+                        break
+                    }
+                }
+                
+                $installations.detailed += [PSCustomObject]@{
+                    Type = "PATH"
+                    Path = $path
+                    Source = $source
+                    Version = ""
+                    Priority = if ($source -ne "unknown" -and $script:PackageManagerConfigs[$source]) { 
+                        $script:PackageManagerConfigs[$source].Priority 
+                    } else { 99 }
+                    Platform = $currentPlatform
                 }
             }
-            $installations.paths = $filteredPaths
+        } else {
+            $installations.paths = @()
         }
-        
-        foreach ($path in $installations.paths) {
-            Write-Status "Found claude in PATH: $path" "Info"
-            
-            # Determine source based on path
-            $source = "unknown"
-            foreach ($manager in $script:PackageManagerConfigs.GetEnumerator()) {
-                $execPaths = $manager.Value.ExecutablePaths[$currentPlatform]
-                if ($execPaths -and ($execPaths | Where-Object { $path -like "*$_*" })) {
-                    $source = $manager.Key
-                    break
-                }
-            }
-            
-            $installations.detailed += [PSCustomObject]@{
-                Type = "PATH"
-                Path = $path
-                Source = $source
-                Version = ""
-                Priority = if ($source -ne "unknown" -and $script:PackageManagerConfigs[$source]) { 
-                    $script:PackageManagerConfigs[$source].Priority 
-                } else { 99 }
-                Platform = $currentPlatform
-            }
-        }
+    } catch {
+        Write-Verbose "Could not find claude in PATH: $_"
+        $installations.paths = @()
     }
     
     # Check for additional known installation paths
