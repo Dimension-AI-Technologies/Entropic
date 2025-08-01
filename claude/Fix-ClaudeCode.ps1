@@ -875,18 +875,11 @@ function Invoke-PlatformCommand {
     if (-not $Live) {
         Write-Status "Would execute: $Command" "DryRun"
         
-        # Simulate some common commands for dry run
-        $simulatedOutput = switch -Regex ($Command) {
-            "claude --version" { "1.0.61" }
-            "npm list.*claude" { '{"dependencies":{"@anthropic-ai/claude-code":{"version":"1.0.61"}}}' }
-            "git --version" { "git version 2.50.1" }
-            "gh --version" { "gh version 2.76.2 (2025-07-30)" }
-            default { "" }
-        }
-        
+        # In dry run mode, we don't execute but we don't lie either!
+        # Return empty output rather than fake data
         return @{
             Success = $true
-            Output = $simulatedOutput
+            Output = ""
             Error = $null
         }
     }
@@ -1236,8 +1229,10 @@ Write-UIStepHeader "0" "Checking prerequisites"
 
 # Check Git
 $gitCheck = Invoke-PlatformCommand "git --version 2>&1" "Checking for Git" -IgnoreError
-if ($gitCheck.Success) {
+if ($gitCheck.Success -and $gitCheck.Output) {
     Write-Status "Git is installed: $($gitCheck.Output -split "`n" | Select-Object -First 1)" "Success"
+} elseif (-not $Live) {
+    Write-Status "Would check for Git installation" "DryRun"
 } else {
     Write-Status "Git is not installed - Claude Code requires Git for many operations" "Warning"
     Write-Status "Install Git from: https://git-scm.com/downloads" "Info"
@@ -1245,8 +1240,10 @@ if ($gitCheck.Success) {
 
 # Check GitHub CLI
 $ghCheck = Invoke-PlatformCommand "gh --version 2>&1" "Checking for GitHub CLI" -IgnoreError
-if ($ghCheck.Success) {
+if ($ghCheck.Success -and $ghCheck.Output) {
     Write-Status "GitHub CLI is installed: $($ghCheck.Output -split "`n" | Select-Object -First 1)" "Success"
+} elseif (-not $Live) {
+    Write-Status "Would check for GitHub CLI installation" "DryRun"
 } else {
     Write-Status "GitHub CLI is not installed - recommended for GitHub integration" "Warning"
     Write-Status "Install from: https://cli.github.com/" "Info"
@@ -1615,12 +1612,12 @@ if (-not $Live) {
     $finalVersion = if ($installations.managers.npm) { 
         $installations.managers.npm 
     } else { 
-        "1.0.61"  # fallback version
+        "Unknown"  # Don't lie about versions we don't know!
     }
     
     $finalResult = @{
         Version = $finalVersion
-        Path = if ($IsWindowsOS) { Join-Path $env:APPDATA "npm\claude.cmd" } else { "/usr/local/bin/claude" }
+        Path = "Not verified in dry run"  # Don't make up paths we haven't checked!
     }
 } else {
     Write-Status "Verifying final installation..." "Info"
