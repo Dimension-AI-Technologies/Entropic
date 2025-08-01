@@ -1358,32 +1358,52 @@ Write-Status "Validating claude executable in PATH..." "Info"
 $needsPathFix = $false
 
 if (-not $Live) {
-    Write-Status "Would validate claude in PATH points to correct npm installation" "DryRun"
-    Write-Status "Would check if claude executable is from npm/pnpm/yarn installation" "DryRun"
-    Write-Status "Would fix PATH if pointing to incorrect installation" "DryRun"
+    Write-Status "Would validate claude in PATH points to npm installation ONLY" "DryRun"
+    Write-Status "Would reject installations from pnpm, yarn, chocolatey, scoop, brew, etc." "DryRun"
+    Write-Status "Would fix PATH to use npm if pointing to non-npm installation" "DryRun"
 } else {
     try {
         $claudeInPath = Get-Command -Name claude -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($claudeInPath) {
             Write-Status "Found claude at: $($claudeInPath.Source)" "Info"
             
-            # Check if it's pointing to the wrong location
-            $validPaths = @("*npm*", "*/usr/local/bin/*", "*/.npm-global/*", "*pnpm*", "*yarn*")
-            $isValidPath = $false
-            foreach ($pattern in $validPaths) {
-                if ($claudeInPath.Source -like $pattern) {
-                    $isValidPath = $true
-                    break
-                }
+            # Check if it's pointing to npm installation ONLY
+            $isNpmPath = $false
+            
+            if ($IsWindowsOS) {
+                # Windows npm paths
+                $isNpmPath = $claudeInPath.Source -like "*\npm\*" -or $claudeInPath.Source -like "*\nodejs\*"
+            } elseif ($IsMacOSDetected) {
+                # macOS npm paths (global npm or brew-installed npm)
+                $isNpmPath = $claudeInPath.Source -like "*/usr/local/bin/*" -or $claudeInPath.Source -like "*/.npm-global/*"
+            } else {
+                # Linux/WSL npm paths
+                $isNpmPath = $claudeInPath.Source -like "*/.npm-global/*" -or $claudeInPath.Source -like "*/usr/local/bin/*" -or $claudeInPath.Source -like "*/npm/*"
             }
             
-            if (-not $isValidPath) {
-                Write-Status "Claude in PATH is not from a package manager installation!" "Warning"
+            if (-not $isNpmPath) {
+                Write-Status "Claude in PATH is not from npm installation!" "Warning"
                 Write-Status "Found at: $($claudeInPath.Source)" "Warning"
+                
+                # Identify the incorrect package manager
+                if ($claudeInPath.Source -like "*pnpm*") {
+                    Write-Status "Detected pnpm installation - will replace with npm" "Warning"
+                } elseif ($claudeInPath.Source -like "*yarn*") {
+                    Write-Status "Detected yarn installation - will replace with npm" "Warning"
+                } elseif ($claudeInPath.Source -like "*scoop*") {
+                    Write-Status "Detected scoop installation - will replace with npm" "Warning"
+                } elseif ($claudeInPath.Source -like "*chocolatey*" -or $claudeInPath.Source -like "*choco*") {
+                    Write-Status "Detected chocolatey installation - will replace with npm" "Warning"
+                } elseif ($claudeInPath.Source -like "*brew*" -or $claudeInPath.Source -like "*Cellar*") {
+                    Write-Status "Detected Homebrew installation - will replace with npm" "Warning"
+                } elseif ($claudeInPath.Source -like "*.local/bin*") {
+                    Write-Status "Detected standalone installation - will replace with npm" "Warning"
+                }
+                
                 Write-Status "Will fix PATH to use npm-installed claude" "Info"
                 $needsPathFix = $true
             } else {
-                Write-Status "Claude in PATH is correctly pointing to package manager installation" "Success"
+                Write-Status "Claude in PATH is correctly pointing to npm installation" "Success"
                 $needsPathFix = $false
             }
         } else {
