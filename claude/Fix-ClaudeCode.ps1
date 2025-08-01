@@ -971,6 +971,26 @@ function Get-ClaudeInstallations {
             # Get-Command already returns unique results, no need for duplicate filtering
             
             foreach ($path in $installations.paths) {
+                # Filter out cross-platform paths
+                $skipPath = $false
+                if ($IsWSL -or $IsLinuxOS) {
+                    # On Linux/WSL, ignore Windows paths accessed through /mnt
+                    if ($path -like "/mnt/*") {
+                        Write-Status "Ignoring Windows claude at: $path (accessed through WSL mount)" "Info"
+                        $skipPath = $true
+                    }
+                } elseif ($IsWindowsOS) {
+                    # On Windows, ignore WSL paths
+                    if ($path -match "\\\\wsl[\$\\]" -or $path -like "\\\\wsl.localhost\\*") {
+                        Write-Status "Ignoring WSL claude at: $path" "Info"
+                        $skipPath = $true
+                    }
+                }
+                
+                if ($skipPath) {
+                    continue
+                }
+                
                 Write-Status "Found claude in PATH: $path" "Info"
                 
                 # Determine source based on path
@@ -1357,16 +1377,32 @@ Write-UIStepHeader "5" "PATH cleanup and configuration"
 Write-Status "Validating claude executable in PATH..." "Info"
 $needsPathFix = $false
 
-if (-not $Live) {
-    Write-Status "Would validate claude in PATH points to npm installation ONLY" "DryRun"
-    Write-Status "Would reject installations from pnpm, yarn, chocolatey, scoop, brew, etc." "DryRun"
-    Write-Status "Would fix PATH to use npm if pointing to non-npm installation" "DryRun"
-} else {
-    try {
+try {
         $claudeInPath = Get-Command -Name claude -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($claudeInPath) {
             Write-Status "Found claude at: $($claudeInPath.Source)" "Info"
             
+            # Ignore cross-platform paths
+            if ($IsWSL -or $IsLinuxOS) {
+                # On Linux/WSL, ignore Windows paths accessed through /mnt
+                if ($claudeInPath.Source -like "/mnt/*") {
+                    Write-Status "Ignoring Windows installation accessed through WSL mount" "Warning"
+                    Write-Status "Looking for native Linux npm installation instead" "Info"
+                    $claudeInPath = $null
+                    $needsPathFix = $true
+                }
+            } elseif ($IsWindowsOS) {
+                # On Windows, ignore WSL paths
+                if ($claudeInPath.Source -match "\\\\wsl[\$\\]" -or $claudeInPath.Source -like "\\\\wsl.localhost\\*") {
+                    Write-Status "Ignoring WSL installation from Windows" "Warning"
+                    Write-Status "Using Windows npm installation instead" "Info"
+                    $claudeInPath = $null
+                    $needsPathFix = $true
+                }
+            }
+        }
+        
+        if ($claudeInPath) {
             # Check if it's pointing to npm installation ONLY
             $isNpmPath = $false
             
@@ -1401,6 +1437,16 @@ if (-not $Live) {
                 }
                 
                 Write-Status "Will fix PATH to use npm-installed claude" "Info"
+                
+                # Show what path will be used
+                $npmPath = if ($IsWindowsOS) {
+                    Join-Path $env:APPDATA "npm"
+                } elseif ($IsMacOSDetected) {
+                    "/usr/local/bin"
+                } else {
+                    "$HOME/.npm-global/bin"
+                }
+                Write-Status "Will add npm path to PATH: $npmPath" "Info"
                 $needsPathFix = $true
             } else {
                 Write-Status "Claude in PATH is correctly pointing to npm installation" "Success"
@@ -1410,10 +1456,9 @@ if (-not $Live) {
             Write-Status "Claude not found in PATH - will add npm path" "Warning"
             $needsPathFix = $true
         }
-    } catch {
-        Write-Verbose "Could not validate claude in PATH: $_"
-        $needsPathFix = $true
-    }
+} catch {
+    Write-Verbose "Could not validate claude in PATH: $_"
+    $needsPathFix = $true
 }
 
 # Windows PATH cleanup
@@ -1560,7 +1605,27 @@ Write-Host ""
 
 # Step 6: Final verification
 Write-UIStepHeader "6" "Final verification"
-$finalResult = Test-FinalInstallation
+
+# In dry run mode, use the detected npm version if available
+if (-not $Live) {
+    Write-Status "Verifying final installation..." "Info"
+    Write-Status "Would verify installation" "DryRun"
+    
+    # Use the npm version we detected earlier
+    $finalVersion = if ($installations.managers.npm) { 
+        $installations.managers.npm 
+    } else { 
+        "1.0.61"  # fallback version
+    }
+    
+    $finalResult = @{
+        Version = $finalVersion
+        Path = if ($IsWindowsOS) { Join-Path $env:APPDATA "npm\claude.cmd" } else { "/usr/local/bin/claude" }
+    }
+} else {
+    Write-Status "Verifying final installation..." "Info"
+    $finalResult = Test-FinalInstallation
+}
 
 Write-Host ""
 
