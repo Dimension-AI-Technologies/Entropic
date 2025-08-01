@@ -1153,44 +1153,40 @@ function Test-FinalInstallation {
     Write-Status "Verifying final installation..." "Info"
     
     if ($Live) {
-        # First try using the npm installation directly
-        $npmConfig = $script:PackageManagerConfigs["npm"]
-        $npmPaths = $npmConfig.ExecutablePaths[$currentPlatform]
-        
-        # Try npm paths first
-        foreach ($npmPath in $npmPaths) {
-            if (Test-Path $npmPath) {
-                $versionCmd = if ($IsWindowsOS) { "`"$npmPath`" --version 2>&1" } else { "'$npmPath' --version 2>&1" }
-                $npmVersionCheck = Invoke-PlatformCommand $versionCmd "Checking npm claude version directly" -IgnoreError
-                if ($npmVersionCheck.Success -and $npmVersionCheck.Output -match '(\d+\.\d+\.\d+)') {
-                    $version = $matches[1]
-                    Write-Status "Verified npm installation: v$version" "Success"
-                    return @{ Success = $true; Version = $version; Path = $npmPath }
+        # Use PowerShell's Get-Command to find claude
+        try {
+            $claudeCmd = Get-Command -Name claude -ErrorAction Stop
+            if ($claudeCmd) {
+                # Get version by running claude --version
+                # Use & operator for external scripts to avoid Invoke-Expression issues
+                try {
+                    $versionOutput = & claude --version 2>&1
+                    if ($versionOutput -match '(\d+\.\d+\.\d+)') {
+                        $version = $matches[1]
+                        Write-Status "Verified installation: v$version" "Success"
+                        Write-Status "Location: $($claudeCmd.Source)" "Info"
+                        return @{ Success = $true; Version = $version; Path = $claudeCmd.Source }
+                    } else {
+                        Write-Status "Could not determine claude version from output: $versionOutput" "Warning"
+                        return @{ Success = $true; Version = "Unknown"; Path = $claudeCmd.Source }
+                    }
+                } catch {
+                    Write-Status "Error running claude --version: $_" "Warning"
+                    # Still return success if claude exists, just version unknown
+                    return @{ Success = $true; Version = "Unknown"; Path = $claudeCmd.Source }
                 }
             }
-        }
-        
-        # Fallback to PATH lookup
-        $versionCheck = Invoke-PlatformCommand "claude --version 2>/dev/null" "Checking final version" -IgnoreError
-        if ($versionCheck.Success -and $versionCheck.Output -match '(\d+\.\d+\.\d+)') {
-            $version = $matches[1]
-            Write-Status "Final version: $version" "Success"
-            
-            $pathCmd = if ($IsWindowsOS) { "where.exe claude" } else { "which claude" }
-            $pathCheck = Invoke-PlatformCommand "$pathCmd 2>/dev/null" "Finding final path" -IgnoreError
-            if ($pathCheck.Success) {
-                $path = $pathCheck.Output.Trim()
-                Write-Status "Final path: $path" "Info"
-            }
-            
-            return @{ Success = $true; Version = $version; Path = $path }
+        } catch {
+            Write-Status "Claude command not found in PATH" "Error"
+            Write-Verbose "Error: $_"
         }
         
         Write-Status "Claude Code installation not found" "Error"
         return @{ Success = $false }
     } else {
         Write-Status "Would verify installation" "DryRun"
-        return @{ Success = $true; Version = "1.0.61"; Path = "simulated" }
+        # Don't return fake data in dry run!
+        return @{ Success = $true; Version = "Not checked"; Path = "Not checked" }
     }
 }
 
@@ -1653,12 +1649,24 @@ if ($finalResult -and $finalResult.Version) {
         try {
             # Enable auto-updates for seamless maintenance
             # Documentation: https://docs.anthropic.com/en/docs/claude-code/settings
-            $autoUpdateResult = & claude settings set autoUpdate true 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Status "Auto-updates enabled successfully" "Success"
-                Write-Status "Claude will automatically update to new versions" "Info"
+            # Use Start-Process with timeout to avoid hanging
+            $autoUpdateJob = Start-Job -ScriptBlock { & claude settings set autoUpdate true 2>&1 }
+            $completed = Wait-Job -Job $autoUpdateJob -Timeout 10
+            
+            if ($completed) {
+                $autoUpdateResult = Receive-Job -Job $autoUpdateJob
+                Remove-Job -Job $autoUpdateJob
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Status "Auto-updates enabled successfully" "Success"
+                    Write-Status "Claude will automatically update to new versions" "Info"
+                } else {
+                    Write-Status "Could not enable auto-updates (command may not be available yet)" "Warning"
+                }
             } else {
-                Write-Status "Could not enable auto-updates (command may not be available yet)" "Warning"
+                Stop-Job -Job $autoUpdateJob
+                Remove-Job -Job $autoUpdateJob -Force
+                Write-Status "Auto-update configuration timed out - claude settings command may be hanging" "Warning"
             }
         } catch {
             Write-Status "Auto-update configuration skipped: $($_.Exception.Message)" "Warning"
