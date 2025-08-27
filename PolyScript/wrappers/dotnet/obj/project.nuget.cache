@@ -1,11 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "3GxZhSXMNBQ=",
+  "dgSpecHash": "yobCW/vqnlQ=",
   "success": true,
-  "projectFilePath": "/Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/PolyScript.NET.csproj",
+  "projectFilePath": "C:\\Users\\mathew.burkitt\\source\\repos\\scripts\\dev\\PolyScript\\wrappers\\dotnet\\PolyScript.NET.csproj",
   "expectedPackageFiles": [
-    "/usr/local/share/dotnet/sdk/NuGetFallbackFolder/microsoft.netcore.platforms/1.1.0/microsoft.netcore.platforms.1.1.0.nupkg.sha512",
-    "/usr/local/share/dotnet/sdk/NuGetFallbackFolder/netstandard.library/2.0.3/netstandard.library.2.0.3.nupkg.sha512"
+    "C:\\Users\\mathew.burkitt\\.nuget\\packages\\microsoft.netcore.platforms\\1.1.0\\microsoft.netcore.platforms.1.1.0.nupkg.sha512",
+    "C:\\Users\\mathew.burkitt\\.nuget\\packages\\netstandard.library\\2.0.3\\netstandard.library.2.0.3.nupkg.sha512"
   ],
   "logs": []
 }

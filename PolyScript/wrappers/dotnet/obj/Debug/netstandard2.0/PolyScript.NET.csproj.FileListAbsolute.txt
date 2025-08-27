@@ -20,3 +20,14 @@
 /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/obj/Debug/netstandard2.0/PolyScript.NET.sourcelink.json
 /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/obj/Debug/netstandard2.0/PolyScript.NET.dll
 /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/obj/Debug/netstandard2.0/PolyScript.NET.pdb
+C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\bin\Debug\netstandard2.0\PolyScript.NET.deps.json
+C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\bin\Debug\netstandard2.0\PolyScript.NET.dll
+C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\bin\Debug\netstandard2.0\PolyScript.NET.pdb
+C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\obj\Debug\netstandard2.0\PolyScript.NET.csproj.AssemblyReference.cache
+C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\obj\Debug\netstandard2.0\PolyScript.NET.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\obj\Debug\netstandard2.0\PolyScript.NET.AssemblyInfoInputs.cache
+C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\obj\Debug\netstandard2.0\PolyScript.NET.AssemblyInfo.cs
+C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\obj\Debug\netstandard2.0\PolyScript.NET.csproj.CoreCompileInputs.cache
+C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\obj\Debug\netstandard2.0\PolyScript.NET.sourcelink.json
+C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\obj\Debug\netstandard2.0\PolyScript.NET.dll
+C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\obj\Debug\netstandard2.0\PolyScript.NET.pdb

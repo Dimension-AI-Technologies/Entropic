@@ -35,3 +35,16 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+# .NET Core / C# / F# / VB.NET
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+project.lock.json
+project.fragment.lock.json
+artifacts/

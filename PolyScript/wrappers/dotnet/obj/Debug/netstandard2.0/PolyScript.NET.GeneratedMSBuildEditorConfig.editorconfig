@@ -1,6 +1,6 @@
 is_global = true
 build_property.RootNamespace = PolyScript.NET
-build_property.ProjectDir = /Users/doowell2/Source/repos/Scripts/scripts-dev/PolyScript/wrappers/dotnet/
+build_property.ProjectDir = C:\Users\mathew.burkitt\source\repos\scripts\dev\PolyScript\wrappers\dotnet\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.CsWinRTUseWindowsUIXamlProjections = false
