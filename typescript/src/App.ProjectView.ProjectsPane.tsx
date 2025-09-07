@@ -46,9 +46,10 @@ interface ProjectsPaneProps {
   selectedProject: Project | null;
   onSelectProject: (project: Project) => void;
   onProjectContextMenu?: (e: React.MouseEvent, project: Project) => void;
+  onRefresh?: () => void;
 }
 
-export function ProjectsPane({ projects, selectedProject, onSelectProject, onProjectContextMenu }: ProjectsPaneProps) {
+export function ProjectsPane({ projects, selectedProject, onSelectProject, onProjectContextMenu, onRefresh }: ProjectsPaneProps) {
   const [sortMethod, setSortMethod] = useState<SortMethod>(1); // recent
   const [showEmptyProjects, setShowEmptyProjects] = useState(false); // hide empty projects by default
   const [showFailedReconstructions, setShowFailedReconstructions] = useState(false); // hide failed path reconstructions by default
@@ -87,13 +88,25 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
     );
   }
   
+  // Helper function to get most recent todo date for a project
+  const getMostRecentTodoDate = (project: Project): Date => {
+    let mostRecent = new Date(0);
+    project.sessions.forEach(session => {
+      const sessionDate = new Date(session.lastModified);
+      if (sessionDate > mostRecent) {
+        mostRecent = sessionDate;
+      }
+    });
+    return mostRecent;
+  };
+
   const sortedProjects = [...filteredProjects].sort((a, b) => {
     switch(sortMethod) {
       case 0: // alphabetic
         return a.path.localeCompare(b.path);
       case 1: // recent
-        const dateA = a.mostRecentTodoDate || new Date(0);
-        const dateB = b.mostRecentTodoDate || new Date(0);
+        const dateA = getMostRecentTodoDate(a);
+        const dateB = getMostRecentTodoDate(b);
         return dateB.getTime() - dateA.getTime();
       case 2: // todos
         const countA = a.sessions.reduce((sum, s) => sum + s.todos.length, 0);
@@ -108,7 +121,18 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
     <div className="sidebar">
       <div className="sidebar-header">
         <div className="sidebar-header-top">
-          <h2>Projects ({sortedProjects.length})</h2>
+          <div className="projects-header-left">
+            {onRefresh && (
+              <button 
+                className="refresh-btn" 
+                onClick={onRefresh}
+                title="Refresh projects and todos"
+              >
+                ↻
+              </button>
+            )}
+            <h2>Projects ({sortedProjects.length})</h2>
+          </div>
           <div className="activity-toggle" title="Auto-select the most recent session when navigating projects">
             <label>
               <span>Activity</span>

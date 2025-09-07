@@ -166,6 +166,7 @@ export function ProjectView({ projects, onLoadTodos }: ProjectViewProps) {
           selectedProject={selectedProject}
           onSelectProject={selectProject}
           onProjectContextMenu={handleProjectContextMenu}
+          onRefresh={onLoadTodos}
         />
       </div>
       

@@ -27,8 +27,9 @@ interface Project {
 interface GlobalViewProps {
   projects: Project[];
   onTodoClick: (project: Project, session: Session, todoIndex: number) => void;
+  onRefresh?: () => void;
 }
 
-export function GlobalView({ projects, onTodoClick }: GlobalViewProps) {
-  return <GlobalOverview projects={projects} onTodoClick={onTodoClick} />;
+export function GlobalView({ projects, onTodoClick, onRefresh }: GlobalViewProps) {
+  return <GlobalOverview projects={projects} onTodoClick={onTodoClick} onRefresh={onRefresh} />;
 }

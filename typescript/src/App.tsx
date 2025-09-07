@@ -231,7 +231,7 @@ function App() {
 
       {/* Content area - either project view or global view */}
       {viewMode === 'global' ? (
-        <GlobalView projects={projects} onTodoClick={handleGlobalTodoClick} />
+        <GlobalView projects={projects} onTodoClick={handleGlobalTodoClick} onRefresh={loadTodos} />
       ) : (
         <ProjectView projects={projects} onLoadTodos={loadTodos} />
       )}

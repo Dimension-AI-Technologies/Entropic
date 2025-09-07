@@ -1,74 +1,147 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Todo, Session, Project } from '../types';
+import ClaudeLogo from '../../assets/ClaudeLogo.png';
 
 interface GlobalOverviewProps {
   projects: Project[];
   onTodoClick: (project: Project, session: Session, todoIndex: number) => void;
+  onRefresh?: () => void;
 }
 
-export const GlobalOverview: React.FC<GlobalOverviewProps> = ({ projects, onTodoClick }) => {
-  // Get all projects with their current and next todos
-  const getProjectData = () => {
-    return projects.map(project => {
+type SortColumn = 'project' | 'session' | 'active' | 'date' | 'next';
+type SortDirection = 'asc' | 'desc';
+type SpacingMode = 'wide' | 'normal' | 'compact';
+
+export const GlobalOverview: React.FC<GlobalOverviewProps> = ({ projects, onTodoClick, onRefresh }) => {
+  const [sortColumn, setSortColumn] = useState<SortColumn>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [spacingMode, setSpacingMode] = useState<SpacingMode>('compact');
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [activityLog, setActivityLog] = useState<string>('Ready');
+  
+  // Update refresh time when projects change
+  useEffect(() => {
+    setLastRefreshTime(new Date());
+    setActivityLog(`Loaded ${projects.length} projects`);
+  }, [projects]);
+  
+  const handleRefresh = () => {
+    if (onRefresh) {
+      setActivityLog('Refreshing...');
+      onRefresh();
+    }
+  };
+  
+  // Helper function to get the most recent todo date for a project
+  const getProjectMostRecentDate = (project: Project) => {
+    let mostRecentDate: Date | null = null;
+    project.sessions.forEach(session => {
+      if (!mostRecentDate || session.lastModified > mostRecentDate) {
+        mostRecentDate = session.lastModified;
+      }
+    });
+    return mostRecentDate || new Date(0);
+  };
+
+  // Get flat list of all active tasks with their details
+  const getTableData = () => {
+    const tableRows: Array<{
+      project: Project;
+      projectName: string;
+      session: Session;
+      sessionId: string;
+      activeTask: Todo;
+      activeTaskIndex: number;
+      taskDate: Date;
+      nextTask?: Todo;
+      nextTaskIndex?: number;
+    }> = [];
+
+    projects.forEach(project => {
       const projectName = project.path?.split(/[\\/]/).pop() || 'Unknown Project';
       
-      // Get all active todos from all sessions in this project
-      const allActiveTodos: Array<{
-        session: Session;
-        todo: Todo;
-        todoIndex: number;
-      }> = [];
-
       project.sessions.forEach(session => {
         session.todos.forEach((todo, index) => {
-          if (todo.status === 'in_progress' || todo.status === 'pending') {
-            allActiveTodos.push({
+          if (todo.status === 'in_progress') {
+            // Find the next pending task in the same session
+            let nextTask: Todo | undefined;
+            let nextTaskIndex: number | undefined;
+            
+            for (let i = index + 1; i < session.todos.length; i++) {
+              if (session.todos[i].status === 'pending') {
+                nextTask = session.todos[i];
+                nextTaskIndex = i;
+                break;
+              }
+            }
+
+            tableRows.push({
+              project,
+              projectName,
               session,
-              todo,
-              todoIndex: index
+              sessionId: session.id.substring(0, 6),
+              activeTask: todo,
+              activeTaskIndex: index,
+              taskDate: session.lastModified, // Using session date as task date
+              nextTask,
+              nextTaskIndex
             });
           }
         });
       });
+    });
 
-      // Sort by status (in_progress first) and then by session last modified
-      allActiveTodos.sort((a, b) => {
-        if (a.todo.status !== b.todo.status) {
-          return a.todo.status === 'in_progress' ? -1 : 1;
-        }
-        return b.session.lastModified.getTime() - a.session.lastModified.getTime();
-      });
-
-      // Current active tasks = all in_progress todos
-      const currentTasks = allActiveTodos.filter(item => item.todo.status === 'in_progress');
+    // Sort the table data based on current sort column and direction
+    tableRows.sort((a, b) => {
+      let comparison = 0;
       
-      // Next tasks = pending todos (limited to show only a reasonable number)
-      const nextTasks = allActiveTodos.filter(item => item.todo.status === 'pending').slice(0, 5);
+      switch (sortColumn) {
+        case 'project':
+          comparison = a.projectName.localeCompare(b.projectName);
+          break;
+        case 'session':
+          comparison = a.sessionId.localeCompare(b.sessionId);
+          break;
+        case 'active':
+          comparison = a.activeTask.content.localeCompare(b.activeTask.content);
+          break;
+        case 'date':
+          comparison = a.taskDate.getTime() - b.taskDate.getTime();
+          break;
+        case 'next':
+          const aNext = a.nextTask?.content || '';
+          const bNext = b.nextTask?.content || '';
+          comparison = aNext.localeCompare(bNext);
+          break;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
 
-      return {
-        project,
-        projectName,
-        currentTasks,
-        nextTasks,
-        totalActiveTodos: allActiveTodos.length
-      };
-    }).filter(projectData => projectData.totalActiveTodos > 0); // Only show projects with active todos
+    return tableRows;
   };
 
-  const projectsData = getProjectData();
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'in_progress': return '▶';
-      case 'pending': return '○';
-      default: return '?';
+  const handleColumnClick = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
     }
   };
 
-  if (projectsData.length === 0) {
+  const getSortIndicator = (column: SortColumn) => {
+    if (sortColumn !== column) return '';
+    return sortDirection === 'asc' ? ' ▲' : ' ▼';
+  };
+
+  const tableData = getTableData();
+
+  if (tableData.length === 0) {
     return (
       <div className="global-overview-fullscreen">
         <div className="global-empty-state">
+          <img src={ClaudeLogo} alt="Claude" className="claude-logo-large throb-rotate" />
           <h1>🎉 All Caught Up!</h1>
           <p>No active todos found across all projects</p>
         </div>
@@ -76,86 +149,139 @@ export const GlobalOverview: React.FC<GlobalOverviewProps> = ({ projects, onTodo
     );
   }
 
+  // Format date for display
+  const formatDate = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[date.getMonth()];
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${day}-${month} ${hours}:${minutes}`;
+  };
+
   return (
     <div className="global-overview-fullscreen">
       <div className="global-header">
-        <h1>🔥 Global Activity Overview</h1>
-        <p>{projectsData.reduce((sum, p) => sum + p.totalActiveTodos, 0)} active todos across {projectsData.length} projects</p>
+        <div className="global-header-content">
+          <img src={ClaudeLogo} alt="Claude" className="claude-logo throb-rotate" />
+          <div className="global-header-text">
+            <h1>Global Activity Overview <span className="header-count">({tableData.length} active todos across {new Set(tableData.map(r => r.project.path)).size} projects)</span></h1>
+          </div>
+          <div className="global-header-controls">
+            {onRefresh && (
+              <button 
+                className="refresh-btn" 
+                onClick={handleRefresh}
+                title="Refresh projects and todos"
+              >
+                ↻
+              </button>
+            )}
+            <div className="padding-controls">
+              <label className="spacing-label" title="Adjust the spacing between table rows">SPACING:</label>
+              <div className="padding-buttons">
+                <button
+                  className={`padding-btn spacing-cycle-btn active`}
+                  onClick={() => {
+                    const modes: SpacingMode[] = ['wide', 'normal', 'compact'];
+                    const currentIndex = modes.indexOf(spacingMode);
+                    const nextIndex = (currentIndex + 1) % modes.length;
+                    setSpacingMode(modes[nextIndex]);
+                  }}
+                  title="Click to cycle through spacing modes: Wide → Normal → Compact"
+                >
+                  {spacingMode === 'wide' ? 'Wide' : spacingMode === 'normal' ? 'Normal' : 'Compact'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="global-three-columns">
-        {/* Column 1: Project Names */}
-        <div className="column column-projects">
-          <h2>Projects</h2>
-          <div className="column-content">
-            {projectsData.map(({ projectName, currentTasks, nextTasks }, index) => (
-              <div key={index} className="project-row">
-                <div className="project-name">📁 {projectName}</div>
-                <div className="project-stats">
-                  <span className="stat-current">{currentTasks.length} active</span>
-                  <span className="stat-next">{nextTasks.length} pending</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Column 2: Current Active Tasks */}
-        <div className="column column-current">
-          <h2>Current Active Tasks</h2>
-          <div className="column-content">
-            {projectsData.map(({ project, projectName, currentTasks }, index) => (
-              <div key={index} className="project-section">
-                {currentTasks.length > 0 ? (
-                  currentTasks.map((item, taskIndex) => (
-                    <div
-                      key={`${item.session.id}-${item.todoIndex}`}
-                      className="task-item current-task"
-                      onClick={() => onTodoClick(project, item.session, item.todoIndex)}
-                    >
-                      <div className="task-header">
-                        <span className="task-status">▶</span>
-                        <span className="task-project">{projectName}</span>
-                      </div>
-                      <div className="task-content">{item.todo.content}</div>
-                      <div className="task-session">Session: {item.session.id.substring(0, 6)}</div>
+      <div className="global-table-container">
+        <table className={`global-table spacing-${spacingMode}`}>
+          <thead>
+            <tr>
+              <th 
+                className="sortable-header"
+                onClick={() => handleColumnClick('project')}
+              >
+                Project{getSortIndicator('project')}
+              </th>
+              <th 
+                className="sortable-header"
+                onClick={() => handleColumnClick('session')}
+              >
+                Session #{getSortIndicator('session')}
+              </th>
+              <th 
+                className="sortable-header"
+                onClick={() => handleColumnClick('active')}
+              >
+                Active Task{getSortIndicator('active')}
+              </th>
+              <th 
+                className="sortable-header"
+                onClick={() => handleColumnClick('date')}
+              >
+                Date{getSortIndicator('date')}
+              </th>
+              <th 
+                className="sortable-header"
+                onClick={() => handleColumnClick('next')}
+              >
+                Next Task{getSortIndicator('next')}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {tableData.map((row, index) => (
+              <tr key={`${row.project.path}-${row.session.id}-${row.activeTaskIndex}`} className="table-row">
+                <td className="project-cell">
+                  <div className="project-name">📁 {row.projectName}</div>
+                </td>
+                <td className="session-cell">
+                  {row.sessionId}
+                </td>
+                <td 
+                  className="active-task-cell clickable"
+                  onClick={() => onTodoClick(row.project, row.session, row.activeTaskIndex)}
+                >
+                  <div className="task-item-inline active-task">
+                    <span className="task-status">▶</span>
+                    <span className="task-content">{row.activeTask.content}</span>
+                  </div>
+                </td>
+                <td className="date-cell">
+                  {formatDate(row.taskDate)}
+                </td>
+                <td 
+                  className={`next-task-cell ${row.nextTask ? 'clickable' : ''}`}
+                  onClick={() => row.nextTask && row.nextTaskIndex !== undefined ? 
+                    onTodoClick(row.project, row.session, row.nextTaskIndex) : undefined}
+                >
+                  {row.nextTask ? (
+                    <div className="task-item-inline next-task">
+                      <span className="task-status">○</span>
+                      <span className="task-content">{row.nextTask.content}</span>
                     </div>
-                  ))
-                ) : (
-                  <div className="task-placeholder">No active tasks</div>
-                )}
-              </div>
+                  ) : (
+                    <div className="task-placeholder">No next task</div>
+                  )}
+                </td>
+              </tr>
             ))}
-          </div>
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Status bar */}
+      <div className="status-bar">
+        <div className="status-bar-left">
+          Last updated: {lastRefreshTime.toLocaleString('en-GB')}
         </div>
-
-        {/* Column 3: Next Tasks */}
-        <div className="column column-next">
-          <h2>Next Tasks</h2>
-          <div className="column-content">
-            {projectsData.map(({ project, projectName, nextTasks }, index) => (
-              <div key={index} className="project-section">
-                {nextTasks.length > 0 ? (
-                  nextTasks.map((item, taskIndex) => (
-                    <div
-                      key={`${item.session.id}-${item.todoIndex}`}
-                      className="task-item next-task"
-                      onClick={() => onTodoClick(project, item.session, item.todoIndex)}
-                    >
-                      <div className="task-header">
-                        <span className="task-status">○</span>
-                        <span className="task-project">{projectName}</span>
-                      </div>
-                      <div className="task-content">{item.todo.content}</div>
-                      <div className="task-session">Session: {item.session.id.substring(0, 6)}</div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="task-placeholder">No pending tasks</div>
-                )}
-              </div>
-            ))}
-          </div>
+        <div className="status-bar-right">
+          {activityLog}
         </div>
       </div>
     </div>
