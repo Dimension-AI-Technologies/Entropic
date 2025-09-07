@@ -3,6 +3,7 @@ import './App.css';
 import { SplashScreen } from './components/SplashScreen';
 import { ProjectView } from './App.ProjectView';
 import { GlobalView } from './App.GlobalView';
+import { UnifiedTitleBar } from './components/UnifiedTitleBar';
 
 interface Todo {
   content: string;
@@ -37,15 +38,21 @@ declare global {
 }
 
 function App() {
+  console.error('[APP] App component rendering!');
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingSteps, setLoadingSteps] = useState<string[]>([]);
   const [loadingComplete, setLoadingComplete] = useState(false);
   const [viewMode, setViewMode] = useState<'project' | 'global'>('project');
+  const [spacingMode, setSpacingMode] = useState<'wide' | 'normal' | 'compact'>('compact');
   
   // Activity mode state for auto-selection
   const [activityMode, setActivityMode] = useState(false);
   const [lastGlobalMostRecentTime, setLastGlobalMostRecentTime] = useState<Date | null>(null);
+  
+  // State for cross-view navigation
+  const [selectedProjectPath, setSelectedProjectPath] = useState<string | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   // Function to find and select the globally most recent session
   const selectMostRecentSession = (projects: Project[]) => {
@@ -83,8 +90,8 @@ function App() {
     let interval: NodeJS.Timeout | null = null;
     
     if (activityMode) {
-      // Poll every 30 seconds when Activity mode is ON (much less aggressive)
-      interval = setInterval(loadTodos, 30000);
+      // Poll every 2 seconds when Activity mode is ON to catch hook updates quickly
+      interval = setInterval(loadTodos, 2000);
     }
     
     return () => {
@@ -93,12 +100,14 @@ function App() {
   }, [activityMode]); // Re-run when activityMode changes
 
   const loadTodos = async () => {
+    console.log('[App] loadTodos called');
     try {
       // Initial loading step
       setLoadingSteps(['Fetching todo data...']);
       await new Promise(resolve => setTimeout(resolve, 300));
       
       const data = await window.electronAPI.getTodos();
+      console.log('[App] Got data from IPC:', data.length, 'projects');
       
       // Show found projects
       setLoadingSteps(prev => [...prev, `Found ${data.length} projects`]);
@@ -144,6 +153,7 @@ function App() {
       setLoadingSteps(prev => [...prev, 'Deduplication complete']);
       await new Promise(resolve => setTimeout(resolve, 200));
       
+      console.log('[App] Setting projects:', deduplicatedData.length, 'projects');
       setProjects(deduplicatedData);
       
       // Activity mode: Auto-focus on the globally most recent session
@@ -180,8 +190,10 @@ function App() {
       
       setLoadingSteps(prev => [...prev, 'Loading complete!']);
       setLoadingComplete(true);
+      console.log('[App] Loading complete, hiding splash screen in 500ms');
       // Delay hiding splash screen slightly to show completion
       setTimeout(() => {
+        console.log('[App] Hiding splash screen, setting loading to false');
         setLoading(false);
       }, 500);
     } catch (error) {
@@ -195,12 +207,15 @@ function App() {
   };
 
   const handleGlobalTodoClick = (project: Project, session: Session, todoIndex: number) => {
+    // Set the selected project and session
+    setSelectedProjectPath(project.path);
+    setSelectedSessionId(session.id);
     // Switch to project view
     setViewMode('project');
-    // The ProjectView component will handle the project and session selection
   };
 
   if (loading) {
+    console.log('[App] Rendering SplashScreen, loading:', loading);
     return (
       <SplashScreen 
         loadingSteps={loadingSteps}
@@ -208,33 +223,67 @@ function App() {
       />
     );
   }
+  
+  console.log('[App] Past loading check, rendering main app. ViewMode:', viewMode, 'Projects:', projects.length);
+  console.error('[APP RENDER] About to render main app structure');
+  
+  // Calculate stats for unified title bar
+  const getSelectedProjectName = () => {
+    // For Project View, get the selected project name
+    // This will need to be enhanced when we integrate with ProjectView state
+    return 'Project View';
+  };
 
+  const getTotalActiveTodos = () => {
+    return projects.reduce((total, project) => {
+      return total + project.sessions.reduce((sessionTotal, session) => {
+        return sessionTotal + session.todos.filter(todo => todo.status === 'in_progress').length;
+      }, 0);
+    }, 0);
+  };
+
+  // For debugging: Simple render first
+  if (!projects || projects.length === 0) {
+    return (
+      <div className="app" style={{ padding: '20px', color: 'white' }}>
+        <h2>No projects loaded yet...</h2>
+        <button onClick={loadTodos}>Reload</button>
+      </div>
+    );
+  }
+
+  // Full app with all components
   return (
     <div className="app">
-      {/* View Mode Toggle - spans across both panes */}
-      <div className="view-toggle-bar">
-        <button
-          className={`view-toggle-btn ${viewMode === 'project' ? 'active' : ''}`}
-          onClick={() => setViewMode('project')}
-          title="View individual project todos"
-        >
-          Project View
-        </button>
-        <button
-          className={`view-toggle-btn ${viewMode === 'global' ? 'active' : ''}`}
-          onClick={() => setViewMode('global')}
-          title="View all active todos across projects"
-        >
-          Global View
-        </button>
-      </div>
-
+      <UnifiedTitleBar
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        spacingMode={spacingMode}
+        onSpacingModeChange={setSpacingMode}
+        onRefresh={loadTodos}
+        selectedProjectName={viewMode === 'project' ? getSelectedProjectName() : undefined}
+        todoCount={getTotalActiveTodos()}
+        projectCount={projects.length}
+      />
+      
       {/* Content area - either project view or global view */}
-      {viewMode === 'global' ? (
-        <GlobalView projects={projects} onTodoClick={handleGlobalTodoClick} onRefresh={loadTodos} />
-      ) : (
-        <ProjectView projects={projects} onLoadTodos={loadTodos} />
-      )}
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        {viewMode === 'global' ? (
+          <GlobalView 
+            projects={projects} 
+            onTodoClick={handleGlobalTodoClick} 
+            onRefresh={loadTodos} 
+            spacingMode={spacingMode} 
+          />
+        ) : (
+          <ProjectView 
+            projects={projects} 
+            onLoadTodos={loadTodos}
+            initialProjectPath={selectedProjectPath}
+            initialSessionId={selectedSessionId}
+          />
+        )}
+      </div>
     </div>
   );
 }

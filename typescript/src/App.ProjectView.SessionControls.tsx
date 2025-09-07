@@ -25,6 +25,7 @@ interface Project {
 }
 
 type SpacingMode = 'wide' | 'normal' | 'compact';
+type ViewMode = 'todo' | 'prompt';
 type FilterState = {
   completed: boolean;
   in_progress: boolean;
@@ -45,6 +46,8 @@ interface SessionControlsProps {
   onShowDeleteConfirm: (show: boolean) => void;
   onDeleteSession: () => void;
   displayTodosLength: number;
+  viewMode: ViewMode;
+  onViewModeChange: (mode: ViewMode) => void;
 }
 
 export function SessionControls({
@@ -60,9 +63,12 @@ export function SessionControls({
   showDeleteConfirm,
   onShowDeleteConfirm,
   onDeleteSession,
-  displayTodosLength
+  displayTodosLength,
+  viewMode,
+  onViewModeChange
 }: SessionControlsProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deletionProgress, setDeletionProgress] = useState<string>("");
 
   const handleDeleteEmptySessionsInProject = async () => {
     if (!selectedProject || isDeleting) return;
@@ -86,24 +92,48 @@ export function SessionControls({
     
     // Start loading state
     setIsDeleting(true);
+    setDeletionProgress("Starting deletion...");
     
     try {
       // Delete each empty session
       let deletedCount = 0;
       let failedCount = 0;
       
-      for (const session of emptySessions) {
+      for (let i = 0; i < emptySessions.length; i++) {
+        const session = emptySessions[i];
+        
+        // Update progress with session name
+        setDeletionProgress(`Deleting session ${session.id} (${i + 1}/${emptySessions.length})...`);
+        
         if (session.filePath) {
           try {
-            await window.electronAPI.deleteTodoFile(session.filePath);
-            deletedCount++;
-            console.log(`Deleted empty session: ${session.id}`);
+            // Add small delay so user can see the progress
+            await new Promise(resolve => setTimeout(resolve, 200));
+            
+            const success = await window.electronAPI.deleteTodoFile(session.filePath);
+            if (success) {
+              deletedCount++;
+              console.log(`✓ Deleted empty session: ${session.id} at ${session.filePath}`);
+              setDeletionProgress(`✓ Deleted session ${session.id}`);
+            } else {
+              failedCount++;
+              console.error(`✗ Failed to delete session ${session.id} at ${session.filePath}`);
+              setDeletionProgress(`✗ Failed to delete session ${session.id}`);
+            }
           } catch (error) {
-            console.error(`Failed to delete session ${session.id}:`, error);
+            console.error(`✗ Exception deleting session ${session.id}:`, error);
             failedCount++;
+            setDeletionProgress(`✗ Error deleting session ${session.id}`);
           }
+        } else {
+          console.warn(`Session ${session.id} has no filePath, skipping`);
+          failedCount++;
         }
       }
+      
+      // Show final status
+      setDeletionProgress(`Completed: ${deletedCount} deleted, ${failedCount} failed`);
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Show result
       if (failedCount > 0) {
@@ -113,10 +143,16 @@ export function SessionControls({
       }
       
       // Force immediate reload of todos to reflect changes
+      console.log("Refreshing project data after deletion...");
       await onLoadTodos();
+      
+      // Extra delay to ensure UI updates
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
     } finally {
-      // Stop loading state
+      // Stop loading state and clear progress
       setIsDeleting(false);
+      setDeletionProgress("");
     }
   };
 
@@ -124,27 +160,47 @@ export function SessionControls({
     return null;
   }
 
+
   return (
     <>
       <PaneHeader className="project-header">
         <h1>
           {selectedProject.path}
-          {selectedSession && (
+          {selectedSession && viewMode === 'todo' && (
             <span className="todo-count-badge"> ({displayTodosLength})</span>
           )}
         </h1>
+        
+        {/* View mode toggle */}
+        <div className="view-mode-toggle">
+          <button
+            className={`view-toggle-btn ${viewMode === 'todo' ? 'active' : ''}`}
+            onClick={() => onViewModeChange('todo')}
+            title="View todos for this project"
+          >
+            Todo
+          </button>
+          <button
+            className={`view-toggle-btn ${viewMode === 'prompt' ? 'active' : ''}`}
+            onClick={() => onViewModeChange('prompt')}
+            title="View prompt history for this project"
+          >
+            History
+          </button>
+        </div>
       </PaneHeader>
-      <PaneControls className="control-bar">
-        <div className="filter-controls">
-          <label title="Toggle which todo statuses are visible">Filter:</label>
-          <div className="filter-toggle">
-            <button
-              className={`filter-btn ${filterState.completed ? 'active' : ''}`}
-              onClick={() => onFilterStateChange({ ...filterState, completed: !filterState.completed })}
-              title="Show/hide completed todos"
-            >
-              Done
-            </button>
+      {viewMode === 'todo' && (
+        <PaneControls className="control-bar">
+          <div className="filter-controls">
+            <label title="Toggle which todo statuses are visible">Filter:</label>
+            <div className="filter-toggle">
+              <button
+                className={`filter-btn ${filterState.completed ? 'active' : ''}`}
+                onClick={() => onFilterStateChange({ ...filterState, completed: !filterState.completed })}
+                title="Show/hide completed todos"
+              >
+                Done
+              </button>
             <button
               className={`filter-btn ${filterState.in_progress ? 'active' : ''}`}
               onClick={() => onFilterStateChange({ ...filterState, in_progress: !filterState.in_progress })}
@@ -212,23 +268,14 @@ export function SessionControls({
           )}
         </div>
       </PaneControls>
+      )}
 
       {/* Progress overlay for delete operations */}
       <ProgressOverlay 
         message="Deleting empty sessions..."
-        progress="Please wait while empty sessions are being deleted"
+        progress={deletionProgress || "Please wait while empty sessions are being deleted"}
         isVisible={isDeleting}
       />
     </>
   );
-}
-
-declare global {
-  interface Window {
-    electronAPI: {
-      getTodos: () => Promise<Project[]>;
-      saveTodos: (filePath: string, todos: Todo[]) => Promise<boolean>;
-      deleteTodoFile: (filePath: string) => Promise<boolean>;
-    };
-  }
 }

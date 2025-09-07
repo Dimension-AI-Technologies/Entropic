@@ -28,8 +28,10 @@ interface GlobalViewProps {
   projects: Project[];
   onTodoClick: (project: Project, session: Session, todoIndex: number) => void;
   onRefresh?: () => void;
+  spacingMode?: 'wide' | 'normal' | 'compact';
 }
 
-export function GlobalView({ projects, onTodoClick, onRefresh }: GlobalViewProps) {
-  return <GlobalOverview projects={projects} onTodoClick={onTodoClick} onRefresh={onRefresh} />;
+export function GlobalView({ projects, onTodoClick, onRefresh, spacingMode }: GlobalViewProps) {
+  console.log('[GlobalView] Rendering with', projects.length, 'projects');
+  return <GlobalOverview projects={projects} onTodoClick={onTodoClick} onRefresh={onRefresh} spacingMode={spacingMode} />;
 }

@@ -265,6 +265,24 @@ export function TodoList({
     }
   };
 
+  const handleStatusToggle = (index: number) => {
+    const todos = editedTodos || selectedSession?.todos || [];
+    const newTodos = [...todos];
+    const todo = newTodos[index];
+    
+    // Cycle through statuses: pending -> in_progress -> completed -> pending
+    if (todo.status === 'pending') {
+      todo.status = 'in_progress';
+    } else if (todo.status === 'in_progress') {
+      todo.status = 'completed';
+    } else {
+      todo.status = 'pending';
+    }
+    
+    setEditedTodos(newTodos);
+    setIsDirty(true);
+  };
+
   const displayTodos = editedTodos || selectedSession?.todos || [];
   
   const filteredTodos = displayTodos.filter(todo => {
@@ -351,9 +369,16 @@ export function TodoList({
                 onClick={(e) => handleTodoClick(e, originalIndex)}
               >
                 <span className="todo-sequence">{sequenceNumber}.</span>
-                <span className={`status-icon ${todo.status}`}>
-                  {getStatusSymbol(todo.status)}
-                </span>
+                <input
+                  type="checkbox"
+                  className={`todo-checkbox ${todo.status}`}
+                  checked={todo.status === 'completed'}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    handleStatusToggle(originalIndex);
+                  }}
+                  title={`Status: ${todo.status}`}
+                />
                 {editingIndex === originalIndex ? (
                   <input
                     type="text"

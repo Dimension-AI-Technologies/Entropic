@@ -81,16 +81,18 @@ export function SessionTabs({
     const counts = getStatusCounts(session);
     const projectName = project.path ? project.path.split(/[\\/]/).pop() : 'Unknown Project';
     
-    // Get the todo folder path
-    const lastSlashIndex = Math.max(session.filePath!.lastIndexOf('/'), session.filePath!.lastIndexOf('\\'));
-    const todoFolderPath = session.filePath!.substring(0, lastSlashIndex);
+    // Get the todo folder path - handle undefined filePath
+    const filePath = session.filePath || '';
+    const lastSlashIndex = filePath ? Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\')) : -1;
+    const todoFolderPath = lastSlashIndex > 0 ? filePath.substring(0, lastSlashIndex) : 'Unknown';
+    const fileName = filePath ? filePath.split(/[\\/]/).pop() : 'Unknown';
     
     const tooltipLines = [
       `Project Name: ${projectName}`,
       `Project Path: ${project.path}`,
       `Todo Folder: ${todoFolderPath}`,
       `Session ID: ${session.id}`,
-      `File: ${session.filePath!.split(/[\\/]/).pop()}`,
+      `File: ${fileName}`,
       '',
       'Todo Summary:',
       `  ${counts.pending} Pending`,

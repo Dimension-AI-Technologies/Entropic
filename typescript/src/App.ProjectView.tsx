@@ -28,9 +28,12 @@ interface Project {
 interface ProjectViewProps {
   projects: Project[];
   onLoadTodos: () => Promise<void>;
+  initialProjectPath?: string | null;
+  initialSessionId?: string | null;
 }
 
-export function ProjectView({ projects, onLoadTodos }: ProjectViewProps) {
+export function ProjectView({ projects, onLoadTodos, initialProjectPath, initialSessionId }: ProjectViewProps) {
+  console.log('[ProjectView] Rendering with', projects.length, 'projects');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [projectSessionMap, setProjectSessionMap] = useState<Map<string, string>>(new Map());
@@ -62,8 +65,21 @@ export function ProjectView({ projects, onLoadTodos }: ProjectViewProps) {
     };
   }, [isResizing]);
 
-  // Auto-select most recent project and session on initial load
+  // Handle initial selection from Global View navigation
   useEffect(() => {
+    if (initialProjectPath && initialSessionId && projects.length > 0) {
+      const project = projects.find(p => p.path === initialProjectPath);
+      if (project) {
+        const session = project.sessions.find(s => s.id === initialSessionId);
+        if (session) {
+          setSelectedProject(project);
+          setSelectedSession(session);
+          return;
+        }
+      }
+    }
+    
+    // Auto-select most recent project and session on initial load if no initial selection
     if (!selectedProject && projects.length > 0) {
       let mostRecentProject: Project | null = null;
       let mostRecentSession: Session | null = null;
@@ -87,7 +103,7 @@ export function ProjectView({ projects, onLoadTodos }: ProjectViewProps) {
         setSelectedSession(mostRecentSession);
       }
     }
-  }, [projects, selectedProject]);
+  }, [projects, selectedProject, initialProjectPath, initialSessionId]);
 
   // Update selectedProject when projects change
   useEffect(() => {

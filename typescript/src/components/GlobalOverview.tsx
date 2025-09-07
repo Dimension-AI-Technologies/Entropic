@@ -6,16 +6,16 @@ interface GlobalOverviewProps {
   projects: Project[];
   onTodoClick: (project: Project, session: Session, todoIndex: number) => void;
   onRefresh?: () => void;
+  spacingMode?: SpacingMode;
 }
 
 type SortColumn = 'project' | 'session' | 'active' | 'date' | 'next';
 type SortDirection = 'asc' | 'desc';
 type SpacingMode = 'wide' | 'normal' | 'compact';
 
-export const GlobalOverview: React.FC<GlobalOverviewProps> = ({ projects, onTodoClick, onRefresh }) => {
+export const GlobalOverview: React.FC<GlobalOverviewProps> = ({ projects, onTodoClick, onRefresh, spacingMode = 'compact' }) => {
   const [sortColumn, setSortColumn] = useState<SortColumn>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [spacingMode, setSpacingMode] = useState<SpacingMode>('compact');
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   const [activityLog, setActivityLog] = useState<string>('Ready');
   
@@ -161,42 +161,6 @@ export const GlobalOverview: React.FC<GlobalOverviewProps> = ({ projects, onTodo
 
   return (
     <div className="global-overview-fullscreen">
-      <div className="global-header">
-        <div className="global-header-content">
-          <img src={ClaudeLogo} alt="Claude" className="claude-logo throb-rotate" />
-          <div className="global-header-text">
-            <h1>Global Activity Overview <span className="header-count">({tableData.length} active todos across {new Set(tableData.map(r => r.project.path)).size} projects)</span></h1>
-          </div>
-          <div className="global-header-controls">
-            {onRefresh && (
-              <button 
-                className="refresh-btn" 
-                onClick={handleRefresh}
-                title="Refresh projects and todos"
-              >
-                ↻
-              </button>
-            )}
-            <div className="padding-controls">
-              <label className="spacing-label" title="Adjust the spacing between table rows">SPACING:</label>
-              <div className="padding-buttons">
-                <button
-                  className={`padding-btn spacing-cycle-btn active`}
-                  onClick={() => {
-                    const modes: SpacingMode[] = ['wide', 'normal', 'compact'];
-                    const currentIndex = modes.indexOf(spacingMode);
-                    const nextIndex = (currentIndex + 1) % modes.length;
-                    setSpacingMode(modes[nextIndex]);
-                  }}
-                  title="Click to cycle through spacing modes: Wide → Normal → Compact"
-                >
-                  {spacingMode === 'wide' ? 'Wide' : spacingMode === 'normal' ? 'Normal' : 'Compact'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="global-table-container">
         <table className={`global-table spacing-${spacingMode}`}>

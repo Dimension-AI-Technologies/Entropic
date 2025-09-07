@@ -785,6 +785,8 @@ function createWindow() {
   } else {
     // In production, load the built files
     mainWindow!.loadFile(path.join(__dirname, '../renderer/index.html'));
+    // TEMPORARILY open DevTools in production to debug
+    mainWindow!.webContents.openDevTools();
   }
 
   mainWindow!.on('closed', () => {
@@ -838,6 +840,83 @@ app.whenReady().then(() => {
     } else {
       console.error('Error deleting todo file:', result.error);
       return false;
+    }
+  });
+  
+  // Handle get project prompts request
+  ipcMain.handle('get-project-prompts', async (event: any, projectPath: string) => {
+    try {
+      console.log(`Getting project prompts for: ${projectPath}`);
+      
+      // Convert project path to flattened path
+      const flattenedPath = projectPath.replace(/\//g, '-');
+      const projectDir = path.join(claudeDir, 'projects', flattenedPath);
+      
+      console.log(`Looking for JSONL files in: ${projectDir}`);
+      
+      // Check if project directory exists
+      if (!fsSync.existsSync(projectDir)) {
+        console.log(`Project directory does not exist: ${projectDir}`);
+        return [];
+      }
+      
+      // Get all JSONL files in the project directory
+      const files = await fs.readdir(projectDir);
+      const jsonlFiles = files.filter(file => file.endsWith('.jsonl')).sort();
+      
+      console.log(`Found ${jsonlFiles.length} JSONL files`);
+      
+      const prompts: any[] = [];
+      const MAX_PROMPTS = 100; // Limit to prevent memory issues
+      let totalLines = 0;
+      
+      // Process files in reverse order (most recent first) and stop when we have enough
+      for (let i = jsonlFiles.length - 1; i >= 0 && prompts.length < MAX_PROMPTS; i--) {
+        const file = jsonlFiles[i];
+        const filePath = path.join(projectDir, file);
+        
+        try {
+          const content = await fs.readFile(filePath, 'utf-8');
+          const lines = content.split('\n').filter(line => line.trim());
+          totalLines += lines.length;
+          
+          // Process lines in reverse order within each file
+          for (let j = lines.length - 1; j >= 0 && prompts.length < MAX_PROMPTS; j--) {
+            const line = lines[j];
+            try {
+              const entry = JSON.parse(line);
+              
+              // Include both user and assistant messages
+              if ((entry.type === 'user' && entry.message?.role === 'user') ||
+                  (entry.type === 'assistant' && entry.message?.role === 'assistant')) {
+                prompts.unshift({
+                  timestamp: entry.timestamp,
+                  message: {
+                    role: entry.message.role,
+                    content: entry.message.content ? 
+                      (entry.message.content.length > 1000 ? 
+                        entry.message.content.substring(0, 1000) + '...' : 
+                        entry.message.content) : ''
+                  },
+                  sessionId: entry.sessionId,
+                  uuid: entry.uuid
+                });
+              }
+            } catch (parseError) {
+              // Skip invalid lines silently
+            }
+          }
+        } catch (fileError) {
+          console.error(`Error reading file ${file}:`, fileError);
+        }
+      }
+      
+      console.log(`Extracted ${prompts.length} prompts (limited from ${totalLines} total lines)`);
+      return prompts;
+      
+    } catch (error) {
+      console.error('Error getting project prompts:', error);
+      return [];
     }
   });
   

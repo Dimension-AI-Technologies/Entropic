@@ -6,6 +6,7 @@ import { SessionTabs } from './App.ProjectView.SessionTabs';
 import { SessionControls } from './App.ProjectView.SessionControls';
 import { TodoList } from './App.ProjectView.TodoList';
 import { MergeDialog } from './App.ProjectView.MergeDialog';
+import { PromptView } from './App.ProjectView.PromptView';
 
 interface Todo {
   content: string;
@@ -35,6 +36,7 @@ declare global {
       getTodos: () => Promise<Project[]>;
       saveTodos: (filePath: string, todos: Todo[]) => Promise<boolean>;
       deleteTodoFile: (filePath: string) => Promise<boolean>;
+      getProjectPrompts: (projectPath: string) => Promise<any[]>;
     };
   }
 }
@@ -60,6 +62,7 @@ export function SingleProjectPane({
   onLoadTodos 
 }: SingleProjectPaneProps) {
   const [spacingMode, setSpacingMode] = useState<SpacingMode>('compact');
+  const [viewMode, setViewMode] = useState<'todo' | 'prompt'>('todo');
   const [filterState, setFilterState] = useState<FilterState>({
     completed: true,
     in_progress: true,
@@ -272,31 +275,41 @@ export function SingleProjectPane({
         onShowDeleteConfirm={setShowDeleteConfirm}
         onDeleteSession={handleDeleteSession}
         displayTodosLength={displayTodos.length}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
       
-      <SessionTabs
-        selectedProject={selectedProject}
-        selectedSession={selectedSession}
-        onSessionSelect={onSessionSelect}
-        selectedTabs={selectedTabs}
-        onStartMerge={startMerge}
-        onTabClick={handleTabClick}
-        onTabRightClick={handleTabRightClick}
-        showContextMenu={showContextMenu}
-        contextMenuPosition={contextMenuPosition}
-        onContextMenuCopyId={handleContextMenuCopyId}
-        onContextMenuClose={() => setShowContextMenu(false)}
-      />
+      {viewMode === 'todo' && (
+        <>
+          <SessionTabs
+            selectedProject={selectedProject}
+            selectedSession={selectedSession}
+            onSessionSelect={onSessionSelect}
+            selectedTabs={selectedTabs}
+            onStartMerge={startMerge}
+            onTabClick={handleTabClick}
+            onTabRightClick={handleTabRightClick}
+            showContextMenu={showContextMenu}
+            contextMenuPosition={contextMenuPosition}
+            onContextMenuCopyId={handleContextMenuCopyId}
+            onContextMenuClose={() => setShowContextMenu(false)}
+          />
+          
+          <TodoList
+            selectedProject={selectedProject}
+            selectedSession={selectedSession}
+            onLoadTodos={onLoadTodos}
+            selectedTabs={selectedTabs}
+            onTabClick={handleTabClick}
+            spacingMode={spacingMode}
+            filterState={filterState}
+          />
+        </>
+      )}
       
-      <TodoList
-        selectedProject={selectedProject}
-        selectedSession={selectedSession}
-        onLoadTodos={onLoadTodos}
-        selectedTabs={selectedTabs}
-        onTabClick={handleTabClick}
-        spacingMode={spacingMode}
-        filterState={filterState}
-      />
+      {viewMode === 'prompt' && (
+        <PromptView selectedProject={selectedProject} />
+      )}
       
       <MergeDialog
         showMergeDialog={showMergeDialog}
