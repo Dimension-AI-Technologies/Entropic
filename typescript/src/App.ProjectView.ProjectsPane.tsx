@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './App.css';
+import { PaneHeader, PaneControls } from './components/PaneLayout';
 
 interface Todo {
   content: string;
@@ -119,7 +120,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
 
   return (
     <div className="sidebar">
-      <div className="sidebar-header">
+      <PaneHeader className="sidebar-header">
         <div className="sidebar-header-top">
           <div className="projects-header-left">
             {onRefresh && (
@@ -144,18 +145,16 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
             </label>
           </div>
         </div>
-        <div className="sidebar-controls">
+      </PaneHeader>
+      <PaneControls className="sidebar-controls">
           <div className="sort-controls">
-            {[0, 1, 2].map(method => (
-              <button
-                key={method}
-                className={`sort-button ${sortMethod === method ? 'active' : ''}`}
-                onClick={() => setSortMethod(method as SortMethod)}
-                title={method === 0 ? 'Sort projects alphabetically by name' : method === 1 ? 'Sort projects by most recent activity' : 'Sort projects by number of todos'}
-              >
-                {getSortSymbol(method)}
-              </button>
-            ))}
+            <button
+              className="sort-button active"
+              onClick={() => setSortMethod(((sortMethod + 1) % 3) as SortMethod)}
+              title={sortMethod === 0 ? 'Sort projects alphabetically by name (click for date sort)' : sortMethod === 1 ? 'Sort projects by most recent activity (click for count sort)' : 'Sort projects by number of todos (click for alphabetic sort)'}
+            >
+              {getSortSymbol(sortMethod)}
+            </button>
           </div>
           <div className="filter-toggles">
             <button
@@ -173,8 +172,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
               Failed
             </button>
           </div>
-        </div>
-      </div>
+      </PaneControls>
       <div className="sidebar-projects">
         {sortedProjects.map((project) => {
           const todoCount = project.sessions.reduce((sum, s) => sum + s.todos.length, 0);

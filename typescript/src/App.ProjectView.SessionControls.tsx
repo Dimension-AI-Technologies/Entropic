@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ProgressOverlay } from './components/ProgressOverlay';
+import { PaneHeader, PaneControls } from './components/PaneLayout';
 
 interface Todo {
   content: string;
@@ -125,15 +126,15 @@ export function SessionControls({
 
   return (
     <>
-      <div className="project-header">
+      <PaneHeader className="project-header">
         <h1>
           {selectedProject.path}
           {selectedSession && (
             <span className="todo-count-badge"> ({displayTodosLength})</span>
           )}
         </h1>
-      </div>
-      <div className="control-bar">
+      </PaneHeader>
+      <PaneControls className="control-bar">
         <div className="filter-controls">
           <label title="Toggle which todo statuses are visible">Filter:</label>
           <div className="filter-toggle">
@@ -210,7 +211,7 @@ export function SessionControls({
             </div>
           )}
         </div>
-      </div>
+      </PaneControls>
 
       {/* Progress overlay for delete operations */}
       <ProgressOverlay 

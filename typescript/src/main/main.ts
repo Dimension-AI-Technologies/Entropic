@@ -567,6 +567,35 @@ async function loadTodosData(): Promise<Project[]> {
   return Array.from(projects.values());
 }
 
+async function takeScreenshot() {
+  if (!mainWindow) return;
+  
+  try {
+    const image = await mainWindow.webContents.capturePage();
+    const buffer = image.toPNG();
+    
+    // Save to a timestamped file
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+    const screenshotPath = path.join(os.tmpdir(), `todo-app-${timestamp}.png`);
+    
+    await fs.writeFile(screenshotPath, buffer);
+    
+    // Show success dialog with path
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Screenshot Saved',
+      message: 'Screenshot saved successfully',
+      detail: `Saved to: ${screenshotPath}`,
+      buttons: ['OK']
+    });
+    
+    console.log(`Screenshot saved to: ${screenshotPath}`);
+  } catch (error) {
+    console.error('Failed to take screenshot:', error);
+    dialog.showErrorBox('Screenshot Failed', 'Failed to capture screenshot');
+  }
+}
+
 function showHelp() {
   const helpContent = `
 ClaudeToDo Help
@@ -679,6 +708,12 @@ function setupMenu() {
         { role: 'forceReload' as const },
         { role: 'toggleDevTools' as const },
         { type: 'separator' as const },
+        {
+          label: 'Take Screenshot',
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => takeScreenshot()
+        },
+        { type: 'separator' as const },
         { role: 'resetZoom' as const },
         { role: 'zoomIn' as const },
         { role: 'zoomOut' as const },
@@ -768,6 +803,13 @@ app.whenReady().then(() => {
     console.log('[IPC] Returning', result.length, 'projects');
     return result;
   });
+
+  // Handle screenshot request
+  ipcMain.handle('take-screenshot', async () => {
+    console.log('[IPC] take-screenshot called');
+    await takeScreenshot();
+    return true;
+  });
   
   // Handle save todos request using TodoManager
   ipcMain.handle('save-todos', async (event: any, filePath: string, todos: Todo[]) => {
@@ -800,6 +842,12 @@ app.whenReady().then(() => {
   });
   
   createWindow();
+
+  // Take a screenshot after a longer delay for debugging to let app fully load
+  setTimeout(async () => {
+    console.log('Taking automatic screenshot for debugging...');
+    await takeScreenshot();
+  }, 8000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
