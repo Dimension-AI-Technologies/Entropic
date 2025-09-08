@@ -242,6 +242,30 @@ async function loadTodosData(): Promise<Project[]> {
           // console.log('Using current working directory:', projectPath);
         }
         
+        // Normalize subfolder paths to their parent project
+        // This prevents duplicate entries like "typescript" and "cc-todo-hook-tracker"
+        for (const existingPath of projects.keys()) {
+          if (projectPath.startsWith(existingPath + path.sep)) {
+            console.log(`Normalizing ${projectPath} to parent project ${existingPath}`);
+            projectPath = existingPath;
+            break;
+          } else if (existingPath.startsWith(projectPath + path.sep)) {
+            // The new path is a parent of an existing path
+            // Move the existing project's sessions to this parent
+            const childProject = projects.get(existingPath)!;
+            projects.delete(existingPath);
+            if (!projects.has(projectPath)) {
+              projects.set(projectPath, childProject);
+              childProject.path = projectPath;
+            } else {
+              // Merge sessions
+              projects.get(projectPath)!.sessions.push(...childProject.sessions);
+            }
+            console.log(`Moving child project ${existingPath} to parent ${projectPath}`);
+            break;
+          }
+        }
+        
         // console.log(`Current session project path: ${projectPath}`);
         
         if (!projects.has(projectPath)) {
