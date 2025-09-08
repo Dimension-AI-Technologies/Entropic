@@ -429,8 +429,9 @@ body {
   height: 60px;
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .project-header h1 {
@@ -2775,7 +2776,6 @@ body {
 .view-mode-toggle {
   display: flex;
   gap: 4px;
-  margin-left: auto;
 }
 
 .view-toggle-btn {

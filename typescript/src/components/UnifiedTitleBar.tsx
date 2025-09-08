@@ -31,7 +31,7 @@ export function UnifiedTitleBar({
   return (
     <div className="unified-title-bar">
       <div className="unified-title-bar-content">
-        {/* Left: Refresh button */}
+        {/* Left: Refresh and Screenshot buttons */}
         <div className="title-bar-left">
           {onRefresh && (
             <button 
@@ -42,6 +42,13 @@ export function UnifiedTitleBar({
               ↻
             </button>
           )}
+          <button 
+            className="screenshot-btn" 
+            onClick={() => window.electronAPI?.takeScreenshot?.()}
+            title="Take screenshot"
+          >
+            📸
+          </button>
         </div>
 
         {/* Center: Project View button + Claude logo + Global View button */}

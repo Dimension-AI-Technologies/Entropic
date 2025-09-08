@@ -23,9 +23,9 @@ export function PromptView({ selectedProject }: PromptViewProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Convert project path to flattened path format
+  // Convert project path to flattened path format (replace both forward and backslashes)
   const getFlattenedProjectPath = (projectPath: string): string => {
-    return projectPath.replace(/\//g, '-');
+    return projectPath.replace(/[/\\]/g, '-');
   };
 
   const loadPrompts = async () => {

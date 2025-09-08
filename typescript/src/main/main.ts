@@ -848,8 +848,8 @@ app.whenReady().then(() => {
     try {
       console.log(`Getting project prompts for: ${projectPath}`);
       
-      // Convert project path to flattened path
-      const flattenedPath = projectPath.replace(/\//g, '-');
+      // Convert project path to flattened path (replace both forward and backslashes)
+      const flattenedPath = projectPath.replace(/[/\\]/g, '-');
       const projectDir = path.join(claudeDir, 'projects', flattenedPath);
       
       console.log(`Looking for JSONL files in: ${projectDir}`);
