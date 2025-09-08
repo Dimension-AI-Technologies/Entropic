@@ -142,15 +142,23 @@ export function SessionControls({
         console.log(`Successfully deleted ${deletedCount} empty session(s)`);
       }
       
-      // Force immediate reload of todos to reflect changes
+      // Keep the overlay visible during the refresh
       console.log("Refreshing project data after deletion...");
-      await onLoadTodos();
+      setDeletionProgress("Refreshing project data...");
       
-      // Extra delay to ensure UI updates
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Don't clear the overlay yet - keep it visible during refresh
+      // The finally block will clear it after onLoadTodos completes
       
     } finally {
-      // Stop loading state and clear progress
+      // Call onLoadTodos INSIDE the finally block so overlay stays visible
+      try {
+        await onLoadTodos();
+        console.log("Project data refreshed successfully");
+      } catch (error) {
+        console.error("Error refreshing project data:", error);
+      }
+      
+      // NOW clear the loading state after refresh is complete
       setIsDeleting(false);
       setDeletionProgress("");
     }
