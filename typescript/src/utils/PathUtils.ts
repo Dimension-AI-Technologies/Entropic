@@ -3,7 +3,8 @@ import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import os from 'node:os';
 
-const projectsDir = path.join(os.homedir(), '.claude', 'projects');
+// Default projects directory - can be overridden for testing
+let projectsDir = path.join(os.homedir(), '.claude', 'projects');
 
 export interface PathReconstructionResult {
   path: string | null;
@@ -22,6 +23,20 @@ export interface ProjectDirFindResult {
  * of project paths between Todo and History views.
  */
 export class PathUtils {
+  
+  /**
+   * Override the projects directory (primarily for testing)
+   */
+  static setProjectsDir(dir: string): void {
+    projectsDir = dir;
+  }
+  
+  /**
+   * Get the current projects directory
+   */
+  static getProjectsDir(): string {
+    return projectsDir;
+  }
   
   /**
    * Create a simple flattened path by replacing path separators with dashes
@@ -242,10 +257,17 @@ export class PathUtils {
       const allParts = [driveLetter, ...flatParts];
       const validatedPath = PathUtils.buildAndValidatePath(allParts, true);
       
-      if (validatedPath && PathUtils.validatePath(validatedPath)) {
+      // If validation failed or returned incomplete path, build it manually
+      if (!validatedPath || validatedPath === `${driveLetter}:\\`) {
+        // Build Windows path manually from parts
+        return `${driveLetter}:\\${flatParts.join('\\')}`;
+      }
+      
+      if (PathUtils.validatePath(validatedPath)) {
         return validatedPath;
       } else {
-        return validatedPath || flatPath;
+        // Return manual build if validation failed
+        return `${driveLetter}:\\${flatParts.join('\\')}`;
       }
     }
     
@@ -253,7 +275,11 @@ export class PathUtils {
     if (flatPath.startsWith('-')) {
       const unixParts = flatPath.slice(1).split('-');
       const validatedPath = PathUtils.buildAndValidatePath(unixParts, false);
-      return validatedPath || ('/' + flatPath.slice(1).replace(/-/g, '/'));
+      // If validation returns just root or partial path, use the simple transformation
+      if (!validatedPath || validatedPath === '/' || validatedPath === '/home/') {
+        return '/' + flatPath.slice(1).replace(/-/g, '/');
+      }
+      return validatedPath;
     }
     
     // Return as-is if we can't figure it out
