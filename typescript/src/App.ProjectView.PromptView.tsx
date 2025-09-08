@@ -44,7 +44,7 @@ export function PromptView({ selectedProject }: PromptViewProps) {
       
       // Filter out invalid entries and sort chronologically
       const validPrompts = projectPrompts.filter(p => 
-        p && p.timestamp && p.message && p.message.content
+        p && p.timestamp && p.message && typeof p.message.content === 'string'
       );
       
       const sortedPrompts = validPrompts.sort((a: PromptEntry, b: PromptEntry) => 
@@ -110,7 +110,7 @@ export function PromptView({ selectedProject }: PromptViewProps) {
 
       <div className="prompts-list">
         {prompts.map((prompt, index) => (
-          <div key={prompt.uuid} className={`prompt-entry ${prompt.message.role}`}>
+          <div key={prompt.uuid || `prompt-${index}`} className={`prompt-entry ${prompt.message.role}`}>
             <div className="prompt-header">
               <span className="prompt-number">#{index + 1}</span>
               <span className="prompt-time">{formatTime(prompt.timestamp)}</span>

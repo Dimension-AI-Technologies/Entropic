@@ -890,7 +890,7 @@ app.whenReady().then(() => {
               if ((entry.type === 'user' && entry.message?.role === 'user') ||
                   (entry.type === 'assistant' && entry.message?.role === 'assistant')) {
                 prompts.unshift({
-                  timestamp: entry.timestamp,
+                  timestamp: entry.timestamp || new Date().toISOString(),
                   message: {
                     role: entry.message.role,
                     content: entry.message.content ? 
@@ -898,8 +898,8 @@ app.whenReady().then(() => {
                         entry.message.content.substring(0, 1000) + '...' : 
                         entry.message.content) : ''
                   },
-                  sessionId: entry.sessionId,
-                  uuid: entry.uuid
+                  sessionId: entry.sessionId || 'unknown',
+                  uuid: entry.uuid || `${file}-${j}-${Date.now()}`
                 });
               }
             } catch (parseError) {
