@@ -22,6 +22,7 @@ export function PromptView({ selectedProject }: PromptViewProps) {
   const [prompts, setPrompts] = useState<PromptEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Convert project path to flattened path format (replace both forward and backslashes)
   const getFlattenedProjectPath = (projectPath: string): string => {
@@ -37,19 +38,34 @@ export function PromptView({ selectedProject }: PromptViewProps) {
       // Get project prompts from main process
       const projectPrompts = await window.electronAPI.getProjectPrompts(selectedProject.path);
       
+      console.log('PromptView: Received prompts from backend:', projectPrompts);
+      console.log('PromptView: Type of prompts:', typeof projectPrompts);
+      console.log('PromptView: Is array?', Array.isArray(projectPrompts));
+      
       // Validate prompts data
       if (!Array.isArray(projectPrompts)) {
+        console.error('PromptView: Not an array!', projectPrompts);
         throw new Error('Invalid prompts data received');
       }
       
-      // Filter out invalid entries and sort chronologically
-      const validPrompts = projectPrompts.filter(p => 
-        p && p.timestamp && p.message && typeof p.message.content === 'string'
-      );
+      console.log(`PromptView: Total prompts received: ${projectPrompts.length}`);
       
-      const sortedPrompts = validPrompts.sort((a: PromptEntry, b: PromptEntry) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
+      // Filter out invalid entries and sort chronologically
+      const validPrompts = projectPrompts.filter(p => {
+        const isValid = p && p.timestamp && p.message && typeof p.message.content === 'string';
+        if (!isValid && p) {
+          console.log('PromptView: Invalid prompt entry:', p);
+        }
+        return isValid;
+      });
+      
+      console.log(`PromptView: Valid prompts after filtering: ${validPrompts.length}`);
+      
+      const sortedPrompts = validPrompts.sort((a: PromptEntry, b: PromptEntry) => {
+        const timeA = new Date(a.timestamp).getTime();
+        const timeB = new Date(b.timestamp).getTime();
+        return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+      });
       
       setPrompts(sortedPrompts);
     } catch (error) {
@@ -63,10 +79,18 @@ export function PromptView({ selectedProject }: PromptViewProps) {
 
   useEffect(() => {
     loadPrompts();
-  }, [selectedProject?.path]);
+  }, [selectedProject?.path, sortOrder]);
 
   const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString();
+    const date = new Date(timestamp);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
   };
 
   const formatPromptContent = (content: string) => {
@@ -88,7 +112,16 @@ export function PromptView({ selectedProject }: PromptViewProps) {
   return (
     <div className="prompt-history-view">
       <div className="prompt-history-header">
-        <h3>Prompt History: {selectedProject.path}</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3>Prompt History: {selectedProject.path}</h3>
+          <button
+            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+            className="sort-toggle-btn"
+            title={`Sort ${sortOrder === 'asc' ? 'newest first' : 'oldest first'}`}
+          >
+            {sortOrder === 'asc' ? '↑ Oldest First' : '↓ Newest First'}
+          </button>
+        </div>
         <p className="flattened-path">
           Flattened path: {getFlattenedProjectPath(selectedProject.path)}
         </p>
@@ -104,7 +137,8 @@ export function PromptView({ selectedProject }: PromptViewProps) {
       {!loading && !error && prompts.length === 0 && (
         <div className="no-prompts">
           <p>No prompts found for this project.</p>
-          <p>JSONL files are expected at: ~/.claude/projects/{getFlattenedProjectPath(selectedProject.path)}/*.jsonl</p>
+          <p>The system searches for JSONL files using the same path resolution logic as todo loading.</p>
+          <p>Expected locations: ~/.claude/projects/[project-directory]/*.jsonl</p>
         </div>
       )}
 

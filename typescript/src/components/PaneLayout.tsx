@@ -21,8 +21,9 @@ export function PaneHeader({ children, className = '' }: PaneHeaderProps) {
         background: '#222529',
         boxSizing: 'border-box',
         display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center'
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center'
       }}
     >
       {children}

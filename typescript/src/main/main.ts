@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename);
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import { TodoManager } from '../utils/TodoManager.js';
 import { ResultUtils } from '../utils/Result.js';
+import { PathUtils } from '../utils/PathUtils.js';
 
 let mainWindow: BrowserWindowType | null = null;
 
@@ -47,29 +48,14 @@ interface Project {
 // Claude flattens paths inconsistently, making it impossible to perfectly reverse
 // For display purposes, we'll make a best guess
 function convertFlattenedPath(flatPath: string): string {
-  // Don't try to convert - just return the flattened path
-  // The actual project path should come from metadata, not from directory names
-  return flatPath;
+  // Use the shared PathUtils for consistent path reconstruction
+  return PathUtils.guessPathFromFlattenedName(flatPath);
 }
 
 // Find project path for a session ID
 async function findProjectForSession(sessionId: string): Promise<string | null> {
-  try {
-    const projectDirs = await fs.readdir(projectsDir);
-    
-    for (const projDir of projectDirs) {
-      const projPath = path.join(projectsDir, projDir);
-      const files = await fs.readdir(projPath);
-      
-      if (files.some((f: string) => f.startsWith(sessionId))) {
-        return convertFlattenedPath(projDir);
-      }
-    }
-  } catch (error) {
-    console.error('Error finding project for session:', error);
-  }
-  
-  return null;
+  // Use the shared PathUtils for consistent path handling
+  return await PathUtils.findProjectForSession(sessionId);
 }
 
 // Result type for path reconstruction
@@ -82,287 +68,25 @@ interface PathReconstructionResult {
 
 // Get real project path from metadata or session files
 async function getRealProjectPath(sessionId: string): Promise<PathReconstructionResult> {
-  // console.log(`Looking for project path for session: ${sessionId}`);
-  
-  try {
-    // First, check if there's a metadata file in the project directory
-    const projectDirs = await fs.readdir(projectsDir);
-    // console.log(`Found ${projectDirs.length} project directories`);
-    
-    // Look for a project directory containing this session
-    let matchedProjDir: string | null = null;
-    for (const projDir of projectDirs) {
-      const projPath = path.join(projectsDir, projDir);
-      const files = await fs.readdir(projPath);
-      
-      // Check if this project contains our session
-      if (files.some((f: string) => f.startsWith(sessionId))) {
-        matchedProjDir = projDir;
-        break;
-      }
-    }
-    
-    if (!matchedProjDir) {
-      // No project directory found for this session
-      return {
-        path: null,
-        failureReason: 'No project directory found containing session files'
-      };
-    }
-    
-    // console.log(`Found session ${sessionId} in project dir: ${matchedProjDir}`);
-    const projPath = path.join(projectsDir, matchedProjDir);
-    const files = await fs.readdir(projPath);
-    
-    // Look for a metadata file
-    const metadataPath = path.join(projPath, 'metadata.json');
-    try {
-      const metadata = await fs.readFile(metadataPath, 'utf-8');
-      const data = JSON.parse(metadata);
-      if (data.path) {
-        return { path: data.path, flattenedDir: matchedProjDir };
-      }
-    } catch {
-      // No metadata file, continue
-    }
-    
-    // Try to read the actual path from a session file
-    for (const file of files) {
-      if (file.startsWith(sessionId) && file.endsWith('.json')) {
-        try {
-          const sessionPath = path.join(projPath, file);
-          const sessionContent = await fs.readFile(sessionPath, 'utf-8');
-          const sessionData = JSON.parse(sessionContent);
-          if (sessionData.projectPath) {
-            return { path: sessionData.projectPath, flattenedDir: matchedProjDir };
-          }
-        } catch {
-          // Continue to next file
-        }
-      }
-    }
-    
-    // Fallback: try to guess from the flattened directory name
-    const reconstructedPath = guessPathFromFlattenedName(matchedProjDir);
-    
-    // Validate the path exists before returning
-    if (reconstructedPath && validatePath(reconstructedPath)) {
-      return { path: reconstructedPath, flattenedDir: matchedProjDir };
-    } else {
-      // console.error(`Failed to reconstruct valid path from: ${matchedProjDir}`);
-      return {
-        path: null,
-        flattenedDir: matchedProjDir,
-        reconstructionAttempt: reconstructedPath || 'Failed to generate path',
-        failureReason: reconstructedPath ? 'Reconstructed path does not exist on filesystem' : 'Path reconstruction failed completely'
-      };
-    }
-  } catch (error) {
-    console.error('Error finding project path:', error);
-    return {
-      path: null,
-      failureReason: `Error during path lookup: ${error}`
-    };
-  }
+  // Use the shared PathUtils for consistent path handling
+  return await PathUtils.getRealProjectPath(sessionId);
 }
 
+// These functions are now handled by PathUtils - keeping stubs for compatibility
 // Validate if a path exists on the filesystem
 function validatePath(testPath: string): boolean {
-  try {
-    return fsSync.existsSync(testPath);
-  } catch {
-    return false;
-  }
-}
-
-// List directory contents to find matching entries
-function listDirectory(dirPath: string): string[] {
-  try {
-    return fsSync.readdirSync(dirPath);
-  } catch (error) {
-    // console.log(`Error listing ${dirPath}: ${error}`);
-    return [];
-  }
-}
-
-// Build path incrementally with greedy matching against actual filesystem
-function buildAndValidatePath(flatParts: string[], isWindows: boolean): string | null {
-  const pathSep = isWindows ? '\\' : '/';
-  let currentPath = isWindows ? `${flatParts[0]}:\\` : '/';
-  let consumedParts = isWindows ? 1 : 0;
-  
-  // console.log(`Starting path reconstruction with parts: [${flatParts.join(', ')}]`);
-  
-  while (consumedParts < flatParts.length) {
-    const remainingParts = flatParts.slice(consumedParts);
-    // console.log(`Current path: ${currentPath}`);
-    // console.log(`Remaining parts: [${remainingParts.join(', ')}]`);
-    
-    // List what's actually in the current directory
-    const dirContents = listDirectory(currentPath);
-    // console.log(`Directory contents: [${dirContents.slice(0, 10).join(', ')}${dirContents.length > 10 ? '...' : ''}]`);
-    
-    if (dirContents.length === 0) {
-      // console.log(`Cannot list directory ${currentPath}, stopping`);
-      break;
-    }
-    
-    // Try to find the best match for the remaining parts
-    let bestMatch = null;
-    let bestMatchLength = 0;
-    
-    // Try increasingly longer combinations of the remaining parts
-    for (let numParts = Math.min(remainingParts.length, 5); numParts >= 1; numParts--) {
-      const testParts = remainingParts.slice(0, numParts);
-      
-      // Build possible directory names from these parts
-      const candidates = [];
-      
-      // Try as-is (parts joined with hyphens)
-      candidates.push(testParts.join('-'));
-      
-      // Try with dots between parts (for usernames like first.last)
-      if (numParts === 2) {
-        candidates.push(testParts.join('.'));
-      }
-      
-      // Try with dot prefix (hidden directories)
-      if (numParts === 1) {
-        candidates.push('.' + testParts[0]);
-      }
-      
-      // Check each candidate against actual directory contents
-      for (const candidate of candidates) {
-        // Look for exact match
-        if (dirContents.includes(candidate)) {
-          // console.log(`Found exact match: "${candidate}" (consuming ${numParts} parts)`);
-          bestMatch = candidate;
-          bestMatchLength = numParts;
-          break;
-        }
-        
-        // Also check for directories that start with our candidate
-        // This handles cases where the flattened name is abbreviated
-        for (const dirEntry of dirContents) {
-          if (dirEntry.toLowerCase().startsWith(candidate.toLowerCase())) {
-            // console.log(`Found prefix match: "${dirEntry}" starts with "${candidate}" (consuming ${numParts} parts)`);
-            bestMatch = dirEntry;
-            bestMatchLength = numParts;
-            break;
-          }
-        }
-        
-        if (bestMatch) break;
-      }
-      
-      if (bestMatch) break;
-    }
-    
-    if (bestMatch) {
-      // Found a match, add it to the path
-      currentPath = currentPath + bestMatch;
-      consumedParts += bestMatchLength;
-      // console.log(`✓ Added "${bestMatch}" to path, new path: ${currentPath}`);
-    } else {
-      // No match found, try adding the part as-is (might be a new directory)
-      const part = remainingParts[0];
-      currentPath = currentPath + part;
-      consumedParts += 1;
-      // console.log(`✗ No match found for "${part}", adding as-is`);
-    }
-    
-    // Add path separator for next iteration unless we're done
-    if (consumedParts < flatParts.length) {
-      currentPath = currentPath + pathSep;
-    }
-  }
-  
-  // console.log(`Final reconstructed path: ${currentPath}`);
-  return currentPath;
+  return PathUtils.validatePath(testPath);
 }
 
 // Best-effort conversion of flattened path
 function guessPathFromFlattenedName(flatPath: string): string {
-  const isWindows = process.platform === 'win32';
-  const pathSep = isWindows ? '\\' : '/';
-  
-  // console.log(`\n${'='.repeat(60)}`);
-  // console.log(`Reconstructing path from: ${flatPath}`);
-  // console.log('='.repeat(60));
-  
-  // First check if we have metadata for this project
-  try {
-    const metadataPath = path.join(projectsDir, flatPath, 'metadata.json');
-    if (fsSync.existsSync(metadataPath)) {
-      const metadata = fsSync.readFileSync(metadataPath, 'utf-8');
-      const data = JSON.parse(metadata);
-      if (data.path) {
-        // console.log(`✓ Found cached metadata: ${data.path}`);
-        return data.path;
-      }
-    }
-  } catch (error) {
-    // No metadata, continue with reconstruction
-  }
-  
-  // Windows path with drive letter (e.g., C--Users-mathew-burkitt-Source-repos-DT-cc-todo-hook-tracker)
-  const windowsMatch = flatPath.match(/^([A-Z])--(.+)$/);
-  if (windowsMatch) {
-    const [, driveLetter, restOfPath] = windowsMatch;
-    
-    // console.log(`Drive letter: ${driveLetter}`);
-    // console.log(`Rest of path: ${restOfPath}`);
-    
-    // Split on single dashes, but preserve empty parts (which indicate dots)
-    const rawParts = restOfPath.split('-');
-    
-    // Process parts to handle double dashes (empty parts mean next part should have dot)
-    let flatParts = [];
-    for (let i = 0; i < rawParts.length; i++) {
-      if (rawParts[i] === '' && i + 1 < rawParts.length) {
-        // Empty part from double dash - next part should have dot prefix
-        flatParts.push('.' + rawParts[i + 1]);
-        i++; // Skip the next part as we've consumed it
-      } else if (rawParts[i] !== '') {
-        flatParts.push(rawParts[i]);
-      }
-    }
-    
-    // console.log(`Flattened parts: [${flatParts.join(', ')}]`);
-    
-    // Build path with greedy filesystem validation
-    const allParts = [driveLetter, ...flatParts];
-    const validatedPath = buildAndValidatePath(allParts, true);
-    
-    if (validatedPath && validatePath(validatedPath)) {
-      // console.log(`✓ Successfully validated: ${validatedPath}`);
-      return validatedPath;
-    } else {
-      // console.log(`✗ Could not validate path, returning best guess: ${validatedPath || flatPath}`);
-      return validatedPath || flatPath;
-    }
-  }
-  
-  // Unix absolute path
-  if (flatPath.startsWith('-')) {
-    const unixParts = flatPath.slice(1).split('-');
-    const validatedPath = buildAndValidatePath(unixParts, false);
-    return validatedPath || ('/' + flatPath.slice(1).replace(/-/g, '/'));
-  }
-  
-  // Return as-is if we can't figure it out
-  // console.log(`✗ Unknown path format: ${flatPath}`);
-  return flatPath;
+  return PathUtils.guessPathFromFlattenedName(flatPath);
 }
 
 // Create or update project metadata
 async function saveProjectMetadata(flattenedPath: string, realPath: string): Promise<void> {
-  try {
-    const metadataPath = path.join(projectsDir, flattenedPath, 'metadata.json');
-    await fs.writeFile(metadataPath, JSON.stringify({ path: realPath }, null, 2));
-  } catch (error) {
-    // Ignore errors - metadata is best-effort
-  }
+  // Use the shared PathUtils for consistent metadata handling
+  return await PathUtils.saveProjectMetadata(flattenedPath, realPath);
 }
 
 // Load all todos data
@@ -848,61 +572,41 @@ app.whenReady().then(() => {
     try {
       console.log(`Getting project prompts for: ${projectPath}`);
       
-      // Try multiple possible paths for finding JSONL files
-      const pathsToTry = [
-        // Try exact path
-        projectPath.replace(/[/\\]/g, '-'),
-        // Try without leading slash
-        projectPath.replace(/^[/\\]/, '').replace(/[/\\]/g, '-'),
-        // Try parent directory (for subdirectories like /typescript)
-        path.dirname(projectPath).replace(/[/\\]/g, '-'),
-        // Try parent without leading slash
-        path.dirname(projectPath).replace(/^[/\\]/, '').replace(/[/\\]/g, '-')
-      ];
+      // Use the shared PathUtils to find the project directory
+      // This ensures we use the same logic as todo loading for consistent results
+      const result = await PathUtils.findProjectDirectory(projectPath);
       
-      let projectDir: string | null = null;
-      let foundDir = false;
-      
-      for (const tryPath of pathsToTry) {
-        const testDir = path.join(claudeDir, 'projects', tryPath);
-        console.log(`Checking: ${testDir}`);
-        if (fsSync.existsSync(testDir)) {
-          projectDir = testDir;
-          foundDir = true;
-          console.log(`Found JSONL directory: ${testDir}`);
-          break;
-        }
-      }
-      
-      if (!foundDir) {
+      if (!result.found || !result.projectDir) {
         console.log(`No project directory found for: ${projectPath}`);
         return [];
       }
       
+      const projectDir = result.projectDir;
+      console.log(`Found project directory: ${projectDir}`);
+      
       console.log(`Looking for JSONL files in: ${projectDir}`);
       
       // Get all JSONL files in the project directory
-      const files = await fs.readdir(projectDir!);
+      const files = await fs.readdir(projectDir);
       const jsonlFiles = files.filter(file => file.endsWith('.jsonl')).sort();
       
       console.log(`Found ${jsonlFiles.length} JSONL files`);
       
       const prompts: any[] = [];
-      const MAX_PROMPTS = 100; // Limit to prevent memory issues
       let totalLines = 0;
       
-      // Process files in reverse order (most recent first) and stop when we have enough
-      for (let i = jsonlFiles.length - 1; i >= 0 && prompts.length < MAX_PROMPTS; i--) {
+      // Process ALL files to get complete history
+      for (let i = 0; i < jsonlFiles.length; i++) {
         const file = jsonlFiles[i];
-        const filePath = path.join(projectDir!, file);
+        const filePath = path.join(projectDir, file);
         
         try {
           const content = await fs.readFile(filePath, 'utf-8');
           const lines = content.split('\n').filter(line => line.trim());
           totalLines += lines.length;
           
-          // Process lines in reverse order within each file
-          for (let j = lines.length - 1; j >= 0 && prompts.length < MAX_PROMPTS; j--) {
+          // Process all lines in the file
+          for (let j = 0; j < lines.length; j++) {
             const line = lines[j];
             try {
               const entry = JSON.parse(line);
@@ -910,7 +614,7 @@ app.whenReady().then(() => {
               // Include both user and assistant messages
               if ((entry.type === 'user' && entry.message?.role === 'user') ||
                   (entry.type === 'assistant' && entry.message?.role === 'assistant')) {
-                prompts.unshift({
+                prompts.push({
                   timestamp: entry.timestamp || new Date().toISOString(),
                   message: {
                     role: entry.message.role,
@@ -932,7 +636,9 @@ app.whenReady().then(() => {
         }
       }
       
-      console.log(`Extracted ${prompts.length} prompts (limited from ${totalLines} total lines)`);
+      console.log(`Extracted ${prompts.length} prompts from ${totalLines} total lines`);
+      
+      
       return prompts;
       
     } catch (error) {

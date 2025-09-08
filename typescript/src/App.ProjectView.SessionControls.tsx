@@ -218,24 +218,6 @@ export function SessionControls({
           </div>
         </div>
         
-        <div className="padding-controls">
-          <label className="spacing-label" title="Adjust the spacing between todo items">SPACING:</label>
-          <div className="padding-buttons">
-            <button
-              className={`padding-btn spacing-cycle-btn active`}
-              onClick={() => {
-                const modes: SpacingMode[] = ['wide', 'normal', 'compact'];
-                const currentIndex = modes.indexOf(spacingMode);
-                const nextIndex = (currentIndex + 1) % modes.length;
-                onSpacingModeChange(modes[nextIndex]);
-              }}
-              title="Click to cycle through spacing modes: Wide → Normal → Compact"
-            >
-              {spacingMode === 'wide' ? 'Wide' : spacingMode === 'normal' ? 'Normal' : 'Compact'}
-            </button>
-          </div>
-        </div>
-        
         <div className="delete-all-controls">
           {selectedTabs.size >= 2 && (
             <button className="merge-btn" onClick={onStartMerge}>
