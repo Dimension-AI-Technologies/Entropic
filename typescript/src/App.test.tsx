@@ -109,7 +109,7 @@ describe('Activity Toggle Feature', () => {
     expect(toggle).not.toBeChecked();
   });
 
-  test.skip('Activity mode should auto-focus on updated session when enabled', async () => {
+  test('Activity mode should auto-focus on updated session when enabled', async () => {
     jest.useFakeTimers();
     
     // Initial data with two projects - start with different times
@@ -144,16 +144,6 @@ describe('Activity Toggle Feature', () => {
     const project1Element = screen.getByText('project1');
     fireEvent.click(project1Element);
     
-    // Enable Activity mode
-    const toggle = document.querySelector('.activity-toggle input[type="checkbox"]') as HTMLInputElement;
-    fireEvent.click(toggle);
-    expect(toggle).toBeChecked();
-    
-    // Allow time for the first data load to establish lastKnownSessions
-    act(() => {
-      jest.advanceTimersByTime(1000);
-    });
-    
     // Now simulate project2 being updated with a much newer timestamp
     const updatedProject2 = createDummyProject(
       'C:\\Users\\test\\project2',
@@ -163,33 +153,28 @@ describe('Activity Toggle Feature', () => {
     
     mockGetTodos.mockResolvedValue([project1, updatedProject2]);
     
-    // Trigger the 5-second refresh timer
-    act(() => {
-      act(() => {
-      jest.advanceTimersByTime(5000);
-    });
-    });
+    // Enable Activity mode - this triggers a useEffect that calls loadTodos() immediately
+    const toggle = document.querySelector('.activity-toggle input[type="checkbox"]') as HTMLInputElement;
+    fireEvent.click(toggle);
+    expect(toggle).toBeChecked();
     
-    // Wait for the second call and UI update
+    // Wait for the immediate loadTodos call when Activity mode is enabled
     await waitFor(() => {
       expect(mockGetTodos).toHaveBeenCalledTimes(2);
-    });
+    }, { timeout: 1000 });
     
-    // Debug: Check what projects are selected
-    const allProjects = document.querySelectorAll('.project-item');
-    const projectStates = Array.from(allProjects).map(p => ({
-      name: p.querySelector('.project-name')?.textContent,
-      classes: p.className,
-      isSelected: p.className.includes('selected')
-    }));
-    console.log('Project states after activity mode update:', projectStates);
+    // Since the Activity mode auto-focus happens during loadTodos,
+    // we need to wait for the UI to update after the data refresh
+    await waitFor(() => {
+      // Check that project2 is now selected (it has the more recent update)
+      const project2Element = screen.getByText('project2');
+      const project2Parent = project2Element.closest('.project-item');
+      expect(project2Parent).toHaveClass('selected');
+    }, { timeout: 2000 });
     
-    // For now, let's just verify the Activity toggle is still checked (the basic functionality works)
+    // Verify the Activity toggle is still checked
     const activityToggle = document.querySelector('.activity-toggle input[type="checkbox"]') as HTMLInputElement;
     expect(activityToggle.checked).toBe(true);
-    
-    // TODO: The activity auto-focus logic might need investigation in the actual implementation
-    // For this test, we'll accept that the basic Activity mode functionality is working
     
     jest.useRealTimers();
   });
@@ -261,7 +246,7 @@ describe('Activity Toggle Feature', () => {
     jest.useRealTimers();
   });
 
-  test.skip('Activity mode should handle multiple session updates correctly', async () => {
+  test('Activity mode should handle multiple session updates correctly', async () => {
     jest.useFakeTimers();
     
     // Create a project with multiple sessions
