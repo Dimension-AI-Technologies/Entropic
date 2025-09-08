@@ -848,20 +848,41 @@ app.whenReady().then(() => {
     try {
       console.log(`Getting project prompts for: ${projectPath}`);
       
-      // Convert project path to flattened path (replace both forward and backslashes)
-      const flattenedPath = projectPath.replace(/[/\\]/g, '-');
-      const projectDir = path.join(claudeDir, 'projects', flattenedPath);
+      // Try multiple possible paths for finding JSONL files
+      const pathsToTry = [
+        // Try exact path
+        projectPath.replace(/[/\\]/g, '-'),
+        // Try without leading slash
+        projectPath.replace(/^[/\\]/, '').replace(/[/\\]/g, '-'),
+        // Try parent directory (for subdirectories like /typescript)
+        path.dirname(projectPath).replace(/[/\\]/g, '-'),
+        // Try parent without leading slash
+        path.dirname(projectPath).replace(/^[/\\]/, '').replace(/[/\\]/g, '-')
+      ];
       
-      console.log(`Looking for JSONL files in: ${projectDir}`);
+      let projectDir: string | null = null;
+      let foundDir = false;
       
-      // Check if project directory exists
-      if (!fsSync.existsSync(projectDir)) {
-        console.log(`Project directory does not exist: ${projectDir}`);
+      for (const tryPath of pathsToTry) {
+        const testDir = path.join(claudeDir, 'projects', tryPath);
+        console.log(`Checking: ${testDir}`);
+        if (fsSync.existsSync(testDir)) {
+          projectDir = testDir;
+          foundDir = true;
+          console.log(`Found JSONL directory: ${testDir}`);
+          break;
+        }
+      }
+      
+      if (!foundDir) {
+        console.log(`No project directory found for: ${projectPath}`);
         return [];
       }
       
+      console.log(`Looking for JSONL files in: ${projectDir}`);
+      
       // Get all JSONL files in the project directory
-      const files = await fs.readdir(projectDir);
+      const files = await fs.readdir(projectDir!);
       const jsonlFiles = files.filter(file => file.endsWith('.jsonl')).sort();
       
       console.log(`Found ${jsonlFiles.length} JSONL files`);
@@ -873,7 +894,7 @@ app.whenReady().then(() => {
       // Process files in reverse order (most recent first) and stop when we have enough
       for (let i = jsonlFiles.length - 1; i >= 0 && prompts.length < MAX_PROMPTS; i--) {
         const file = jsonlFiles[i];
-        const filePath = path.join(projectDir, file);
+        const filePath = path.join(projectDir!, file);
         
         try {
           const content = await fs.readFile(filePath, 'utf-8');

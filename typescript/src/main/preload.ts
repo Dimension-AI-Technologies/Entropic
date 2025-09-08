@@ -4,5 +4,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getTodos: () => ipcRenderer.invoke('get-todos'),
   saveTodos: (filePath: string, todos: any[]) => ipcRenderer.invoke('save-todos', filePath, todos),
   deleteTodoFile: (filePath: string) => ipcRenderer.invoke('delete-todo-file', filePath),
-  getProjectPrompts: (projectPath: string) => ipcRenderer.invoke('get-project-prompts', projectPath)
+  getProjectPrompts: (projectPath: string) => ipcRenderer.invoke('get-project-prompts', projectPath),
+  takeScreenshot: () => ipcRenderer.invoke('take-screenshot')
 });
