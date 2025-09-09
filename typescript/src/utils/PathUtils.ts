@@ -233,7 +233,7 @@ export class PathUtils {
       // No metadata, continue with reconstruction
     }
     
-    // Windows path with drive letter (e.g., C--Users-mathew-burkitt-Source-repos-DT-cc-todo-hook-tracker)
+    // Windows path with drive letter (e.g., C--Users-username-Source-repos-project-name)
     const windowsMatch = flatPath.match(/^([A-Z])--(.+)$/);
     if (windowsMatch) {
       const [, driveLetter, restOfPath] = windowsMatch;
