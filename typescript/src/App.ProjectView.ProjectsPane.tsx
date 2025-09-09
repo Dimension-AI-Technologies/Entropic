@@ -48,13 +48,14 @@ interface ProjectsPaneProps {
   onSelectProject: (project: Project) => void;
   onProjectContextMenu?: (e: React.MouseEvent, project: Project) => void;
   onRefresh?: () => void;
+  activityMode: boolean;
+  setActivityMode: (mode: boolean) => void;
 }
 
-export function ProjectsPane({ projects, selectedProject, onSelectProject, onProjectContextMenu, onRefresh }: ProjectsPaneProps) {
+export function ProjectsPane({ projects, selectedProject, onSelectProject, onProjectContextMenu, onRefresh, activityMode, setActivityMode }: ProjectsPaneProps) {
   const [sortMethod, setSortMethod] = useState<SortMethod>(1); // recent
   const [showEmptyProjects, setShowEmptyProjects] = useState(false); // hide empty projects by default
   const [showFailedReconstructions, setShowFailedReconstructions] = useState(false); // hide failed path reconstructions by default
-  const [activityMode, setActivityMode] = useState(false);
 
   const handleProjectClick = (project: Project) => {
     onSelectProject(project);

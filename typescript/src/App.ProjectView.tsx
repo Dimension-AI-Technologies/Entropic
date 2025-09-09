@@ -30,9 +30,11 @@ interface ProjectViewProps {
   onLoadTodos: () => Promise<void>;
   initialProjectPath?: string | null;
   initialSessionId?: string | null;
+  activityMode: boolean;
+  setActivityMode: (mode: boolean) => void;
 }
 
-export function ProjectView({ projects, onLoadTodos, initialProjectPath, initialSessionId }: ProjectViewProps) {
+export function ProjectView({ projects, onLoadTodos, initialProjectPath, initialSessionId, activityMode, setActivityMode }: ProjectViewProps) {
   console.log('[ProjectView] Rendering with', projects.length, 'projects');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
@@ -183,6 +185,8 @@ export function ProjectView({ projects, onLoadTodos, initialProjectPath, initial
           onSelectProject={selectProject}
           onProjectContextMenu={handleProjectContextMenu}
           onRefresh={onLoadTodos}
+          activityMode={activityMode}
+          setActivityMode={setActivityMode}
         />
       </div>
       

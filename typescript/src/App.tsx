@@ -179,8 +179,10 @@ function App() {
           if (!lastGlobalMostRecentTime || globalMostRecentTime > lastGlobalMostRecentTime) {
             setLoadingSteps(prev => [...prev, `Selecting recent session: ${globalMostRecentSession.id.substring(0, 6)}`]);
             await new Promise(resolve => setTimeout(resolve, 300));
-            // Switch to project view for auto-selection
+            // Switch to project view and auto-select the project and session
             setViewMode('project');
+            setSelectedProjectPath(globalMostRecentProject.path);
+            setSelectedSessionId(globalMostRecentSession.id);
           }
           
           // Always update our knowledge of the global most recent time
@@ -281,6 +283,8 @@ function App() {
             onLoadTodos={loadTodos}
             initialProjectPath={selectedProjectPath}
             initialSessionId={selectedSessionId}
+            activityMode={activityMode}
+            setActivityMode={setActivityMode}
           />
         )}
       </div>
