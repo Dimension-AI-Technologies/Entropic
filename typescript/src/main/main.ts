@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { watch } from 'node:fs';
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -545,6 +546,105 @@ function createWindow() {
   setupMenu();
 }
 
+// File watching setup
+let fileWatchers: fsSync.FSWatcher[] = [];
+
+function setupFileWatching() {
+  // Watch the projects directory for changes to .session_*.json files
+  if (fsSync.existsSync(projectsDir)) {
+    console.log('[FileWatch] Setting up file watching for:', projectsDir);
+    
+    // Watch the projects directory
+    const watcher = watch(projectsDir, { recursive: true }, (eventType, filename) => {
+      if (filename && filename.includes('.session_') && filename.endsWith('.json')) {
+        console.log(`[FileWatch] Detected ${eventType} on ${filename}`);
+        // Send IPC event to renderer to trigger update
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('todo-files-changed', {
+            eventType,
+            filename,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    });
+    
+    fileWatchers.push(watcher);
+  }
+  
+  // Also watch the todos directory for legacy files
+  if (fsSync.existsSync(todosDir)) {
+    console.log('[FileWatch] Setting up file watching for:', todosDir);
+    
+    const watcher = watch(todosDir, (eventType, filename) => {
+      if (filename && filename.endsWith('.json')) {
+        console.log(`[FileWatch] Detected ${eventType} on ${filename} in todos dir`);
+        // Send IPC event to renderer to trigger update
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('todo-files-changed', {
+            eventType,
+            filename,
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    });
+    
+    fileWatchers.push(watcher);
+  }
+  
+  // Watch current_todos.json in logs directory
+  const currentTodosPath = path.join(logsDir, 'current_todos.json');
+  if (fsSync.existsSync(logsDir)) {
+    console.log('[FileWatch] Setting up file watching for current_todos.json');
+    
+    const watcher = watch(logsDir, (eventType, filename) => {
+      if (filename === 'current_todos.json') {
+        console.log(`[FileWatch] Detected ${eventType} on current_todos.json`);
+        // Send IPC event to renderer to trigger update
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('todo-files-changed', {
+            eventType,
+            filename: 'current_todos.json',
+            timestamp: new Date().toISOString()
+          });
+        }
+      }
+    });
+    
+    fileWatchers.push(watcher);
+  }
+}
+
+function cleanupFileWatchers() {
+  fileWatchers.forEach(watcher => {
+    try {
+      watcher.close();
+    } catch (error) {
+      console.error('[FileWatch] Error closing watcher:', error);
+    }
+  });
+  fileWatchers = [];
+}
+
+// Single instance lock - prevent multiple instances from running
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  console.error('[SingleInstance] Another instance is already running. Exiting...');
+  app.quit();
+} else {
+  // Handle when second instance is attempted
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    console.log('[SingleInstance] Second instance attempted, focusing existing window');
+    // Someone tried to run a second instance, focus our window instead
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 app.whenReady().then(() => {
   // Handle IPC requests for todos data
   ipcMain.handle('get-todos', async () => {
@@ -672,6 +772,9 @@ app.whenReady().then(() => {
   });
   
   createWindow();
+  
+  // Set up file watching after window is created
+  setupFileWatching();
 
   // Take a screenshot after a longer delay for debugging to let app fully load
   setTimeout(async () => {
@@ -682,12 +785,18 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
+      setupFileWatching();
     }
   });
 });
 
 app.on('window-all-closed', () => {
+  cleanupFileWatchers();
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('before-quit', () => {
+  cleanupFileWatchers();
 });

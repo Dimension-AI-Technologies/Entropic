@@ -12,13 +12,21 @@ export interface Failure {
   details?: any;
 }
 
+export function Ok<T>(value: T): Success<T> {
+  return { success: true, value };
+}
+
+export function Err(error: string, details?: any): Failure {
+  return { success: false, error, details };
+}
+
 export class ResultUtils {
   static ok<T>(value: T): Success<T> {
-    return { success: true, value };
+    return Ok(value);
   }
 
   static fail(error: string, details?: any): Failure {
-    return { success: false, error, details };
+    return Err(error, details);
   }
 
   static isSuccess<T>(result: Result<T>): result is Success<T> {
@@ -31,7 +39,7 @@ export class ResultUtils {
 
   static map<T, U>(result: Result<T>, fn: (value: T) => U): Result<U> {
     if (ResultUtils.isSuccess(result)) {
-      return ResultUtils.ok(fn(result.value));
+      return Ok(fn(result.value));
     }
     return result;
   }
@@ -46,9 +54,9 @@ export class ResultUtils {
   static async fromPromise<T>(promise: Promise<T>): Promise<Result<T>> {
     try {
       const value = await promise;
-      return ResultUtils.ok(value);
+      return Ok(value);
     } catch (error) {
-      return ResultUtils.fail(
+      return Err(
         error instanceof Error ? error.message : 'Unknown error',
         error
       );

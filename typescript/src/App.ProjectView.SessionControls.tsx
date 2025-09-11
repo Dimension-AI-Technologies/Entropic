@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ProgressOverlay } from './components/ProgressOverlay';
 import { PaneHeader, PaneControls } from './components/PaneLayout';
+import { Result, Ok, Err } from './utils/Result';
 
 interface Todo {
   content: string;
@@ -94,8 +95,8 @@ export function SessionControls({
     setIsDeleting(true);
     setDeletionProgress("Starting deletion...");
     
-    try {
-      // Delete each empty session
+    // Use Result pattern for the deletion operation
+    const deletionResult = await (async (): Promise<Result<{deletedCount: number, failedCount: number}>> => {
       let deletedCount = 0;
       let failedCount = 0;
       
@@ -106,24 +107,33 @@ export function SessionControls({
         setDeletionProgress(`Deleting session ${session.id} (${i + 1}/${emptySessions.length})...`);
         
         if (session.filePath) {
-          try {
-            // Add small delay so user can see the progress
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-            const success = await window.electronAPI.deleteTodoFile(session.filePath);
-            if (success) {
-              deletedCount++;
-              console.log(`✓ Deleted empty session: ${session.id} at ${session.filePath}`);
-              setDeletionProgress(`✓ Deleted session ${session.id}`);
+          // Add small delay so user can see the progress
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // Use Result pattern for individual deletion
+          const deleteResult = await (async (): Promise<Result<boolean>> => {
+            try {
+              const success = await window.electronAPI.deleteTodoFile(session.filePath!);
+              return Ok(success);
+            } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              console.error(`✗ Exception deleting session ${session.id}:`, error);
+              return Err(`Error deleting session ${session.id}: ${errorMessage}`, error);
+            }
+          })();
+          
+          if (deleteResult.success && deleteResult.value) {
+            deletedCount++;
+            console.log(`✓ Deleted empty session: ${session.id} at ${session.filePath}`);
+            setDeletionProgress(`✓ Deleted session ${session.id}`);
+          } else {
+            failedCount++;
+            if (!deleteResult.success) {
+              setDeletionProgress(`✗ Error deleting session ${session.id}`);
             } else {
-              failedCount++;
               console.error(`✗ Failed to delete session ${session.id} at ${session.filePath}`);
               setDeletionProgress(`✗ Failed to delete session ${session.id}`);
             }
-          } catch (error) {
-            console.error(`✗ Exception deleting session ${session.id}:`, error);
-            failedCount++;
-            setDeletionProgress(`✗ Error deleting session ${session.id}`);
           }
         } else {
           console.warn(`Session ${session.id} has no filePath, skipping`);
@@ -146,22 +156,26 @@ export function SessionControls({
       console.log("Refreshing project data after deletion...");
       setDeletionProgress("Refreshing project data...");
       
-      // Don't clear the overlay yet - keep it visible during refresh
-      // The finally block will clear it after onLoadTodos completes
-      
-    } finally {
-      // Call onLoadTodos INSIDE the finally block so overlay stays visible
+      return Ok({deletedCount, failedCount});
+    })();
+    
+    // The finally block replacement - always execute cleanup
+    // Call onLoadTodos so overlay stays visible
+    const refreshResult = await (async (): Promise<Result<void>> => {
       try {
         await onLoadTodos();
         console.log("Project data refreshed successfully");
+        return Ok(undefined);
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error("Error refreshing project data:", error);
+        return Err(`Error refreshing project data: ${errorMessage}`, error);
       }
-      
-      // NOW clear the loading state after refresh is complete
-      setIsDeleting(false);
-      setDeletionProgress("");
-    }
+    })();
+    
+    // NOW clear the loading state after refresh is complete
+    setIsDeleting(false);
+    setDeletionProgress("");
   };
 
   if (!selectedProject) {

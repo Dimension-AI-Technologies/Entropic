@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Result, Ok, Err } from './utils/Result';
 
 interface Todo {
   content: string;
@@ -39,6 +40,7 @@ function formatUKTime(date: Date): string {
 interface TodoListProps {
   selectedProject: Project | null;
   selectedSession: Session | null;
+  selectedTodoIndex: number | null;
   onLoadTodos: () => Promise<void>;
   selectedTabs: Set<string>;
   onTabClick: (e: React.MouseEvent, session: Session) => void;
@@ -48,7 +50,8 @@ interface TodoListProps {
 
 export function TodoList({ 
   selectedProject, 
-  selectedSession, 
+  selectedSession,
+  selectedTodoIndex,
   onLoadTodos,
   selectedTabs,
   onTabClick,
@@ -64,6 +67,14 @@ export function TodoList({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+  
+  // Auto-select the todo when selectedTodoIndex changes
+  useEffect(() => {
+    if (selectedTodoIndex !== null && selectedTodoIndex >= 0) {
+      setSelectedIndices(new Set([selectedTodoIndex]));
+      setLastSelectedIndex(selectedTodoIndex);
+    }
+  }, [selectedTodoIndex, selectedSession?.id]); // Re-run when session changes too
   
   // Keyboard event handler
   useEffect(() => {
@@ -236,17 +247,32 @@ export function TodoList({
     }
   };
 
-  const handleSave = async () => {
-    if (!selectedSession || !editedTodos || !selectedSession.filePath) return;
+  const handleSave = async (): Promise<Result<void>> => {
+    if (!selectedSession || !editedTodos || !selectedSession.filePath) {
+      return Err('Invalid session or todos state');
+    }
     
-    try {
-      const success = await window.electronAPI.saveTodos(selectedSession.filePath, editedTodos);
-      if (success) {
-        setIsDirty(false);
-        await onLoadTodos();
+    // Use Result pattern instead of try-catch
+    const saveResult = await (async (): Promise<Result<boolean>> => {
+      try {
+        const success = await window.electronAPI.saveTodos(selectedSession.filePath!, editedTodos);
+        return Ok(success);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        console.error('Failed to save todos:', error);
+        return Err(`Failed to save todos: ${errorMessage}`, error);
       }
-    } catch (error) {
-      console.error('Failed to save todos:', error);
+    })();
+    
+    if (saveResult.success && saveResult.value) {
+      setIsDirty(false);
+      await onLoadTodos();
+      return Ok(undefined);
+    } else if (!saveResult.success) {
+      // Error already logged in the inner function
+      return saveResult;
+    } else {
+      return Err('Save operation returned false');
     }
   };
 

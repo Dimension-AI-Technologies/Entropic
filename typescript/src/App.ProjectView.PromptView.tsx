@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Result, Ok, Err } from '../utils/Result';
 
 interface PromptEntry {
   timestamp: string;
@@ -45,7 +46,12 @@ export function PromptView({ selectedProject }: PromptViewProps) {
       // Validate prompts data
       if (!Array.isArray(projectPrompts)) {
         console.error('PromptView: Not an array!', projectPrompts);
-        throw new Error('Invalid prompts data received');
+        // Return early instead of throwing
+        console.error('PromptView: Invalid prompts data received');
+        setError('Invalid prompts data received');
+        setPrompts([]);
+        setLoading(false);
+        return;
       }
       
       console.log(`PromptView: Total prompts received: ${projectPrompts.length}`);

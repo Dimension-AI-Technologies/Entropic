@@ -30,14 +30,16 @@ interface ProjectViewProps {
   onLoadTodos: () => Promise<void>;
   initialProjectPath?: string | null;
   initialSessionId?: string | null;
+  initialTodoIndex?: number | null;
   activityMode: boolean;
   setActivityMode: (mode: boolean) => void;
 }
 
-export function ProjectView({ projects, onLoadTodos, initialProjectPath, initialSessionId, activityMode, setActivityMode }: ProjectViewProps) {
+export function ProjectView({ projects, onLoadTodos, initialProjectPath, initialSessionId, initialTodoIndex, activityMode, setActivityMode }: ProjectViewProps) {
   console.log('[ProjectView] Rendering with', projects.length, 'projects');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [selectedTodoIndex, setSelectedTodoIndex] = useState<number | null>(null);
   const [projectSessionMap, setProjectSessionMap] = useState<Map<string, string>>(new Map());
   const [leftPaneWidth, setLeftPaneWidth] = useState(260);
   const [isResizing, setIsResizing] = useState(false);
@@ -76,6 +78,10 @@ export function ProjectView({ projects, onLoadTodos, initialProjectPath, initial
         if (session) {
           setSelectedProject(project);
           setSelectedSession(session);
+          // Set the initial todo index if provided
+          if (initialTodoIndex !== null && initialTodoIndex !== undefined) {
+            setSelectedTodoIndex(initialTodoIndex);
+          }
           return;
         }
       }
@@ -105,7 +111,7 @@ export function ProjectView({ projects, onLoadTodos, initialProjectPath, initial
         setSelectedSession(mostRecentSession);
       }
     }
-  }, [projects, selectedProject, initialProjectPath, initialSessionId]);
+  }, [projects, selectedProject, initialProjectPath, initialSessionId, initialTodoIndex]);
 
   // Update selectedProject when projects change
   useEffect(() => {
@@ -200,6 +206,7 @@ export function ProjectView({ projects, onLoadTodos, initialProjectPath, initial
       <SingleProjectPane
         selectedProject={selectedProject}
         selectedSession={selectedSession}
+        selectedTodoIndex={selectedTodoIndex}
         onSessionSelect={selectSession}
         onLoadTodos={onLoadTodos}
       />

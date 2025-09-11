@@ -4,6 +4,7 @@ import { SplashScreen } from './components/SplashScreen';
 import { ProjectView } from './App.ProjectView';
 import { GlobalView } from './App.GlobalView';
 import { UnifiedTitleBar } from './components/UnifiedTitleBar';
+import { Result, Ok, Err } from './utils/Result';
 
 interface Todo {
   content: string;
@@ -33,6 +34,7 @@ declare global {
       getTodos: () => Promise<Project[]>;
       saveTodos: (filePath: string, todos: Todo[]) => Promise<boolean>;
       deleteTodoFile: (filePath: string) => Promise<boolean>;
+      onTodoFilesChanged: (callback: (event: any, data: any) => void) => () => void;
     };
   }
 }
@@ -53,6 +55,7 @@ function App() {
   // State for cross-view navigation
   const [selectedProjectPath, setSelectedProjectPath] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const [selectedTodoIndex, setSelectedTodoIndex] = useState<number | null>(null);
 
   // Function to find and select the globally most recent session
   const selectMostRecentSession = (projects: Project[]) => {
@@ -80,38 +83,58 @@ function App() {
     }
   };
 
-  // Load todos data with smart refresh strategy
+  // Load todos data initially and set up file watching
   useEffect(() => {
     loadTodos();
     
-    // Smart refresh: Only poll when Activity mode is ON, and much less frequently
-    // Hook system provides immediate updates for current session,
-    // but polling catches updates from other sessions/instances
-    let interval: NodeJS.Timeout | null = null;
-    
-    if (activityMode) {
-      // Poll every 2 seconds when Activity mode is ON to catch hook updates quickly
-      interval = setInterval(loadTodos, 2000);
-    }
+    // Set up file watching for immediate updates when hooks write files
+    // This replaces polling - updates happen instantly when files change
+    const cleanup = window.electronAPI.onTodoFilesChanged((event: any, data: any) => {
+      console.log('[App] File change detected:', data);
+      // Always reload data when files change (immediate updates)
+      loadTodos();
+    });
     
     return () => {
-      if (interval) clearInterval(interval);
+      cleanup(); // Clean up the file watcher listener
     };
-  }, [activityMode]); // Re-run when activityMode changes
+  }, []); // Only set up once on mount
 
-  const loadTodos = async () => {
+  const loadTodos = async (): Promise<Result<void>> => {
     console.log('[App] loadTodos called');
-    try {
-      // Initial loading step
-      setLoadingSteps(['Fetching todo data...']);
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const data = await window.electronAPI.getTodos();
-      console.log('[App] Got data from IPC:', data.length, 'projects');
-      
-      // Show found projects
-      setLoadingSteps(prev => [...prev, `Found ${data.length} projects`]);
-      await new Promise(resolve => setTimeout(resolve, 200));
+    
+    // Use Result pattern for the entire loading operation
+    const loadResult = await (async (): Promise<Result<Project[]>> => {
+      try {
+        // Initial loading step
+        setLoadingSteps(['Fetching todo data...']);
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const data = await window.electronAPI.getTodos();
+        console.log('[App] Got data from IPC:', data.length, 'projects');
+        
+        // Show found projects
+        setLoadingSteps(prev => [...prev, `Found ${data.length} projects`]);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        return Ok(data);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        console.error('Failed to load todos:', error);
+        setLoadingSteps(prev => [...prev, `Error: ${errorMessage}`]);
+        return Err(`Failed to load todos: ${errorMessage}`, error);
+      }
+    })();
+    
+    if (!loadResult.success) {
+      setLoadingComplete(true);
+      setTimeout(() => {
+        setLoading(false);
+      }, 1000);
+      return loadResult;
+    }
+    
+    const data = loadResult.value;
       
       // Process projects with visible delays
       const deduplicatedData: Project[] = [];
@@ -179,10 +202,29 @@ function App() {
           if (!lastGlobalMostRecentTime || globalMostRecentTime > lastGlobalMostRecentTime) {
             setLoadingSteps(prev => [...prev, `Selecting recent session: ${globalMostRecentSession.id.substring(0, 6)}`]);
             await new Promise(resolve => setTimeout(resolve, 300));
-            // Switch to project view and auto-select the project and session
+            
+            // Find the most relevant todo to select (first in_progress, then first pending)
+            let todoIndexToSelect = -1;
+            const todos = globalMostRecentSession.todos;
+            
+            // First, look for the first in_progress todo
+            todoIndexToSelect = todos.findIndex(t => t.status === 'in_progress');
+            
+            // If no in_progress, look for the first pending todo
+            if (todoIndexToSelect === -1) {
+              todoIndexToSelect = todos.findIndex(t => t.status === 'pending');
+            }
+            
+            // If still no match, select the first todo if any exist
+            if (todoIndexToSelect === -1 && todos.length > 0) {
+              todoIndexToSelect = 0;
+            }
+            
+            // Switch to project view and auto-select the project, session, and todo
             setViewMode('project');
             setSelectedProjectPath(globalMostRecentProject.path);
             setSelectedSessionId(globalMostRecentSession.id);
+            setSelectedTodoIndex(todoIndexToSelect >= 0 ? todoIndexToSelect : null);
           }
           
           // Always update our knowledge of the global most recent time
@@ -198,14 +240,8 @@ function App() {
         console.log('[App] Hiding splash screen, setting loading to false');
         setLoading(false);
       }, 500);
-    } catch (error) {
-      console.error('Failed to load todos:', error);
-      setLoadingSteps(prev => [...prev, `Error: ${error}`]);
-      setLoadingComplete(true);
-      setTimeout(() => {
-        setLoading(false);
-      }, 1000);
-    }
+      
+      return Ok(undefined);
   };
 
   const handleGlobalTodoClick = (project: Project, session: Session, todoIndex: number) => {
@@ -274,15 +310,16 @@ function App() {
           <GlobalView 
             projects={projects} 
             onTodoClick={handleGlobalTodoClick} 
-            onRefresh={loadTodos} 
+            onRefresh={async () => { await loadTodos(); }} 
             spacingMode={spacingMode} 
           />
         ) : (
           <ProjectView 
             projects={projects} 
-            onLoadTodos={loadTodos}
+            onLoadTodos={async () => { await loadTodos(); }}
             initialProjectPath={selectedProjectPath}
             initialSessionId={selectedSessionId}
+            initialTodoIndex={selectedTodoIndex}
             activityMode={activityMode}
             setActivityMode={setActivityMode}
           />

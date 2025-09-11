@@ -7,6 +7,7 @@ import { SessionControls } from './App.ProjectView.SessionControls';
 import { TodoList } from './App.ProjectView.TodoList';
 import { MergeDialog } from './App.ProjectView.MergeDialog';
 import { PromptView } from './App.ProjectView.PromptView';
+import { Result, Ok, Err } from './utils/Result';
 
 interface Todo {
   content: string;
@@ -51,13 +52,15 @@ type FilterState = {
 interface SingleProjectPaneProps {
   selectedProject: Project | null;
   selectedSession: Session | null;
+  selectedTodoIndex: number | null;
   onSessionSelect: (session: Session) => void;
   onLoadTodos: () => Promise<void>;
 }
 
 export function SingleProjectPane({ 
   selectedProject, 
-  selectedSession, 
+  selectedSession,
+  selectedTodoIndex,
   onSessionSelect,
   onLoadTodos 
 }: SingleProjectPaneProps) {
@@ -209,19 +212,34 @@ export function SingleProjectPane({
     };
   };
 
-  const handleDeleteSession = async () => {
-    if (!selectedSession || !selectedSession.filePath) return;
+  const handleDeleteSession = async (): Promise<Result<void>> => {
+    if (!selectedSession || !selectedSession.filePath) {
+      return Err('Invalid session or file path');
+    }
     
-    try {
-      const success = await window.electronAPI.deleteTodoFile(selectedSession.filePath);
-      if (success) {
-        setShowDeleteConfirm(false);
-        setEditedTodos(null);
-        setIsDirty(false);
-        await onLoadTodos();
+    // Use Result pattern instead of try-catch
+    const deleteResult = await (async (): Promise<Result<boolean>> => {
+      try {
+        const success = await window.electronAPI.deleteTodoFile(selectedSession.filePath!);
+        return Ok(success);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        console.error('Failed to delete session:', error);
+        return Err(`Failed to delete session: ${errorMessage}`, error);
       }
-    } catch (error) {
-      console.error('Failed to delete session:', error);
+    })();
+    
+    if (deleteResult.success && deleteResult.value) {
+      setShowDeleteConfirm(false);
+      setEditedTodos(null);
+      setIsDirty(false);
+      await onLoadTodos();
+      return Ok(undefined);
+    } else if (!deleteResult.success) {
+      // Error already logged in the inner function
+      return deleteResult;
+    } else {
+      return Err('Delete operation returned false');
     }
   };
 
@@ -298,6 +316,7 @@ export function SingleProjectPane({
           <TodoList
             selectedProject={selectedProject}
             selectedSession={selectedSession}
+            selectedTodoIndex={selectedTodoIndex}
             onLoadTodos={onLoadTodos}
             selectedTabs={selectedTabs}
             onTabClick={handleTabClick}

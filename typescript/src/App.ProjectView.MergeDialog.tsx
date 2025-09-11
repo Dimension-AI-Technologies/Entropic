@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Result, Ok, Err } from './utils/Result';
 
 interface Todo {
   content: string;
@@ -69,10 +70,13 @@ export function MergeDialog({
   onLoadTodos
 }: MergeDialogProps) {
 
-  const handlePerformMerge = async () => {
-    if (!mergeTarget || !mergeTarget.filePath || mergeSources.length === 0) return;
+  const handlePerformMerge = async (): Promise<Result<void>> => {
+    if (!mergeTarget || !mergeTarget.filePath || mergeSources.length === 0) {
+      return Err('Invalid merge target or sources');
+    }
     
-    try {
+    // Use Result pattern for the merge operation
+    const mergeResult = await (async (): Promise<Result<void>> => {
       // Start with target todos
       let mergedTodos: Todo[] = [...mergeTarget.todos];
       const mergedContents = new Set(mergeTarget.todos.map(t => t.content.toLowerCase()));
@@ -92,47 +96,55 @@ export function MergeDialog({
           continue;
         }
         
-        try {
-          // Save current state for rollback
-          const beforeMerge = [...mergedTodos];
-          let todosAdded = 0;
-          
-          // Add unique todos from this source
-          for (const sourceTodo of source.todos) {
-            if (!mergedContents.has(sourceTodo.content.toLowerCase())) {
-              mergedTodos.push(sourceTodo);
-              mergedContents.add(sourceTodo.content.toLowerCase());
-              todosAdded++;
+        // Use Result pattern for individual source merge
+        const sourceResult = await (async (): Promise<Result<number>> => {
+          try {
+            // Save current state for rollback
+            const beforeMerge = [...mergedTodos];
+            let todosAdded = 0;
+            
+            // Add unique todos from this source
+            for (const sourceTodo of source.todos) {
+              if (!mergedContents.has(sourceTodo.content.toLowerCase())) {
+                mergedTodos.push(sourceTodo);
+                mergedContents.add(sourceTodo.content.toLowerCase());
+                todosAdded++;
+              }
             }
+            
+            // Verify the merge makes sense
+            if (mergedTodos.length !== beforeMerge.length + todosAdded) {
+              const errorMsg = `Merge verification failed: expected ${beforeMerge.length + todosAdded} todos, got ${mergedTodos.length}`;
+              console.error(errorMsg);
+              return Err(errorMsg);
+            }
+            
+            // Save the updated todos to target
+            await window.electronAPI.saveTodos(mergeTarget.filePath!, mergedTodos);
+            
+            // Delete the source session only after successful save
+            await window.electronAPI.deleteTodoFile(source.filePath!);
+            
+            return Ok(todosAdded);
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`Failed to merge session ${source.id}:`, error);
+            return Err(`Failed to merge session ${source.id}: ${errorMessage}`, error);
           }
-          
-          // Verify the merge makes sense
-          if (mergedTodos.length !== beforeMerge.length + todosAdded) {
-            console.error(`Merge verification failed: expected ${beforeMerge.length + todosAdded} todos, got ${mergedTodos.length}`);
-            alert('Merge operation failed verification. Please try again.');
-            return;
-          }
-          
-          // Save the updated todos to target
-          await window.electronAPI.saveTodos(mergeTarget.filePath, mergedTodos);
-          
-          // Delete the source session only after successful save
-          await window.electronAPI.deleteTodoFile(source.filePath);
-          
+        })();
+        
+        if (sourceResult.success) {
           mergeResults.push({
             source: source.id.substring(0, 8),
             success: true,
-            todosAdded
+            todosAdded: sourceResult.value
           });
-          
-        } catch (error) {
-          // Rollback on error
-          console.error(`Failed to merge session ${source.id}:`, error);
+        } else {
           mergeResults.push({
             source: source.id.substring(0, 8),
             success: false,
             todosAdded: 0,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: sourceResult.error
           });
           // Stop merging further sources on error
           break;
@@ -146,7 +158,20 @@ export function MergeDialog({
       onCloseMergeDialog();
       
       // Reload data
-      await onLoadTodos();
+      const reloadResult = await (async (): Promise<Result<void>> => {
+        try {
+          await onLoadTodos();
+          return Ok(undefined);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          console.error('Failed to reload data after merge:', error);
+          return Err(`Failed to reload data: ${errorMessage}`, error);
+        }
+      })();
+      
+      if (!reloadResult.success) {
+        return reloadResult;
+      }
       
       // Select the target session
       onSessionSelect(mergeTarget);
@@ -157,10 +182,16 @@ export function MergeDialog({
         alert(`Merge partially completed. ${failures.length} session(s) failed to merge.`);
       }
       
-    } catch (error) {
-      console.error('Failed to perform merge:', error);
+      return Ok(undefined);
+    })();
+    
+    if (!mergeResult.success) {
+      console.error('Failed to perform merge:', mergeResult.error);
       alert('Merge failed. No changes were made.');
+      return mergeResult;
     }
+    
+    return Ok(undefined);
   };
 
   if (!showMergeDialog || !mergeTarget || mergeSources.length === 0) {
