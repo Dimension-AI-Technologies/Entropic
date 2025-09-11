@@ -1,6 +1,6 @@
-# Claude Code Todo Hook Tracker
+# Entropic - a Claude Code Todo GUI and Project History viewer
 
-A real-time todo monitoring system for Claude Code that displays live updates of todo items as they are created, modified, and completed. This tool provides a visual dashboard in your terminal that automatically updates whenever Claude Code uses the TodoWrite tool.
+A real-time todo monitoring system for Claude Code that displays live updates of Todo items as they are created, modified, and completed. This tool provides a visual dashboard in your terminal that automatically updates whenever Claude Code uses the TodoWrite tool.
 
 ![Claude Code Todo Tracker Live Monitor](Todo%20Tracker.png)
 
