@@ -4,6 +4,8 @@ import { SplashScreen } from './components/SplashScreen';
 import { ProjectView } from './App.ProjectView';
 import { GlobalView } from './App.GlobalView';
 import { UnifiedTitleBar } from './components/UnifiedTitleBar';
+import { AnimatedBackground } from './components/AnimatedBackground';
+import { BoidSystem } from './components/BoidSystem';
 import { Result, Ok, Err } from './utils/Result';
 
 interface Todo {
@@ -293,6 +295,10 @@ function App() {
   // Full app with all components
   return (
     <div className="app">
+      {/* Background animations - centered on entire window */}
+      <AnimatedBackground />
+      <BoidSystem />
+      
       <UnifiedTitleBar
         viewMode={viewMode}
         onViewModeChange={setViewMode}

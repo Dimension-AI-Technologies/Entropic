@@ -264,8 +264,6 @@ export function SingleProjectPane({
   if (!selectedProject) {
     return (
       <div className="main-content">
-        <AnimatedBackground />
-        <BoidSystem />
         <div className="no-project-selected">
           <h2>No Project Selected</h2>
           <p>Select a project from the sidebar to view its sessions and todos.</p>
@@ -276,8 +274,6 @@ export function SingleProjectPane({
 
   return (
     <div className="main-content">
-      <AnimatedBackground />
-      <BoidSystem />
       
       <SessionControls
         selectedProject={selectedProject}
