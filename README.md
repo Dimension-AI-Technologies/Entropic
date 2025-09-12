@@ -1,6 +1,6 @@
 # Entropic - a Claude Code Todo GUI and Project History viewer
 
-A real-time todo monitoring system for Claude Code that displays live updates of Todo items as they are created, modified, and completed. This tool provides a visual dashboard as a GUI or in your terminal that automatically updates whenever Claude Code uses the TodoWrite tool.  GUI is in cross-platform TypeScript.  Terminal version is in original Bash (by [@JamesonNyp](@JamesonNyp)) and cross-platform PowerShell [dimension-zero](@dimension-zero).
+A real-time todo monitoring system for Claude Code that displays live updates of Todo items as they are created, modified, and completed. This tool provides a visual dashboard in your terminal or as a GUI that automatically updates whenever Claude Code uses the TodoWrite tool.  Terminal version is in original Bash (by [@JamesonNyp](@JamesonNyp)) and cross-platform PowerShell (by [dimension-zero](@dimension-zero)).  GUI is in cross-platform TypeScript.
 
 ![Claude Code Todo Tracker Live Monitor](Todo%20Tracker.png)
 
