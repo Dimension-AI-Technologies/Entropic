@@ -37,9 +37,20 @@ export function PromptView({ selectedProject }: PromptViewProps) {
     setError(null);
     try {
       // Get project prompts from main process
-      const projectPrompts = await window.electronAPI.getProjectPrompts(selectedProject.path);
+      const result = await window.electronAPI.getProjectPrompts(selectedProject.path);
       
-      console.log('PromptView: Received prompts from backend:', projectPrompts);
+      console.log('PromptView: Received result from backend:', result);
+      
+      // Check if the result is successful
+      if (!result.success || !result.value) {
+        console.error('PromptView: Failed to get prompts:', result.error);
+        setError(result.error || 'Failed to load prompts');
+        setPrompts([]);
+        setLoading(false);
+        return;
+      }
+      
+      const projectPrompts = result.value;
       console.log('PromptView: Type of prompts:', typeof projectPrompts);
       console.log('PromptView: Is array?', Array.isArray(projectPrompts));
       
@@ -84,6 +95,15 @@ export function PromptView({ selectedProject }: PromptViewProps) {
   };
 
   useEffect(() => {
+    // Clear prompts immediately when project changes
+    if (!selectedProject) {
+      setPrompts([]);
+      setError(null);
+      return;
+    }
+    
+    // Clear existing prompts before loading new ones
+    setPrompts([]);
     loadPrompts();
   }, [selectedProject?.path, sortOrder]);
 

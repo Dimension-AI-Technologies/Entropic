@@ -2,26 +2,36 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from './App';
+import { DIContainer } from './services/DIContainer';
+import { MockProjectRepository } from './repositories/MockProjectRepository';
+import { Project as MVVMProject } from './models/Project';
 
 // Mock the electron API
 const mockGetTodos = jest.fn();
 const mockSaveTodos = jest.fn();
 const mockDeleteTodoFile = jest.fn();
+const mockOnTodoFilesChanged = jest.fn(() => jest.fn()); // Returns a cleanup function
 
 beforeAll(() => {
-  // Mock window.electronAPI
+  // Mock window.electronAPI for App component usage
   Object.defineProperty(window, 'electronAPI', {
     writable: true,
+    configurable: true,
     value: {
       getTodos: mockGetTodos,
       saveTodos: mockSaveTodos,
       deleteTodoFile: mockDeleteTodoFile,
+      onTodoFilesChanged: mockOnTodoFilesChanged,
     },
   });
 });
 
 beforeEach(() => {
   jest.clearAllMocks();
+  
+  // Reset DIContainer to use mock data for each test
+  const container = DIContainer.getInstance();
+  container.reset(); // Reset to clean state
 });
 
 describe('Activity Toggle Feature', () => {
@@ -46,6 +56,28 @@ describe('Activity Toggle Feature', () => {
     mostRecentTodoDate: lastModified,
   });
 
+  // Helper to create MVVM-compatible projects from legacy test data
+  const createMVVMProject = (legacyProject: any): MVVMProject => {
+    const pathParts = legacyProject.path.split(/[/\\]/);
+    const projectName = pathParts[pathParts.length - 1] || 'Unknown';
+    
+    return {
+      id: legacyProject.path.replace(/[/\\:]/g, '-'), // Convert path to ID
+      path: legacyProject.path,
+      flattenedDir: legacyProject.path.replace(/[/\\:]/g, '-'),
+      pathExists: true,
+      lastModified: legacyProject.mostRecentTodoDate || new Date()
+    };
+  };
+
+  // Helper to setup mock DIContainer with test data
+  const setupMockDIContainer = (projects: any[]) => {
+    const mvvmProjects = projects.map(createMVVMProject);
+    const mockRepo = new MockProjectRepository(mvvmProjects);
+    const container = DIContainer.getInstance();
+    container.setProjectRepository(mockRepo);
+  };
+
   test('Activity toggle should be present in sidebar header', async () => {
     const dummyProject = createDummyProject(
       'C:\\Users\\test\\project1',
@@ -54,6 +86,9 @@ describe('Activity Toggle Feature', () => {
     );
     
     mockGetTodos.mockResolvedValue([dummyProject]);
+    
+    // Setup MVVM mock data to match the legacy data
+    setupMockDIContainer([dummyProject]);
     
     render(<App />);
     
@@ -82,6 +117,9 @@ describe('Activity Toggle Feature', () => {
     );
     
     mockGetTodos.mockResolvedValue([dummyProject]);
+    
+    // Setup MVVM mock data to match the legacy data
+    setupMockDIContainer([dummyProject]);
     
     render(<App />);
     
@@ -130,6 +168,9 @@ describe('Activity Toggle Feature', () => {
     
     mockGetTodos.mockResolvedValue([project1, project2]);
     
+    // Setup MVVM mock data to match the legacy data
+    setupMockDIContainer([project1, project2]);
+    
     render(<App />);
     
     // Wait for initial load
@@ -139,17 +180,20 @@ describe('Activity Toggle Feature', () => {
     
     // Wait for the projects to render
     await waitFor(() => {
-      const project1Text = screen.getByText('project1');
+      const project1Text = screen.getByText('✅ project1');
       expect(project1Text).toBeInTheDocument();
     }, { timeout: 2000 });
     
     // Click on project1 to select it
-    const project1Element = screen.getByText('project1');
+    const project1Element = screen.getByText('✅ project1');
     fireEvent.click(project1Element);
     
-    // Verify Activity mode is OFF (default)
-    const toggle = document.querySelector('.activity-toggle input[type="checkbox"]') as HTMLInputElement;
-    expect(toggle).not.toBeChecked();
+    // Verify Activity mode is OFF (default) - wait for the toggle to be rendered
+    await waitFor(() => {
+      const toggle = document.querySelector('.activity-toggle input[type="checkbox"]') as HTMLInputElement;
+      expect(toggle).not.toBeNull();
+      expect(toggle).not.toBeChecked();
+    }, { timeout: 2000 });
     
     // Simulate an update to project2's session
     const updatedProject2 = createDummyProject(
@@ -172,7 +216,7 @@ describe('Activity Toggle Feature', () => {
     const project1Parent = project1Element.closest('.project-item');
     expect(project1Parent).toHaveClass('selected');
     
-    const project2Element = screen.getByText('project2');
+    const project2Element = screen.getByText('✅ project2');
     const project2Parent = project2Element.closest('.project-item');
     expect(project2Parent).not.toHaveClass('selected');
     
@@ -191,17 +235,31 @@ describe('Activity Toggle Feature', () => {
     
     mockGetTodos.mockResolvedValue(projects);
     
+    // Setup MVVM mock data to match the legacy data
+    setupMockDIContainer(projects);
+    
     render(<App />);
     
     await waitFor(() => {
       expect(mockGetTodos).toHaveBeenCalled();
     });
     
-    // Wait for projects to render
+    // Wait for projects to render - let's debug what's actually being rendered
     await waitFor(() => {
-      const project1 = screen.getByText('project1');
-      expect(project1).toBeInTheDocument();
+      const projectsElement = screen.getByText(/Projects \(/);
+      expect(projectsElement).toBeInTheDocument();
     }, { timeout: 2000 });
+    
+    // Wait specifically for MVVM projects to load and render
+    await waitFor(() => {
+      const projectItems = document.querySelectorAll('.project-item .project-name');
+      console.log('DEBUG: Found project items:', Array.from(projectItems).map(item => item.textContent));
+      expect(projectItems.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
+    
+    // Now look for project1 text (it includes status icon) - be more specific to avoid ambiguity
+    const project1 = screen.getByText('✅ project1');
+    expect(project1).toBeInTheDocument();
     
     // Check that the project count is displayed
     const projectsHeader = screen.getByText(/Projects \(3\)/);
@@ -217,6 +275,9 @@ describe('Activity Toggle Feature', () => {
     
     mockGetTodos.mockResolvedValue([dummyProject]);
     
+    // Setup MVVM mock data to match the legacy data
+    setupMockDIContainer([dummyProject]);
+    
     render(<App />);
     
     await waitFor(() => {
@@ -225,7 +286,7 @@ describe('Activity Toggle Feature', () => {
     
     // Wait for projects to render
     await waitFor(() => {
-      const project1 = screen.getByText('project1');
+      const project1 = screen.getByText('✅ project1');
       expect(project1).toBeInTheDocument();
     }, { timeout: 2000 });
     

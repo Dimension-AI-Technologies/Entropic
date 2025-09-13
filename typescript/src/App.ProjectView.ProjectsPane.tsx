@@ -50,9 +50,10 @@ interface ProjectsPaneProps {
   onRefresh?: () => void;
   activityMode: boolean;
   setActivityMode: (mode: boolean) => void;
+  deletedProjects?: Set<string>;
 }
 
-export function ProjectsPane({ projects, selectedProject, onSelectProject, onProjectContextMenu, onRefresh, activityMode, setActivityMode }: ProjectsPaneProps) {
+export function ProjectsPane({ projects, selectedProject, onSelectProject, onProjectContextMenu, onRefresh, activityMode, setActivityMode, deletedProjects }: ProjectsPaneProps) {
   const [sortMethod, setSortMethod] = useState<SortMethod>(1); // recent
   const [showEmptyProjects, setShowEmptyProjects] = useState(false); // hide empty projects by default
   const [showFailedReconstructions, setShowFailedReconstructions] = useState(false); // hide failed path reconstructions by default
@@ -76,10 +77,10 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
     }
   };
 
-  // Filter projects based on settings
+  // Filter projects based on settings - ensure projects is never undefined
   let filteredProjects = showEmptyProjects 
-    ? projects 
-    : projects.filter(p => p.sessions.some(s => s.todos.length > 0));
+    ? (projects || []) 
+    : (projects || []).filter(p => p.sessions && p.sessions.some(s => s.todos && s.todos.length > 0));
   
   // Further filter based on failed reconstructions
   if (!showFailedReconstructions) {
@@ -90,19 +91,26 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
     );
   }
   
+  // Filter out deleted projects for immediate UI updates
+  if (deletedProjects && deletedProjects.size > 0) {
+    filteredProjects = filteredProjects.filter(p => !deletedProjects.has(p.path));
+  }
+  
   // Helper function to get most recent todo date for a project
   const getMostRecentTodoDate = (project: Project): Date => {
     let mostRecent = new Date(0);
-    project.sessions.forEach(session => {
+    if (project.sessions) {
+      project.sessions.forEach(session => {
       const sessionDate = new Date(session.lastModified);
       if (sessionDate > mostRecent) {
         mostRecent = sessionDate;
       }
-    });
+      });
+    }
     return mostRecent;
   };
 
-  const sortedProjects = [...filteredProjects].sort((a, b) => {
+  const sortedProjects = filteredProjects && filteredProjects.length ? [...filteredProjects].sort((a, b) => {
     switch(sortMethod) {
       case 0: // alphabetic
         return a.path.localeCompare(b.path);
@@ -111,13 +119,13 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
         const dateB = getMostRecentTodoDate(b);
         return dateB.getTime() - dateA.getTime();
       case 2: // todos
-        const countA = a.sessions.reduce((sum, s) => sum + s.todos.length, 0);
-        const countB = b.sessions.reduce((sum, s) => sum + s.todos.length, 0);
+        const countA = a.sessions ? a.sessions.reduce((sum, s) => sum + (s.todos ? s.todos.length : 0), 0) : 0;
+        const countB = b.sessions ? b.sessions.reduce((sum, s) => sum + (s.todos ? s.todos.length : 0), 0) : 0;
         return countB - countA;
       default:
         return 0;
     }
-  });
+  }) : [];
 
   return (
     <div className="sidebar">
@@ -176,7 +184,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
       </PaneControls>
       <div className="sidebar-projects">
         {sortedProjects.map((project) => {
-          const todoCount = project.sessions.reduce((sum, s) => sum + s.todos.length, 0);
+          const todoCount = project.sessions ? project.sessions.reduce((sum, s) => sum + (s.todos ? s.todos.length : 0), 0) : 0;
           return (
             <div
               key={project.path}

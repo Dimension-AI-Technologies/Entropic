@@ -2,6 +2,9 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import os from 'node:os';
+import { Result, AsyncResult, Ok, Err, ResultUtils } from './Result.js';
+import { createFlattenedPath as createFlattenedPathImpl } from './path/flatten.js';
+import { validatePathImpl, listDirectoryImpl } from './path/validate.js';
 
 // Default projects directory - can be overridden for testing
 let projectsDir = path.join(os.homedir(), '.claude', 'projects');
@@ -43,32 +46,40 @@ export class PathUtils {
    * This is the most basic flattening approach that both systems should use as fallback
    */
   static createFlattenedPath(realPath: string): string {
-    return realPath.replace(/[/\\]/g, '-');
+    return createFlattenedPathImpl(realPath);
   }
   
   /**
    * Find the project directory for a given real path
    * First tries to find via metadata, then via flattened path
    */
-  static async findProjectDirectory(realPath: string): Promise<ProjectDirFindResult> {
-    try {
-      const projectDirsList = await fs.readdir(projectsDir);
+  static async findProjectDirectory(realPath: string): AsyncResult<ProjectDirFindResult> {
+    const projectDirsListResult = await ResultUtils.fromPromise(fs.readdir(projectsDir));
+    if (!projectDirsListResult.success) {
+      return Err(
+        'Failed to read projects directory',
+        projectDirsListResult.error
+      );
+    }
+    const projectDirsList = projectDirsListResult.value;
       
       // First, look for a project directory with metadata matching this path
       for (const flatDir of projectDirsList) {
         const metadataPath = path.join(projectsDir, flatDir, 'metadata.json');
-        try {
-          if (fsSync.existsSync(metadataPath)) {
-            const metadata = fsSync.readFileSync(metadataPath, 'utf-8');
-            const data = JSON.parse(metadata);
-            if (data.path === realPath) {
-              return {
-                projectDir: path.join(projectsDir, flatDir),
-                found: true
-              };
-            }
+        if (fsSync.existsSync(metadataPath)) {
+          // Read metadata without try-catch
+          const readResult = (() => {
+            const content = fsSync.readFileSync(metadataPath, 'utf-8');
+            const data = JSON.parse(content);
+            return Ok(data);
+          })();
+          
+          if (readResult.success && readResult.value.path === realPath) {
+            return Ok({
+              projectDir: path.join(projectsDir, flatDir),
+              found: true
+            });
           }
-        } catch (e) {
           // Ignore metadata read errors, continue searching
         }
       }
@@ -78,10 +89,10 @@ export class PathUtils {
       const testDir = path.join(projectsDir, flattenedPath);
       
       if (fsSync.existsSync(testDir)) {
-        return {
+        return Ok({
           projectDir: testDir,
           found: true
-        };
+        });
       }
       
       // If still not found, try parent directories (for subdirectory paths)
@@ -90,40 +101,27 @@ export class PathUtils {
       if (parentPath && parentPath !== realPath && parentPath !== '/' && parentPath !== '.') {
         // Try to find parent project recursively
         const parentResult = await PathUtils.findProjectDirectory(parentPath);
-        if (parentResult.found) {
-          console.log(`Found parent project for ${realPath} at ${parentResult.projectDir}`);
+        if (parentResult.success && parentResult.value.found) {
+          console.log(`Found parent project for ${realPath} at ${parentResult.value.projectDir}`);
           return parentResult;
         }
       }
       
-      return { projectDir: null, found: false };
-      
-    } catch (error) {
-      console.error('Error finding project directory:', error);
-      return { projectDir: null, found: false };
-    }
+      return Ok({ projectDir: null, found: false });
   }
   
   /**
    * Validate if a path exists on the filesystem
    */
-  static validatePath(testPath: string): boolean {
-    try {
-      return fsSync.existsSync(testPath);
-    } catch {
-      return false;
-    }
+  static validatePath(testPath: string): Result<boolean> {
+    return validatePathImpl(testPath);
   }
   
   /**
    * List directory contents safely
    */
-  static listDirectory(dirPath: string): string[] {
-    try {
-      return fsSync.readdirSync(dirPath);
-    } catch (error) {
-      return [];
-    }
+  static listDirectory(dirPath: string): Result<string[]> {
+    return listDirectoryImpl(dirPath);
   }
   
   /**
@@ -138,10 +136,11 @@ export class PathUtils {
       const remainingParts = flatParts.slice(consumedParts);
       
       // List what's actually in the current directory
-      const dirContents = PathUtils.listDirectory(currentPath);
-      if (dirContents.length === 0) {
+      const dirResult = PathUtils.listDirectory(currentPath);
+      if (!dirResult.success) {
         break;
       }
+      const dirContents = dirResult.value;
       
       // Try to find the best match for the remaining parts
       let bestMatch = null;
@@ -220,17 +219,19 @@ export class PathUtils {
     const isWindows = process.platform === 'win32';
     
     // First check if we have metadata for this project
-    try {
-      const metadataPath = path.join(projectsDir, flatPath, 'metadata.json');
-      if (fsSync.existsSync(metadataPath)) {
-        const metadata = fsSync.readFileSync(metadataPath, 'utf-8');
-        const data = JSON.parse(metadata);
-        if (data.path) {
-          return data.path;
-        }
+    const metadataPath = path.join(projectsDir, flatPath, 'metadata.json');
+    if (fsSync.existsSync(metadataPath)) {
+      // Read metadata without try-catch
+      const readResult = (() => {
+        const content = fsSync.readFileSync(metadataPath, 'utf-8');
+        const data = JSON.parse(content);
+        return Ok(data);
+      })();
+      
+      if (readResult.success && readResult.value.path) {
+        return readResult.value.path;
       }
-    } catch (error) {
-      // No metadata, continue with reconstruction
+      // No valid metadata, continue with reconstruction
     }
     
     // Windows path with drive letter (e.g., C--Users-username-Source-repos-project-name)
@@ -263,7 +264,8 @@ export class PathUtils {
         return `${driveLetter}:\\${flatParts.join('\\')}`;
       }
       
-      if (PathUtils.validatePath(validatedPath)) {
+      const pathValidation = PathUtils.validatePath(validatedPath);
+      if (pathValidation.success && pathValidation.value) {
         return validatedPath;
       } else {
         // Return manual build if validation failed
@@ -275,8 +277,14 @@ export class PathUtils {
     if (flatPath.startsWith('-')) {
       const unixParts = flatPath.slice(1).split('-');
       const validatedPath = PathUtils.buildAndValidatePath(unixParts, false);
-      // If validation returns just root or partial path, use the simple transformation
-      if (!validatedPath || validatedPath === '/' || validatedPath === '/home/') {
+      
+      // Check if we got the full path or just a partial one
+      // If we didn't consume all parts during validation, use simple transformation
+      const expectedParts = unixParts.length;
+      const validatedParts = validatedPath ? validatedPath.split('/').filter(p => p !== '').length : 0;
+      
+      if (!validatedPath || validatedPath === '/' || validatedParts < expectedParts) {
+        // Simple transformation when filesystem validation fails or is incomplete
         return '/' + flatPath.slice(1).replace(/-/g, '/');
       }
       return validatedPath;
@@ -290,16 +298,26 @@ export class PathUtils {
    * Get real project path from metadata or session files (used for todos)
    * This is the complex reconstruction used in the loadTodosData function
    */
-  static async getRealProjectPath(sessionId: string): Promise<PathReconstructionResult> {
-    try {
+  static async getRealProjectPath(sessionId: string): AsyncResult<PathReconstructionResult> {
       // First, check if there's a metadata file in the project directory
-      const projectDirs = await fs.readdir(projectsDir);
+      const projectDirsResult = await ResultUtils.fromPromise(fs.readdir(projectsDir));
+      if (!projectDirsResult.success) {
+        return Err(
+          'Failed to read project directories',
+          projectDirsResult.error
+        );
+      }
+      const projectDirs = projectDirsResult.value;
       
       // Look for a project directory containing this session
       let matchedProjDir: string | null = null;
       for (const projDir of projectDirs) {
         const projPath = path.join(projectsDir, projDir);
-        const files = await fs.readdir(projPath);
+        const filesResult = await ResultUtils.fromPromise(fs.readdir(projPath));
+        if (!filesResult.success) {
+          continue; // Skip directories we can't read
+        }
+        const files = filesResult.value;
         
         // Check if this project contains our session
         if (files.some((f: string) => f.startsWith(sessionId))) {
@@ -310,40 +328,53 @@ export class PathUtils {
       
       if (!matchedProjDir) {
         // No project directory found for this session
-        return {
+        return Ok({
           path: null,
           failureReason: 'No project directory found containing session files'
-        };
+        });
       }
       
       const projPath = path.join(projectsDir, matchedProjDir);
-      const files = await fs.readdir(projPath);
+      const filesResult = await ResultUtils.fromPromise(fs.readdir(projPath));
+      if (!filesResult.success) {
+        return Ok({
+          path: null,
+          failureReason: 'Could not read project directory'
+        });
+      }
+      const files = filesResult.value;
       
       // Look for a metadata file
       const metadataPath = path.join(projPath, 'metadata.json');
-      try {
-        const metadata = await fs.readFile(metadataPath, 'utf-8');
-        const data = JSON.parse(metadata);
-        if (data.path) {
-          return { path: data.path, flattenedDir: matchedProjDir };
+      const metadataResult = await ResultUtils.fromPromise(
+        fs.readFile(metadataPath, 'utf-8')
+      );
+      if (metadataResult.success) {
+        const parseResult = await ResultUtils.fromPromise(
+          Promise.resolve(JSON.parse(metadataResult.value))
+        );
+        if (parseResult.success && parseResult.value.path) {
+          return Ok({ path: parseResult.value.path, flattenedDir: matchedProjDir });
         }
-      } catch {
-        // No metadata file, continue
       }
+      // No metadata file, continue
       
       // Try to read the actual path from a session file
       for (const file of files) {
         if (file.startsWith(sessionId) && file.endsWith('.json')) {
-          try {
-            const sessionPath = path.join(projPath, file);
-            const sessionContent = await fs.readFile(sessionPath, 'utf-8');
-            const sessionData = JSON.parse(sessionContent);
-            if (sessionData.projectPath) {
-              return { path: sessionData.projectPath, flattenedDir: matchedProjDir };
+          const sessionPath = path.join(projPath, file);
+          const sessionContentResult = await ResultUtils.fromPromise(
+            fs.readFile(sessionPath, 'utf-8')
+          );
+          if (sessionContentResult.success) {
+            const sessionParseResult = await ResultUtils.fromPromise(
+              Promise.resolve(JSON.parse(sessionContentResult.value))
+            );
+            if (sessionParseResult.success && sessionParseResult.value.projectPath) {
+              return Ok({ path: sessionParseResult.value.projectPath, flattenedDir: matchedProjDir });
             }
-          } catch {
-            // Continue to next file
           }
+          // Continue to next file
         }
       }
       
@@ -351,56 +382,62 @@ export class PathUtils {
       const reconstructedPath = PathUtils.guessPathFromFlattenedName(matchedProjDir);
       
       // Validate the path exists before returning
-      if (reconstructedPath && PathUtils.validatePath(reconstructedPath)) {
-        return { path: reconstructedPath, flattenedDir: matchedProjDir };
+      const pathValidation = PathUtils.validatePath(reconstructedPath);
+      if (reconstructedPath && pathValidation.success && pathValidation.value) {
+        return Ok({ path: reconstructedPath, flattenedDir: matchedProjDir });
       } else {
-        return {
+        return Ok({
           path: null,
           flattenedDir: matchedProjDir,
           reconstructionAttempt: reconstructedPath || 'Failed to generate path',
           failureReason: reconstructedPath ? 'Reconstructed path does not exist on filesystem' : 'Path reconstruction failed completely'
-        };
+        });
       }
-    } catch (error) {
-      console.error('Error finding project path:', error);
-      return {
-        path: null,
-        failureReason: `Error during path lookup: ${error}`
-      };
-    }
   }
   
   /**
    * Save project metadata for future lookups
    */
-  static async saveProjectMetadata(flattenedPath: string, realPath: string): Promise<void> {
-    try {
-      const metadataPath = path.join(projectsDir, flattenedPath, 'metadata.json');
-      await fs.writeFile(metadataPath, JSON.stringify({ path: realPath }, null, 2));
-    } catch (error) {
-      // Ignore errors - metadata is best-effort
+  static async saveProjectMetadata(flattenedPath: string, realPath: string): AsyncResult<void> {
+    const metadataPath = path.join(projectsDir, flattenedPath, 'metadata.json');
+    const writeResult = await ResultUtils.fromPromise(
+      fs.writeFile(metadataPath, JSON.stringify({ path: realPath }, null, 2))
+    );
+    if (!writeResult.success) {
+      return Err(
+        'Failed to save project metadata',
+        writeResult.error
+      );
     }
+    return Ok(undefined);
   }
   
   /**
    * Find project path for a session ID (used in todos loading)
    */
-  static async findProjectForSession(sessionId: string): Promise<string | null> {
-    try {
-      const projectDirs = await fs.readdir(projectsDir);
+  static async findProjectForSession(sessionId: string): AsyncResult<string | null> {
+      const projectDirsResult = await ResultUtils.fromPromise(fs.readdir(projectsDir));
+      if (!projectDirsResult.success) {
+        return Err(
+          'Failed to read project directories',
+          projectDirsResult.error
+        );
+      }
+      const projectDirs = projectDirsResult.value;
       
       for (const projDir of projectDirs) {
         const projPath = path.join(projectsDir, projDir);
-        const files = await fs.readdir(projPath);
+        const filesResult = await ResultUtils.fromPromise(fs.readdir(projPath));
+        if (!filesResult.success) {
+          continue; // Skip directories we can't read
+        }
+        const files = filesResult.value;
         
         if (files.some((f: string) => f.startsWith(sessionId))) {
-          return PathUtils.guessPathFromFlattenedName(projDir);
+          return Ok(PathUtils.guessPathFromFlattenedName(projDir));
         }
       }
-    } catch (error) {
-      console.error('Error finding project for session:', error);
-    }
-    
-    return null;
+      
+      return Ok(null);
   }
 }

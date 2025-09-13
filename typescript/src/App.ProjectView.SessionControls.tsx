@@ -75,7 +75,7 @@ export function SessionControls({
     if (!selectedProject || isDeleting) return;
     
     // Find all empty sessions in current project
-    const emptySessions = selectedProject.sessions.filter(s => s.todos.length === 0);
+    const emptySessions = selectedProject.sessions ? selectedProject.sessions.filter(s => s.todos && s.todos.length === 0) : [];
     
     if (emptySessions.length === 0) {
       alert('No empty sessions found in this project.');
@@ -246,13 +246,13 @@ export function SessionControls({
               Merge {selectedTabs.size} Sessions
             </button>
           )}
-          {selectedProject.sessions.some(s => s.todos.length === 0) && (
+          {selectedProject.sessions && selectedProject.sessions.some(s => s.todos && s.todos.length === 0) && (
             <button 
               className="delete-empty-btn" 
               onClick={handleDeleteEmptySessionsInProject}
-              title={`Delete all ${selectedProject.sessions.filter(s => s.todos.length === 0).length} empty session(s) in this project`}
+              title={`Delete all ${selectedProject.sessions ? selectedProject.sessions.filter(s => s.todos && s.todos.length === 0).length : 0} empty session(s) in this project`}
             >
-              Delete Empty ({selectedProject.sessions.filter(s => s.todos.length === 0).length})
+              Delete Empty ({selectedProject.sessions ? selectedProject.sessions.filter(s => s.todos && s.todos.length === 0).length : 0})
             </button>
           )}
           {!showDeleteConfirm ? (

@@ -19,65 +19,71 @@ export class TodoManager {
 
   // Read todos from file
   async readTodos(): Promise<Result<Todo[]>> {
-    try {
-      const fileExists = await this.fileExists();
-      if (!fileExists) {
-        return ResultUtils.ok([]);
-      }
-
-      const content = await fs.readFile(this.filePath, 'utf-8');
-      
-      // Handle empty file
-      if (!content.trim()) {
-        return ResultUtils.ok([]);
-      }
-
-      const todos = JSON.parse(content);
-      
-      if (!Array.isArray(todos)) {
-        return ResultUtils.fail('File does not contain a valid todo array');
-      }
-
-      // Validate each todo
-      for (const todo of todos) {
-        if (!this.isValidTodo(todo)) {
-          return ResultUtils.fail('Invalid todo structure in file');
-        }
-      }
-
-      return ResultUtils.ok(todos);
-    } catch (error) {
-      return ResultUtils.fail(
-        `Failed to read todos: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error
-      );
+    const fileExists = await this.fileExists();
+    if (!fileExists) {
+      return ResultUtils.ok([]);
     }
+
+    const readResult = await ResultUtils.fromPromise(
+      fs.readFile(this.filePath, 'utf-8')
+    );
+    if (!readResult.success) {
+      return ResultUtils.fail(`Failed to read file: ${readResult.error}`, readResult.details);
+    }
+    
+    // Handle empty file
+    if (!readResult.value.trim()) {
+      return ResultUtils.ok([]);
+    }
+
+    const parseResult = await ResultUtils.fromPromise(
+      Promise.resolve(JSON.parse(readResult.value))
+    );
+    if (!parseResult.success) {
+      return ResultUtils.fail(`Failed to parse JSON: ${parseResult.error}`, parseResult.details);
+    }
+    
+    if (!Array.isArray(parseResult.value)) {
+      return ResultUtils.fail('File does not contain a valid todo array');
+    }
+
+    // Validate each todo
+    for (const todo of parseResult.value) {
+      if (!this.isValidTodo(todo)) {
+        return ResultUtils.fail('Invalid todo structure in file');
+      }
+    }
+
+    return ResultUtils.ok(parseResult.value);
   }
 
   // Write todos to file
   async writeTodos(todos: Todo[]): Promise<Result<void>> {
-    try {
-      // Validate all todos before writing
-      for (const todo of todos) {
-        if (!this.isValidTodo(todo)) {
-          return ResultUtils.fail('Invalid todo structure');
-        }
+    // Validate all todos before writing
+    for (const todo of todos) {
+      if (!this.isValidTodo(todo)) {
+        return ResultUtils.fail('Invalid todo structure');
       }
-
-      // Ensure directory exists
-      const dir = path.dirname(this.filePath);
-      await fs.mkdir(dir, { recursive: true });
-
-      // Write with proper formatting
-      await fs.writeFile(this.filePath, JSON.stringify(todos, null, 2), 'utf-8');
-      
-      return ResultUtils.ok(undefined);
-    } catch (error) {
-      return ResultUtils.fail(
-        `Failed to write todos: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error
-      );
     }
+
+    // Ensure directory exists
+    const dir = path.dirname(this.filePath);
+    const mkdirResult = await ResultUtils.fromPromise(
+      fs.mkdir(dir, { recursive: true })
+    );
+    if (!mkdirResult.success) {
+      return ResultUtils.fail(`Failed to create directory: ${mkdirResult.error}`, mkdirResult.details);
+    }
+
+    // Write with proper formatting
+    const writeResult = await ResultUtils.fromPromise(
+      fs.writeFile(this.filePath, JSON.stringify(todos, null, 2), 'utf-8')
+    );
+    if (!writeResult.success) {
+      return ResultUtils.fail(`Failed to write file: ${writeResult.error}`, writeResult.details);
+    }
+    
+    return ResultUtils.ok(undefined);
   }
 
   // Add a new todo
@@ -189,30 +195,23 @@ export class TodoManager {
 
   // Delete the entire file
   async deleteFile(): Promise<Result<void>> {
-    try {
-      const exists = await this.fileExists();
-      if (!exists) {
-        return ResultUtils.ok(undefined);
-      }
-
-      await fs.unlink(this.filePath);
+    const exists = await this.fileExists();
+    if (!exists) {
       return ResultUtils.ok(undefined);
-    } catch (error) {
-      return ResultUtils.fail(
-        `Failed to delete file: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        error
-      );
     }
+
+    const unlinkResult = await ResultUtils.fromPromise(fs.unlink(this.filePath));
+    if (!unlinkResult.success) {
+      return ResultUtils.fail(`Failed to delete file: ${unlinkResult.error}`, unlinkResult.details);
+    }
+    
+    return ResultUtils.ok(undefined);
   }
 
   // Helper methods
   private async fileExists(): Promise<boolean> {
-    try {
-      await fs.access(this.filePath);
-      return true;
-    } catch {
-      return false;
-    }
+    const accessResult = await ResultUtils.fromPromise(fs.access(this.filePath));
+    return accessResult.success;
   }
 
   private isValidTodo(todo: any): todo is Todo {

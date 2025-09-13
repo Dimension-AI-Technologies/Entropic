@@ -95,8 +95,8 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
       </div>
       <div className="sidebar-projects">
         {sortedProjects.map((project) => {
-          const todoCount = project.sessions.reduce((sum, s) => sum + s.todos.length, 0);
-          const hasActiveTodos = project.sessions.some(s => s.todos.some(t => t.status !== 'completed'));
+          const todoCount = project.sessions ? project.sessions.reduce((sum, s) => sum + (s.todos ? s.todos.length : 0), 0) : 0;
+          const hasActiveTodos = project.sessions && project.sessions.some(s => s.todos && s.todos.some(t => t.status !== 'completed'));
           return (
             <div
               key={project.path}

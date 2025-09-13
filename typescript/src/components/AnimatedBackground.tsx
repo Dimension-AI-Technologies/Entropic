@@ -71,7 +71,7 @@ export const AnimatedBackground: React.FC = () => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [throbSpeed, rotationSpeed]);
+  }, []); // Empty dependency array - animation loop manages itself
 
   return (
     <div 

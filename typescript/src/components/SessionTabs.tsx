@@ -26,7 +26,7 @@ export const SessionTabs: React.FC<SessionTabsProps> = ({
 
   return (
     <div className="session-tabs">
-      {selectedProject.sessions
+      {selectedProject.sessions && selectedProject.sessions.length ? selectedProject.sessions
         .sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())
         .map((session) => {
         const counts = getStatusCounts(session);
@@ -49,7 +49,7 @@ export const SessionTabs: React.FC<SessionTabsProps> = ({
             </div>
           </div>
         );
-      })}
+      }) : null}
       {selectedTabs.size === 2 && (
         <button className="merge-button" onClick={startMerge}>
           Merge Selected ({selectedTabs.size})

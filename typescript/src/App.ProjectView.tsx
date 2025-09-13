@@ -1,160 +1,132 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { ProjectsPane } from './App.ProjectView.ProjectsPane';
+import { ProjectsPaneMVVM } from './components/ProjectsPaneMVVM';
 import { SingleProjectPane } from './App.ProjectView.SingleProjectPane';
+import { DIContainer } from './services/DIContainer';
+import { Project as MVVMProject } from './models/Project';
+import { Session, Todo } from './models/Todo';
+import { ProjectContextMenu } from './components/ProjectContextMenu';
+import { useResize } from './components/hooks/useResize';
 
-interface Todo {
-  content: string;
-  status: 'pending' | 'in_progress' | 'completed';
-  activeForm?: string;
-  id?: string;
-  created?: Date;
-}
-
-interface Session {
-  id: string;
-  todos: Todo[];
-  lastModified: Date;
-  created?: Date;
-  filePath?: string;
-}
-
-interface Project {
-  path: string;
-  sessions: Session[];
-  mostRecentTodoDate?: Date;
-}
 
 interface ProjectViewProps {
-  projects: Project[];
-  onLoadTodos: () => Promise<void>;
-  initialProjectPath?: string | null;
-  initialSessionId?: string | null;
-  initialTodoIndex?: number | null;
   activityMode: boolean;
   setActivityMode: (mode: boolean) => void;
 }
 
-export function ProjectView({ projects, onLoadTodos, initialProjectPath, initialSessionId, initialTodoIndex, activityMode, setActivityMode }: ProjectViewProps) {
-  console.log('[ProjectView] Rendering with', projects.length, 'projects');
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps) {
+  console.log('[ProjectView] Rendering');
+  const [projects, setProjects] = useState<MVVMProject[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [selectedMVVMProject, setSelectedMVVMProject] = useState<MVVMProject | null>(null);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [selectedTodoIndex, setSelectedTodoIndex] = useState<number | null>(null);
   const [projectSessionMap, setProjectSessionMap] = useState<Map<string, string>>(new Map());
-  const [leftPaneWidth, setLeftPaneWidth] = useState(260);
-  const [isResizing, setIsResizing] = useState(false);
+  const { leftPaneWidth, setLeftPaneWidth, isResizing, setIsResizing } = useResize(260, 200, 400);
+  const [contextMenu, setContextMenu] = useState<{x: number, y: number, project: MVVMProject} | null>(null);
+  const [deletedProjects, setDeletedProjects] = useState<Set<string>>(new Set());
 
-  // Mouse move and up handlers for resizing
+  // Get ViewModels from container
+  const container = DIContainer.getInstance();
+  const projectsViewModel = container.getProjectsViewModel();
+  const todosViewModel = container.getTodosViewModel();
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
+  // Subscribe to ViewModel changes and sync local state
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      const newWidth = e.clientX;
-      if (newWidth >= 200 && newWidth <= 400) {
-        setLeftPaneWidth(newWidth);
-      }
+    // Initial load
+    const updateProjects = () => {
+      const vmProjects = projectsViewModel.getProjects();
+      setProjects(vmProjects);
+      console.log('[ProjectView] Updated projects from ViewModel:', vmProjects.length);
     };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
+    
+    const updateSessions = () => {
+      const vmSessions = todosViewModel.getSessions();
+      setSessions(vmSessions);
+      console.log('[ProjectView] Updated sessions from ViewModel:', vmSessions.length);
     };
-
-    if (isResizing) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-    }
-
+    
+    updateProjects();
+    updateSessions();
+    
+    // Subscribe to changes
+    const unsubscribeProjects = projectsViewModel.onChange(updateProjects);
+    const unsubscribeTodos = todosViewModel.onChange(updateSessions);
+    
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      unsubscribeProjects();
+      unsubscribeTodos();
     };
-  }, [isResizing]);
+  }, [projectsViewModel, todosViewModel])
 
-  // Handle initial selection from Global View navigation
+  // Resizing logic moved to useResize hook
+
+  // Auto-select most recent project and session on initial load
   useEffect(() => {
-    if (initialProjectPath && initialSessionId && projects.length > 0) {
-      const project = projects.find(p => p.path === initialProjectPath);
-      if (project) {
-        const session = project.sessions.find(s => s.id === initialSessionId);
-        if (session) {
-          setSelectedProject(project);
-          setSelectedSession(session);
-          // Set the initial todo index if provided
-          if (initialTodoIndex !== null && initialTodoIndex !== undefined) {
-            setSelectedTodoIndex(initialTodoIndex);
-          }
-          return;
-        }
+    if (!selectedMVVMProject && projects.length > 0) {
+      // Select the most recently modified project
+      const sortedProjects = projectsViewModel.getProjectsSortedByDate();
+      if (sortedProjects.length > 0) {
+        setSelectedMVVMProject(sortedProjects[0]);
       }
     }
     
-    // Auto-select most recent project and session on initial load if no initial selection
-    if (!selectedProject && projects.length > 0) {
-      let mostRecentProject: Project | null = null;
-      let mostRecentSession: Session | null = null;
-      let mostRecentDate: Date | null = null;
-      
-      // Find the project with the most recently modified session
-      for (const project of projects) {
-        for (const session of project.sessions) {
-          const sessionDate = new Date(session.lastModified);
-          if (!mostRecentDate || sessionDate > mostRecentDate) {
-            mostRecentDate = sessionDate;
-            mostRecentProject = project;
-            mostRecentSession = session;
-          }
-        }
-      }
-      
-      // Select the most recent project and session found
-      if (mostRecentProject && mostRecentSession) {
-        setSelectedProject(mostRecentProject);
-        setSelectedSession(mostRecentSession);
+    if (!selectedSession && sessions.length > 0) {
+      // Select the most recently modified session
+      const sortedSessions = todosViewModel.getSessionsSortedByDate();
+      if (sortedSessions.length > 0) {
+        setSelectedSession(sortedSessions[0]);
       }
     }
-  }, [projects, selectedProject, initialProjectPath, initialSessionId, initialTodoIndex]);
+  }, [projects, sessions, selectedMVVMProject, selectedSession, projectsViewModel, todosViewModel]);
 
-  // Update selectedProject when projects change
+  // Update selected project when projects change
   useEffect(() => {
-    if (selectedProject) {
-      const updated = projects.find(p => p.path === selectedProject.path);
+    if (selectedMVVMProject) {
+      const updated = projects.find(p => p.id === selectedMVVMProject.id);
       if (updated) {
-        setSelectedProject(updated);
-        // Update selected session if it exists
-        if (selectedSession) {
-          const updatedSession = updated.sessions.find(s => s.id === selectedSession.id);
-          if (updatedSession) {
-            setSelectedSession(updatedSession);
-          }
-        }
+        setSelectedMVVMProject(updated);
       }
     }
-  }, [projects, selectedProject, selectedSession]);
+    
+    // Update selected session when sessions change
+    if (selectedSession) {
+      const updated = sessions.find(s => s.id === selectedSession.id);
+      if (updated) {
+        setSelectedSession(updated);
+      }
+    }
+  }, [projects, sessions, selectedMVVMProject, selectedSession]);
 
-  const selectProject = (project: Project) => {
+
+  // Handle MVVM project selection
+  const selectMVVMProject = (mvvmProject: MVVMProject) => {
     // Save current session selection before switching
-    if (selectedProject && selectedSession) {
+    if (selectedMVVMProject && selectedSession) {
       setProjectSessionMap(prev => {
         const newMap = new Map(prev);
-        newMap.set(selectedProject.path, selectedSession.id);
+        newMap.set(selectedMVVMProject.path, selectedSession.id);
         return newMap;
       });
     }
     
-    setSelectedProject(project);
+    setSelectedMVVMProject(mvvmProject);
     
     // Check if we have a previously selected session for this project
-    const rememberedSessionId = projectSessionMap.get(project.path);
+    const rememberedSessionId = projectSessionMap.get(mvvmProject.path);
     if (rememberedSessionId) {
-      const rememberedSession = project.sessions.find(s => s.id === rememberedSessionId);
+      const rememberedSession = sessions.find(s => s.id === rememberedSessionId);
       if (rememberedSession) {
         setSelectedSession(rememberedSession);
         return;
       }
     }
     
-    // Otherwise, select the most recently updated session
-    if (project.sessions.length > 0) {
-      const mostRecent = [...project.sessions].sort((a, b) => 
+    // Otherwise, select the most recent session for this project
+    const projectSessions = todosViewModel.getSessionsForProject(mvvmProject.path);
+    if (projectSessions.length > 0) {
+      const mostRecent = [...projectSessions].sort((a, b) => 
         b.lastModified.getTime() - a.lastModified.getTime()
       )[0];
       setSelectedSession(mostRecent);
@@ -167,32 +139,157 @@ export function ProjectView({ projects, onLoadTodos, initialProjectPath, initial
     setSelectedSession(session);
     
     // Remember this session selection for the current project
-    if (selectedProject) {
+    if (selectedMVVMProject) {
       setProjectSessionMap(prev => {
         const newMap = new Map(prev);
-        newMap.set(selectedProject.path, session.id);
+        newMap.set(selectedMVVMProject.path, session.id);
         return newMap;
       });
     }
   };
 
-  const handleProjectContextMenu = (e: React.MouseEvent, project: Project) => {
-    // Pass through to projects pane - could implement if needed
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
+        setContextMenu(null);
+      }
+    };
+    
+    if (contextMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [contextMenu]);
+
+  const handleMVVMProjectContextMenu = (e: React.MouseEvent, mvvmProject: MVVMProject) => {
     e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, project: mvvmProject });
+  };
+  
+  const getFlattenedPath = (projectPath: string): string => {
+    // Convert project path to flattened path format used in ~/.claude/projects
+    let flatPath = projectPath;
+    
+    // Assume Unix-style paths for now, can be enhanced later
+    // Replace home directory pattern
+    if (flatPath.startsWith('/Users/')) {
+      const parts = flatPath.split('/');
+      if (parts.length > 2) {
+        flatPath = `-Users-${parts[2]}${flatPath.substring(`/Users/${parts[2]}`.length)}`;
+      }
+    }
+    
+    // Replace path separators with hyphens
+    flatPath = flatPath.replace(/[/\\]/g, '-');
+    
+    // Handle Windows-style paths
+    if (flatPath.includes(':')) {
+      flatPath = flatPath.replace(':', '');
+    }
+    
+    return flatPath;
+  };
+  
+  const handleCopyProjectName = () => {
+    if (contextMenu) {
+      const projectName = contextMenu.project.path.split(/[\\/]/).pop() || 'Unknown';
+      navigator.clipboard.writeText(projectName);
+      setContextMenu(null);
+    }
+  };
+  
+  const handleCopyProjectPath = () => {
+    if (contextMenu) {
+      navigator.clipboard.writeText(contextMenu.project.path);
+      setContextMenu(null);
+    }
+  };
+  
+  const handleCopyFlattenedPath = () => {
+    if (contextMenu) {
+      const flatPath = getFlattenedPath(contextMenu.project.path);
+      // Construct the full path manually without Node.js path module
+      const homePath = '/Users/' + (contextMenu.project.path.split('/')[2] || 'unknown');
+      const fullPath = `${homePath}/.claude/projects/${flatPath}`;
+      navigator.clipboard.writeText(fullPath);
+      setContextMenu(null);
+    }
+  };
+  
+  const handleDeleteProject = async () => {
+    if (contextMenu) {
+      const projectToDelete = contextMenu.project;
+      const projectName = projectToDelete.path.split(/[\\/]/).pop() || 'Unknown';
+      
+      // Show confirmation dialog
+      if (window.confirm(`Are you sure you want to delete the project "${projectName}"?\n\nThis will remove it from the list but won't delete any files on disk.`)) {
+        // Close context menu immediately
+        setContextMenu(null);
+        
+        // Immediately hide the project from UI by adding it to deletedProjects
+        setDeletedProjects(prev => {
+          const newSet = new Set(prev);
+          newSet.add(projectToDelete.path);
+          return newSet;
+        });
+        
+        // If this is the selected project, clear selection
+        if (selectedMVVMProject?.path === projectToDelete.path) {
+          setSelectedMVVMProject(null);
+          setSelectedSession(null);
+          setSelectedTodoIndex(null);
+        }
+        
+        // Get the flattened path for the project
+        const flatPath = getFlattenedPath(projectToDelete.path);
+        const projectDirPath = `/Users/${projectToDelete.path.split('/')[2] || 'unknown'}/.claude/projects/${flatPath}`;
+        
+        try {
+          // Call backend to delete the project directory
+          const result = await window.electronAPI.deleteProjectDirectory(projectDirPath);
+          
+          if (result.success && result.value) {
+            console.log('Successfully deleted project directory:', projectDirPath);
+          } else if (result.success) {
+            console.log('Could not delete project directory (may not exist):', projectDirPath);
+          } else {
+            console.error('Error deleting project directory:', result.error);
+          }
+        } catch (error) {
+          console.error('Error calling deleteProjectDirectory:', error);
+          // Continue anyway - we still want to remove from UI
+        }
+        
+        // Force refresh ViewModels to get updated list
+        await projectsViewModel.refresh();
+        await todosViewModel.refresh();
+      } else {
+        setContextMenu(null);
+      }
+    }
   };
 
   return (
     <div className="app-main">
       {/* Projects Pane (Left) */}
       <div className="sidebar" style={{ width: leftPaneWidth }}>
-        <ProjectsPane
-          projects={projects}
-          selectedProject={selectedProject}
-          onSelectProject={selectProject}
-          onProjectContextMenu={handleProjectContextMenu}
-          onRefresh={onLoadTodos}
+        <ProjectsPaneMVVM
+          viewModel={projectsViewModel}
+          todosViewModel={todosViewModel}
+          selectedProject={selectedMVVMProject}
+          onSelectProject={selectMVVMProject}
+          onProjectContextMenu={handleMVVMProjectContextMenu}
+          onRefresh={async () => {
+            await projectsViewModel.refresh();
+            await todosViewModel.refresh();
+          }}
           activityMode={activityMode}
           setActivityMode={setActivityMode}
+          deletedProjects={deletedProjects}
         />
       </div>
       
@@ -204,12 +301,29 @@ export function ProjectView({ projects, onLoadTodos, initialProjectPath, initial
       
       {/* Single Project Pane (Right) */}
       <SingleProjectPane
-        selectedProject={selectedProject}
+        selectedProject={selectedMVVMProject}
         selectedSession={selectedSession}
         selectedTodoIndex={selectedTodoIndex}
         onSessionSelect={selectSession}
-        onLoadTodos={onLoadTodos}
+        onRefresh={async () => {
+          await projectsViewModel.refresh();
+          await todosViewModel.refresh();
+        }}
       />
+      
+      {/* Context Menu */}
+      {contextMenu && (
+        <ProjectContextMenu
+          ref={contextMenuRef}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          project={contextMenu.project}
+          onCopyProjectName={handleCopyProjectName}
+          onCopyProjectPath={handleCopyProjectPath}
+          onCopyFlattenedPath={handleCopyFlattenedPath}
+          onDeleteProject={handleDeleteProject}
+        />
+      )}
     </div>
   );
 }

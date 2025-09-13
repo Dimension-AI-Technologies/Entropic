@@ -3,6 +3,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { Result, Ok, Err, ResultUtils } from '../utils/Result.js';
 
 // Colors for output
 const RED = '\x1b[31m';
@@ -13,21 +14,23 @@ const RESET = '\x1b[0m';
 const projectsDir = path.join(os.homedir(), '.config-dir', 'projects');
 
 // Validate if a path exists on the filesystem
-function validatePath(testPath: string): boolean {
-  try {
-    return fs.existsSync(testPath);
-  } catch {
-    return false;
-  }
+function validatePath(testPath: string): Result<boolean> {
+  // fs.existsSync doesn't throw in normal operation, just returns boolean
+  const exists = fs.existsSync(testPath);
+  return Ok(exists);
 }
 
 // List directory contents to find matching entries
-function listDirectory(dirPath: string): string[] {
-  try {
-    return fs.readdirSync(dirPath);
-  } catch {
-    return [];
+function listDirectory(dirPath: string): Result<string[]> {
+  // fs.readdirSync may fail if directory doesn't exist or permissions issue
+  // We handle this without try-catch by checking existence first
+  if (!fs.existsSync(dirPath)) {
+    return Err(`Directory does not exist: ${dirPath}`);
   }
+  
+  // Use Result pattern for directory reading
+  const contents = fs.readdirSync(dirPath);
+  return Ok(contents);
 }
 
 // Build path incrementally with greedy matching against actual filesystem
@@ -43,11 +46,12 @@ function buildAndValidatePath(flatParts: string[], isWindows: boolean): string |
     console.log(`  At: ${currentPath || '[root]'}, Remaining: [${remainingParts.join(', ')}]`);
     
     // List what's actually in the current directory
-    const dirContents = listDirectory(currentPath || '/');
-    if (dirContents.length === 0) {
-      console.log(`  Cannot list directory, stopping`);
+    const dirResult = listDirectory(currentPath || '/');
+    if (!dirResult.success) {
+      console.log(`  Cannot list directory: ${(dirResult as any).error}, stopping`);
       break;
     }
+    const dirContents = (dirResult as any).value;
     
     // Try to find the best match for the remaining parts
     let bestMatch = null;
@@ -122,18 +126,20 @@ function guessPathFromFlattenedName(flatPath: string): string {
   console.log(`\nTesting: ${flatPath}`);
   
   // First check if we have metadata for this project
-  try {
-    const metadataPath = path.join(projectsDir, flatPath, 'metadata.json');
-    if (fs.existsSync(metadataPath)) {
-      const metadata = fs.readFileSync(metadataPath, 'utf-8');
-      const data = JSON.parse(metadata);
-      if (data.path) {
-        console.log(`  Cached metadata: ${data.path}`);
-        return data.path;
-      }
+  const metadataPath = path.join(projectsDir, flatPath, 'metadata.json');
+  if (fs.existsSync(metadataPath)) {
+    // Read metadata file without try-catch
+    const metadataResult = (() => {
+      const content = fs.readFileSync(metadataPath, 'utf-8');
+      const data = JSON.parse(content);
+      return Ok(data);
+    })();
+    
+    if (metadataResult.success && metadataResult.value.path) {
+      console.log(`  Cached metadata: ${metadataResult.value.path}`);
+      return metadataResult.value.path;
     }
-  } catch (error) {
-    // No metadata, continue with reconstruction
+    // No valid metadata, continue with reconstruction
   }
   
   // Windows path with drive letter
@@ -160,12 +166,18 @@ function guessPathFromFlattenedName(flatPath: string): string {
     const allParts = [driveLetter, ...flatParts];
     const validatedPath = buildAndValidatePath(allParts, true);
     
-    if (validatedPath && validatePath(validatedPath)) {
-      console.log(`  ${GREEN}✓ Successfully validated: ${validatedPath}${RESET}`);
-      return validatedPath;
+    if (validatedPath) {
+      const pathValidation = validatePath(validatedPath);
+      if (pathValidation.success && pathValidation.value) {
+        console.log(`  ${GREEN}✓ Successfully validated: ${validatedPath}${RESET}`);
+        return validatedPath;
+      } else {
+        console.log(`  ${YELLOW}⚠ Could not fully validate: ${validatedPath}${RESET}`);
+        return validatedPath;
+      }
     } else {
-      console.log(`  ${YELLOW}⚠ Could not fully validate: ${validatedPath || flatPath}${RESET}`);
-      return validatedPath || flatPath;
+      console.log(`  ${YELLOW}⚠ Could not build path: ${flatPath}${RESET}`);
+      return flatPath;
     }
   }
   
@@ -201,7 +213,8 @@ function runTests() {
   
   for (const projectDir of projects) {
     const reconstructed = guessPathFromFlattenedName(projectDir);
-    const exists = validatePath(reconstructed);
+    const validateResult = validatePath(reconstructed);
+    const exists = validateResult.success ? validateResult.value : false;
     
     results.push({ dir: projectDir, path: reconstructed, exists });
     
@@ -241,7 +254,9 @@ function runTests() {
     const result = guessPathFromFlattenedName(hiddenDirTestCase);
     console.log(`Input: ${hiddenDirTestCase}`);
     console.log(`Reconstructed: ${result}`);
-    console.log(`Exists: ${validatePath(result) ? GREEN + '✓' : RED + '✗'}${RESET}`);
+    const validateResult = validatePath(result);
+    const exists = validateResult.success ? validateResult.value : false;
+    console.log(`Exists: ${exists ? GREEN + '✓' : RED + '✗'}${RESET}`);
   } else {
     console.log(`${YELLOW}No suitable test case found for hidden directory patterns${RESET}`);
   }

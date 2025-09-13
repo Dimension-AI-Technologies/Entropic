@@ -50,6 +50,7 @@ interface SessionTabsProps {
   contextMenuPosition: { x: number; y: number };
   onContextMenuCopyId: () => void;
   onContextMenuClose: () => void;
+  onContextMenuDelete?: () => void;
 }
 
 export function SessionTabs({ 
@@ -61,7 +62,8 @@ export function SessionTabs({
   onTabRightClick,
   showContextMenu,
   contextMenuPosition,
-  onContextMenuCopyId
+  onContextMenuCopyId,
+  onContextMenuDelete
 }: SessionTabsProps) {
 
   const getStatusCounts = (session: Session) => {
@@ -119,7 +121,7 @@ export function SessionTabs({
 
   return (
     <div className="session-tabs">
-      {selectedProject.sessions
+      {selectedProject.sessions && selectedProject.sessions.length ? selectedProject.sessions
         .sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())
         .map((session) => {
         const counts = getStatusCounts(session);
@@ -142,7 +144,7 @@ export function SessionTabs({
             </div>
           </div>
         );
-      })}
+      }) : null}
       {selectedTabs.size >= 2 && (
         <button className="merge-button" onClick={onStartMerge}>
           Merge Selected ({selectedTabs.size})
@@ -158,6 +160,11 @@ export function SessionTabs({
           <div className="context-menu-item" onClick={onContextMenuCopyId}>
             Copy Session ID
           </div>
+          {onContextMenuDelete && (
+            <div className="context-menu-item" onClick={onContextMenuDelete}>
+              Delete Session
+            </div>
+          )}
         </div>
       )}
     </div>

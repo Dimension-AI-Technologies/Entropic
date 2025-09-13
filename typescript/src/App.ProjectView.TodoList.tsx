@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { TodoItem } from './components/todos/TodoItem';
 import { Result, Ok, Err } from './utils/Result';
 
 interface Todo {
@@ -380,73 +381,28 @@ export function TodoList({
             const originalIndex = displayTodos.indexOf(todo);
             const isSelected = selectedIndices.has(originalIndex);
             const sequenceNumber = index + 1;
-            
             return (
-              <div
+              <TodoItem
                 key={`${todo.id || index}-${originalIndex}`}
-                className={`todo-item ${isSelected ? 'selected' : ''} ${
-                  dragOverIndex === originalIndex ? 'drag-over' : ''
-                }`}
-                draggable={!editingIndex}
-                onDragStart={(e) => handleDragStart(e, originalIndex)}
-                onDragOver={(e) => handleDragOver(e, originalIndex)}
-                onDrop={(e) => handleDrop(e, originalIndex)}
+                todo={todo}
+                originalIndex={originalIndex}
+                sequenceNumber={sequenceNumber}
+                isSelected={isSelected}
+                isDragOver={dragOverIndex === originalIndex}
+                editingIndex={editingIndex}
+                editingContent={editingContent}
+                onStartEdit={startEdit}
+                onChangeEdit={setEditingContent}
+                onSaveEdit={saveEdit}
+                onCancelEdit={cancelEdit}
+                onDelete={handleDelete}
+                onToggleStatus={handleStatusToggle}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
                 onDragLeave={() => setDragOverIndex(null)}
-                onClick={(e) => handleTodoClick(e, originalIndex)}
-              >
-                <span className="todo-sequence">{sequenceNumber}.</span>
-                <input
-                  type="checkbox"
-                  className={`todo-checkbox ${todo.status}`}
-                  checked={todo.status === 'completed'}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    handleStatusToggle(originalIndex);
-                  }}
-                  title={`Status: ${todo.status}`}
-                />
-                {editingIndex === originalIndex ? (
-                  <input
-                    type="text"
-                    className="todo-edit-input"
-                    value={editingContent}
-                    onChange={(e) => setEditingContent(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') saveEdit();
-                      if (e.key === 'Escape') cancelEdit();
-                    }}
-                    onBlur={saveEdit}
-                    autoFocus
-                  />
-                ) : (
-                  <>
-                    <span className="todo-content">
-                      {todo.id && <span className="todo-id">[{todo.id.substring(0, 4)}] </span>}
-                      {todo.content}
-                    </span>
-                    <div className="todo-actions">
-                      <button 
-                        className="edit-btn" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startEdit(originalIndex);
-                        }}
-                      >
-                        ✏️
-                      </button>
-                      <button 
-                        className="delete-btn" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(originalIndex);
-                        }}
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+                onClick={handleTodoClick}
+              />
             );
           })}
         </div>

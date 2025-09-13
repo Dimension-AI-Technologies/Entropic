@@ -195,6 +195,10 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  height: 100%;
+  width: 300px;
+  min-width: 250px;
+  max-width: 400px;
 }
 
 /* Uses shared .pane-header dimensions for alignment */
@@ -234,6 +238,14 @@ body {
   padding: 10px 20px;
   background: #2f3136;
   border-bottom: 1px solid #35373b;
+}
+
+.sidebar-projects {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px;
+  min-height: 0;
 }
 
 .project-count {

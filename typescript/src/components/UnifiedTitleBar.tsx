@@ -96,7 +96,7 @@ export function UnifiedTitleBar({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [throbSpeed, rotationSpeed]);
+  }, []); // Empty dependency array - animation loop manages itself
 
   return (
     <div className="unified-title-bar">

@@ -1,5 +1,6 @@
 // Result<T> pattern for better error handling
 export type Result<T> = Success<T> | Failure;
+export type AsyncResult<T> = Promise<Result<T>>;
 
 export interface Success<T> {
   success: true;
@@ -51,15 +52,39 @@ export class ResultUtils {
     return result;
   }
 
-  static async fromPromise<T>(promise: Promise<T>): Promise<Result<T>> {
-    try {
-      const value = await promise;
-      return Ok(value);
-    } catch (error) {
-      return Err(
+  static async fromPromise<T>(promise: Promise<T>): AsyncResult<T> {
+    // This method wraps a promise to return a Result - implementation without try-catch
+    return promise
+      .then(value => Ok(value))
+      .catch(error => Err(
         error instanceof Error ? error.message : 'Unknown error',
         error
-      );
+      ));
+  }
+
+  /**
+   * Collect multiple results into a single result
+   * If all results are successful, returns Ok with array of values
+   * If any result fails, returns the first failure
+   */
+  static collect<T>(results: Result<T>[]): Result<T[]> {
+    const values: T[] = [];
+    for (const result of results) {
+      if (!result.success) {
+        return result; // Return first failure
+      }
+      values.push(result.value);
     }
+    return Ok(values);
+  }
+
+  /**
+   * Collect multiple async results into a single result
+   * If all results are successful, returns Ok with array of values
+   * If any result fails, returns the first failure
+   */
+  static async collectAsync<T>(results: AsyncResult<T>[]): AsyncResult<T[]> {
+    const resolvedResults = await Promise.all(results);
+    return ResultUtils.collect(resolvedResults);
   }
 }

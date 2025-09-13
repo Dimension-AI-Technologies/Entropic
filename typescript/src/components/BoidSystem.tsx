@@ -1,30 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ClaudeLogo from '../../assets/ClaudeLogo.png';
 import { LOGO_RADIUS } from './AnimatedBackground';
+import { BOID_CONFIG_BASE as BASE_CONFIG } from './boids/config';
 
-// Base configuration constants
-const BOID_CONFIG_BASE = {
-  MAX_BOIDS: 10,
-  MIN_BOID_SIZE: 30,
-  MAX_BOID_SIZE: 50,
-  SPAWN_PROBABILITY_BASE: 1.0, // 100% at flock size 0
-  SPAWN_PROBABILITY_DECAY: 0.15, // Exponential decay factor
-  DETACH_PROBABILITY_MAX: 0.02, // 2% per frame at flock size 10+
-  DETACH_PROBABILITY_SCALE: 0.002, // Linear increase per boid
-  BOID_SPEED: 0.5,
-  BOID_ACCELERATION: 0.02,
-  ALIGNMENT_RADIUS: 150,
-  COHESION_RADIUS: 100,
-  SEPARATION_RADIUS: 50,
-  ALIGNMENT_FORCE: 0.05,
-  COHESION_FORCE: 0.03,
-  SEPARATION_FORCE: 0.1,
-  WANDER_FORCE: 0.02,
-  EDGE_MARGIN: 100,
-  EDGE_TURN_FORCE: 0.05,
-  LOGO_BOUNCE_FORCE: 0.15, // Force applied when bouncing off logo
-  LOGO_DETECTION_RADIUS: LOGO_RADIUS + 20, // Detection radius for logo collision
-};
+// Base configuration constants now in separate module
+const BOID_CONFIG_BASE = BASE_CONFIG;
 
 // Stochastic parameters with mean reversion
 class StochasticParameters {

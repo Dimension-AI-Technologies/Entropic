@@ -89,8 +89,11 @@ describe('PathUtils', () => {
       await fs.mkdir(flattenedProjectDir, { recursive: true });
       
       const result = await PathUtils.findProjectDirectory(projectDir);
-      expect(result.found).toBe(true);
-      expect(result.projectDir).toBe(flattenedProjectDir);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.value.found).toBe(true);
+        expect(result.value.projectDir).toBe(flattenedProjectDir);
+      }
     });
 
     test('should find project directory from metadata', async () => {
@@ -106,7 +109,10 @@ describe('PathUtils', () => {
       await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
       
       const result = await PathUtils.findProjectDirectory(projectDir);
-      expect(result.found).toBe(true);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.value.found).toBe(true);
+      }
     });
 
     test('should find parent project for subdirectory paths', async () => {
@@ -116,15 +122,21 @@ describe('PathUtils', () => {
       await fs.mkdir(flattenedProjectDir, { recursive: true });
       
       const result = await PathUtils.findProjectDirectory(subdirPath);
-      expect(result.found).toBe(true);
-      expect(result.projectDir).toBe(flattenedProjectDir);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.value.found).toBe(true);
+        expect(result.value.projectDir).toBe(flattenedProjectDir);
+      }
     });
 
     test('should return not found for non-existent project', async () => {
       const nonExistentPath = path.join(testDir, 'non-existent-project');
       const result = await PathUtils.findProjectDirectory(nonExistentPath);
-      expect(result.found).toBe(false);
-      expect(result.projectDir).toBe(null);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.value.found).toBe(false);
+        expect(result.value.projectDir).toBe(null);
+      }
     });
   });
 
@@ -141,25 +153,47 @@ describe('PathUtils', () => {
       await fs.writeFile(sessionFile, JSON.stringify({ projectPath: projectDir }));
       
       const result = await PathUtils.getRealProjectPath(sessionId);
-      expect(result.path).toBe(projectDir);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.value.path).toBe(projectDir);
+      }
     });
 
     test('should return null when session not found', async () => {
       const result = await PathUtils.getRealProjectPath('non-existent-session');
-      expect(result.path).toBe(null);
-      expect(result.failureReason).toBeTruthy();
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.value.path).toBe(null);
+        expect(result.value.failureReason).toBeTruthy();
+      }
     });
   });
 
   describe('validatePath', () => {
     test('should validate existing paths', () => {
-      expect(PathUtils.validatePath(testDir)).toBe(true);
-      expect(PathUtils.validatePath(projectDir)).toBe(true);
+      const result1 = PathUtils.validatePath(testDir);
+      expect(result1.success).toBe(true);
+      if (result1.success) {
+        expect(result1.value).toBe(true);
+      }
+      const result2 = PathUtils.validatePath(projectDir);
+      expect(result2.success).toBe(true);
+      if (result2.success) {
+        expect(result2.value).toBe(true);
+      }
     });
 
     test('should return false for non-existent paths', () => {
-      expect(PathUtils.validatePath('/non/existent/path')).toBe(false);
-      expect(PathUtils.validatePath('C:\\fake\\path')).toBe(false);
+      const result1 = PathUtils.validatePath('/non/existent/path');
+      expect(result1.success).toBe(true);
+      if (result1.success) {
+        expect(result1.value).toBe(false);
+      }
+      const result2 = PathUtils.validatePath('C:\\fake\\path');
+      expect(result2.success).toBe(true);
+      if (result2.success) {
+        expect(result2.value).toBe(false);
+      }
     });
   });
 });

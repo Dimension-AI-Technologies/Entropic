@@ -8,6 +8,8 @@ import { TodoList } from './App.ProjectView.TodoList';
 import { MergeDialog } from './App.ProjectView.MergeDialog';
 import { PromptView } from './App.ProjectView.PromptView';
 import { Result, Ok, Err } from './utils/Result';
+import { DIContainer } from './services/DIContainer';
+import { Todo as DomainTodo, Session as DomainSession } from './models/Todo';
 
 interface Todo {
   content: string;
@@ -37,7 +39,7 @@ declare global {
       getTodos: () => Promise<Project[]>;
       saveTodos: (filePath: string, todos: Todo[]) => Promise<boolean>;
       deleteTodoFile: (filePath: string) => Promise<boolean>;
-      getProjectPrompts: (projectPath: string) => Promise<any[]>;
+      getProjectPrompts: (projectPath: string) => Promise<{ success: boolean; value?: any[]; error?: string }>;
     };
   }
 }
@@ -50,11 +52,11 @@ type FilterState = {
 };
 
 interface SingleProjectPaneProps {
-  selectedProject: Project | null;
+  selectedProject: any | null; // MVVMProject or legacy Project
   selectedSession: Session | null;
   selectedTodoIndex: number | null;
   onSessionSelect: (session: Session) => void;
-  onLoadTodos: () => Promise<void>;
+  onRefresh: () => Promise<void>;
 }
 
 export function SingleProjectPane({ 
@@ -62,8 +64,19 @@ export function SingleProjectPane({
   selectedSession,
   selectedTodoIndex,
   onSessionSelect,
-  onLoadTodos 
+  onRefresh 
 }: SingleProjectPaneProps) {
+  // Initialize MVVM ViewModels
+  const container = DIContainer.getInstance();
+  const todosViewModel = container.getTodosViewModel();
+  
+  // Load sessions on component mount and when selectedProject changes
+  useEffect(() => {
+    if (selectedProject) {
+      todosViewModel.loadSessions();
+    }
+  }, [selectedProject, todosViewModel]);
+  
   const [spacingMode, setSpacingMode] = useState<SpacingMode>('compact');
   const [viewMode, setViewMode] = useState<'todo' | 'prompt'>('todo');
   const [filterState, setFilterState] = useState<FilterState>({
@@ -150,9 +163,9 @@ export function SingleProjectPane({
     ) || [];
     
     console.log('Starting merge with tabs:', tabArray);
-    console.log('Found sessions:', sessions.map(s => s.id));
+    console.log('Found sessions:', sessions ? sessions.map(s => s.id) : []);
     
-    if (sessions.length >= 2) {
+    if (sessions && sessions.length >= 2) {
       // Sort by date - newest is target, all others are sources
       const sorted = sessions.sort((a, b) => 
         b.lastModified.getTime() - a.lastModified.getTime()
@@ -233,7 +246,7 @@ export function SingleProjectPane({
       setShowDeleteConfirm(false);
       setEditedTodos(null);
       setIsDirty(false);
-      await onLoadTodos();
+      await onRefresh();
       return Ok(undefined);
     } else if (!deleteResult.success) {
       // Error already logged in the inner function
@@ -278,7 +291,7 @@ export function SingleProjectPane({
       <SessionControls
         selectedProject={selectedProject}
         selectedSession={selectedSession}
-        onLoadTodos={onLoadTodos}
+        onRefresh={onRefresh}
         selectedTabs={selectedTabs}
         onStartMerge={startMerge}
         spacingMode={spacingMode}
@@ -307,13 +320,17 @@ export function SingleProjectPane({
             contextMenuPosition={contextMenuPosition}
             onContextMenuCopyId={handleContextMenuCopyId}
             onContextMenuClose={() => setShowContextMenu(false)}
+            onContextMenuDelete={() => {
+              setShowContextMenu(false);
+              setShowDeleteConfirm(true);
+            }}
           />
           
           <TodoList
             selectedProject={selectedProject}
             selectedSession={selectedSession}
             selectedTodoIndex={selectedTodoIndex}
-            onLoadTodos={onLoadTodos}
+            onRefresh={onRefresh}
             selectedTabs={selectedTabs}
             onTabClick={handleTabClick}
             spacingMode={spacingMode}
@@ -335,7 +352,7 @@ export function SingleProjectPane({
         onPerformMerge={async () => {}} // Will be handled by MergeDialog itself
         onCloseMergeDialog={handleCloseMergeDialog}
         onSessionSelect={onSessionSelect}
-        onLoadTodos={onLoadTodos}
+        onRefresh={onRefresh}
       />
     </div>
   );
