@@ -7,9 +7,10 @@ interface GlobalViewProps {
   spacingMode?: 'wide' | 'normal' | 'compact';
 }
 
-export function GlobalView({ spacingMode: _spacingMode }: GlobalViewProps) {
+export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   const [projects, setProjects] = useState<MVVMProject[]>([]);
   const [version, setVersion] = useState(0);
+  const [activeOnly, setActiveOnly] = useState(false);
 
   const container = DIContainer.getInstance();
   const projectsViewModel = container.getProjectsViewModel();
@@ -27,10 +28,15 @@ export function GlobalView({ spacingMode: _spacingMode }: GlobalViewProps) {
   }, [projectsViewModel, todosViewModel]);
 
   // Build rows per session, latest first
-  const rows = projects.flatMap(p => {
+  const allRows = projects.flatMap(p => {
     const sessions = todosViewModel.getSessionsForProject(p.path);
     return sessions.map(s => ({ p, s }));
   }).sort((a, b) => b.s.lastModified.getTime() - a.s.lastModified.getTime());
+  const rows = allRows.filter(({ s }) => {
+    if (!activeOnly) return true;
+    const hasActive = (s.todos || []).some((t: any) => t.status !== 'completed');
+    return hasActive;
+  });
 
   const pickCurrent = (todos: any[]) => {
     if (!Array.isArray(todos) || todos.length === 0) return null;
@@ -46,14 +52,27 @@ export function GlobalView({ spacingMode: _spacingMode }: GlobalViewProps) {
     return after.find(t => t.status === 'pending') || todos.find(t => t.status === 'pending') || null;
   };
 
-  // Stats for subtitle
+  // Stats for subtitle (based on filtered rows)
   const activeTodos = rows.reduce((sum, r) => sum + ((r.s.todos || []).filter((t: any) => t.status !== 'completed').length), 0);
   const activeProjects = new Set(rows.map(r => r.p.id)).size;
 
+  // Spacing presets tied to app spacingMode
+  const spacing = (() => {
+    switch (spacingMode) {
+      case 'wide':
+        return { pad: 14, headerPad: 12, dateWidth: 170, font: 13 };
+      case 'normal':
+        return { pad: 10, headerPad: 10, dateWidth: 160, font: 13 };
+      case 'compact':
+      default:
+        return { pad: 8, headerPad: 8, dateWidth: 150, font: 12 };
+    }
+  })();
+
   // Column widths: Project | Current | Date | Next
-  const gridCols = '2fr 4fr 150px 4fr';
-  const headerStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: gridCols, padding: '10px 14px', background: '#2a2d33', color: '#bfc3c8', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6 };
-  const cellBase: React.CSSProperties = { padding: '10px 14px', borderTop: '1px solid #30343a', display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center', background: '#23262b' };
+  const gridCols = `2fr 4fr ${spacing.dateWidth}px 4fr`;
+  const headerStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: gridCols, padding: `${spacing.headerPad}px 14px`, background: '#2a2d33', color: '#bfc3c8', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6 };
+  const cellBase: React.CSSProperties = { padding: `${spacing.pad}px 14px`, borderTop: '1px solid #30343a', display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center', background: '#23262b', fontSize: spacing.font };
   const dot = (color: string) => ({ width: 8, height: 8, borderRadius: 8, background: color, display: 'inline-block', marginRight: 8 });
 
   return (
@@ -62,7 +81,13 @@ export function GlobalView({ spacingMode: _spacingMode }: GlobalViewProps) {
         <div style={{ width: 18, height: 18, borderRadius: 18, background: '#e79b5c', boxShadow: '0 0 8px rgba(231,155,92,0.6)' }} />
         <div style={{ fontSize: 18, fontWeight: 600 }}>Global Activity Overview</div>
       </div>
-      <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 14 }}>{activeTodos} active todos across {activeProjects} projects</div>
+      <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>{activeTodos} active todos across {activeProjects} projects</span>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }} title="Hide sessions with only completed items">
+          <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
+          <span>Active only</span>
+        </label>
+      </div>
       <div style={{ border: '1px solid #3a3d42', borderRadius: 6, overflow: 'hidden', background: '#202328' }}>
         <div style={headerStyle}>
           <div>Project</div>
