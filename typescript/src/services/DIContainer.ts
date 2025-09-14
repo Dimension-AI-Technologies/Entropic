@@ -1,15 +1,74 @@
-import { IProjectRepository } from '../models/Project';
-import { MockProjectRepository } from '../repositories/MockProjectRepository';
-import { IPCProjectRepository } from '../repositories/IPCProjectRepository';
-import { ProjectsViewModel } from '../viewmodels/ProjectsViewModel';
-import { ITodoRepository } from '../models/Todo';
-import { MockTodoRepository } from '../repositories/MockTodoRepository';
-import { IPCTodoRepository } from '../repositories/IPCTodoRepository';
-import { TodosViewModel } from '../viewmodels/TodosViewModel';
-import { IChatRepository } from '../models/Chat';
-import { MockChatRepository } from '../repositories/MockChatRepository';
-import { IPCChatRepository } from '../repositories/IPCChatRepository';
-import { ChatHistoryViewModel } from '../viewmodels/ChatHistoryViewModel';
+// Lightweight façade replacing the previous DI system. It uses
+// electronAPI directly and provides minimal ViewModel-like objects
+// with the methods our UI expects.
+import { dlog } from '../utils/log';
+
+type Project = {
+  path: string;
+  sessions: any[];
+  mostRecentTodoDate?: Date;
+};
+
+class SimpleProjectsViewModel {
+  private projects: Project[] = [];
+  private listeners = new Set<() => void>();
+
+  constructor() { this.refresh(); }
+  getProjects(): Project[] { return this.projects; }
+  setProjects(p: Project[]): void { this.projects = p || []; this.emit(); }
+  async refresh(): Promise<void> {
+    try { const p = await (window as any).electronAPI?.getTodos?.(); this.projects = Array.isArray(p)?p:[]; } catch { this.projects = []; }
+    this.emit();
+  }
+  onChange(cb: () => void): () => void { this.listeners.add(cb); return () => this.listeners.delete(cb); }
+  private emit(){ this.listeners.forEach(f=>{ try{f();}catch{} }); }
+  getProjectsSortedByDate(): Project[] { return [...this.projects].sort((a,b)=> (b.mostRecentTodoDate?.getTime?.()||0)-(a.mostRecentTodoDate?.getTime?.()||0)); }
+  // Compatibility helpers used by legacy tests
+  getProjectCount(): number { return this.projects.length; }
+  getExistingProjects(): Project[] { return this.projects.filter((p:any)=>p.pathExists); }
+  getUnmatchedProjects(): Project[] { return this.projects.filter((p:any)=>!p.pathExists); }
+  getExistingProjectCount(): number { return this.getExistingProjects().length; }
+  getUnmatchedProjectCount(): number { return this.getUnmatchedProjects().length; }
+  getProject(id: string): Project | null { return this.projects.find((p:any)=>p.id===id) || null; }
+  getDisplayName(project: any): string { const parts=(project.path||'').split(/[/\\]/); return parts[parts.length-1]||project.path; }
+  getStatusIcon(project: any): string { return project.pathExists? '✅':'⚠️'; }
+  getTooltip(project: any): string { return project.pathExists? `Path: ${project.path}`:`Path: ${project.path} (does not exist)\nFlattened: ${project.flattenedDir}`; }
+}
+
+type Session = { id: string; todos: any[]; lastModified: Date; created?: Date; filePath?: string; projectPath?: string };
+
+class SimpleTodosViewModel {
+  private sessions: Session[] = [];
+  private listeners = new Set<() => void>();
+  constructor(){
+    this.refresh();
+    try {
+      (window as any).electronAPI?.onTodoFilesChanged?.((_e: any,_d:any)=>this.refresh());
+    } catch {}
+  }
+  getSessions(): Session[] { return this.sessions; }
+  clearAll(): void { this.sessions = []; this.emit(); }
+  async loadSessions(): Promise<void> {
+    // Just refresh the sessions
+    return this.refresh();
+  }
+  async refresh(): Promise<void> {
+    try {
+      const projects = await (window as any).electronAPI?.getTodos?.();
+      const sess: Session[] = [];
+      (projects||[]).forEach((p: any) => (p.sessions||[]).forEach((s: any)=> sess.push({ ...s, projectPath: p.path })));
+      // normalize dates
+      this.sessions = sess.map(s=> ({...s, lastModified: new Date(s.lastModified)}));
+    } catch { this.sessions = []; }
+    this.emit();
+  }
+  onChange(cb: () => void): () => void { this.listeners.add(cb); return () => this.listeners.delete(cb); }
+  private emit(){ this.listeners.forEach(f=>{ try{f();}catch{} }); }
+  getSessionsSortedByDate(): Session[] { return [...this.sessions].sort((a,b)=> b.lastModified.getTime()-a.lastModified.getTime()); }
+  getSessionsForProject(projectPath: string): Session[] { return this.sessions.filter(s=>s.projectPath===projectPath); }
+}
+
+class SimpleChatHistoryViewModel { /* placeholder to satisfy callers if any */ }
 
 /**
  * Simple dependency injection container for MVVM architecture
@@ -17,63 +76,15 @@ import { ChatHistoryViewModel } from '../viewmodels/ChatHistoryViewModel';
  */
 export class DIContainer {
   private static instance: DIContainer;
-  private projectRepository: IProjectRepository;
-  private projectsViewModel: ProjectsViewModel;
-  private todoRepository: ITodoRepository;
-  private todosViewModel: TodosViewModel;
-  private chatRepository: IChatRepository;
-  private chatHistoryViewModel: ChatHistoryViewModel;
+  private projectsViewModel: SimpleProjectsViewModel;
+  private todosViewModel: SimpleTodosViewModel;
+  private chatHistoryViewModel: SimpleChatHistoryViewModel;
 
   private constructor() {
-    console.error('[DIContainer] Constructor called');
-    // Use IPC repository when running in Electron renderer, mock otherwise (for tests)
-    const isElectron = typeof window !== 'undefined' && window.electronAPI;
-    console.error('[DIContainer] isElectron:', isElectron, 'window.electronAPI:', typeof window !== 'undefined' ? window.electronAPI : 'no window');
-    
-    try {
-      if (isElectron) {
-        // Use IPC-based repositories in Electron renderer
-        console.error('[DIContainer] Creating IPC repositories...');
-        this.projectRepository = new IPCProjectRepository();
-        this.todoRepository = new IPCTodoRepository();
-        this.chatRepository = new IPCChatRepository();
-        console.error('[DIContainer] IPC repositories created successfully');
-      } else {
-        // Use mock repositories for tests and non-Electron environments
-        // FileSystem repositories cannot be used in browser due to Node.js dependencies
-        console.error('[DIContainer] Creating Mock repositories...');
-        this.projectRepository = new MockProjectRepository();
-        this.todoRepository = new MockTodoRepository();
-        this.chatRepository = new MockChatRepository();
-        console.error('[DIContainer] Mock repositories created successfully');
-      }
-    } catch (error) {
-      // Fallback to mock repositories instead of throwing
-      console.error('[DIContainer] ERROR in repository setup. Falling back to mocks:', error);
-      this.projectRepository = new MockProjectRepository();
-      this.todoRepository = new MockTodoRepository();
-      this.chatRepository = new MockChatRepository();
-    }
-
-    // ViewModels should always be created from whichever repositories are available
-    try {
-      console.error('[DIContainer] Creating ViewModels...');
-      this.projectsViewModel = new ProjectsViewModel(this.projectRepository);
-      console.error('[DIContainer] ProjectsViewModel created');
-      this.todosViewModel = new TodosViewModel(this.todoRepository);
-      console.error('[DIContainer] TodosViewModel created');
-      this.chatHistoryViewModel = new ChatHistoryViewModel(this.chatRepository);
-      console.error('[DIContainer] ChatHistoryViewModel created');
-    } catch (error) {
-      // As a last resort, create empty mocks to avoid throwing during construction
-      console.error('[DIContainer] ERROR creating ViewModels. Creating with mocks:', error);
-      this.projectRepository = new MockProjectRepository();
-      this.todoRepository = new MockTodoRepository();
-      this.chatRepository = new MockChatRepository();
-      this.projectsViewModel = new ProjectsViewModel(this.projectRepository);
-      this.todosViewModel = new TodosViewModel(this.todoRepository);
-      this.chatHistoryViewModel = new ChatHistoryViewModel(this.chatRepository);
-    }
+    dlog('[DIContainer] Lightweight container initializing');
+    this.projectsViewModel = new SimpleProjectsViewModel();
+    this.todosViewModel = new SimpleTodosViewModel();
+    this.chatHistoryViewModel = new SimpleChatHistoryViewModel();
   }
 
   static getInstance(): DIContainer {
@@ -86,105 +97,21 @@ export class DIContainer {
   /**
    * Get the projects repository
    */
-  getProjectRepository(): IProjectRepository {
-    return this.projectRepository;
-  }
-
-  /**
-   * Get the projects view model (singleton)
-   */
-  getProjectsViewModel(): ProjectsViewModel {
+  getProjectsViewModel(): any {
     return this.projectsViewModel;
   }
 
   /**
    * Get the todo repository
    */
-  getTodoRepository(): ITodoRepository {
-    return this.todoRepository;
-  }
-
-  /**
-   * Get the todos view model (singleton)
-   */
-  getTodosViewModel(): TodosViewModel {
+  getTodosViewModel(): any {
     return this.todosViewModel;
   }
 
   /**
    * Get the chat repository
    */
-  getChatRepository(): IChatRepository {
-    return this.chatRepository;
-  }
-
-  /**
-   * Get the chat history view model (singleton)
-   */
-  getChatHistoryViewModel(): ChatHistoryViewModel {
+  getChatHistoryViewModel(): any {
     return this.chatHistoryViewModel;
-  }
-
-  /**
-   * Override repository (useful for testing)
-   */
-  setProjectRepository(repository: IProjectRepository): void {
-    this.projectRepository = repository;
-    // Recreate ViewModel with new repository
-    this.projectsViewModel = new ProjectsViewModel(repository);
-  }
-
-  /**
-   * Override todo repository (useful for testing)
-   */
-  setTodoRepository(repository: ITodoRepository): void {
-    this.todoRepository = repository;
-    // Recreate ViewModel with new repository
-    this.todosViewModel = new TodosViewModel(repository);
-  }
-
-  /**
-   * Override chat repository (useful for testing)
-   */
-  setChatRepository(repository: IChatRepository): void {
-    this.chatRepository = repository;
-    // Recreate ViewModel with new repository
-    this.chatHistoryViewModel = new ChatHistoryViewModel(repository);
-  }
-
-  /**
-   * Create a test container with mock repository
-   */
-  static createTestContainer(): DIContainer {
-    const container = new DIContainer();
-    const mockProjectRepo = new MockProjectRepository(MockProjectRepository.createSampleProjects());
-    const mockTodoRepo = new MockTodoRepository(MockTodoRepository.createSampleSessions());
-    const mockChatRepo = new MockChatRepository(MockChatRepository.createSamplePrompts());
-    container.setProjectRepository(mockProjectRepo);
-    container.setTodoRepository(mockTodoRepo);
-    container.setChatRepository(mockChatRepo);
-    return container;
-  }
-
-  /**
-   * Reset to default configuration
-   */
-  reset(): void {
-    // Reset to the same configuration as constructor
-    const isElectron = typeof window !== 'undefined' && window.electronAPI;
-    
-    if (isElectron) {
-      this.projectRepository = new IPCProjectRepository();
-      this.todoRepository = new IPCTodoRepository();
-      this.chatRepository = new IPCChatRepository();
-    } else {
-      this.projectRepository = new MockProjectRepository();
-      this.todoRepository = new MockTodoRepository();
-      this.chatRepository = new MockChatRepository();
-    }
-    
-    this.projectsViewModel = new ProjectsViewModel(this.projectRepository);
-    this.todosViewModel = new TodosViewModel(this.todoRepository);
-    this.chatHistoryViewModel = new ChatHistoryViewModel(this.chatRepository);
   }
 }

@@ -1,4 +1,4 @@
-import { app, Menu } from 'electron';
+import { app, Menu, clipboard } from 'electron';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
 import os from 'node:os';
@@ -18,12 +18,12 @@ export function setupMenu(options: {
   // Ensure app name appears as "Entropic" in OS-native menus
   try { app.setName('Entropic'); } catch {}
 
-  // Logging state (defaults off)
-  let logAnimations = false;
-  let logBoids = false;
+  // Logging state (default to trace for debugging)
+  let logAnimations = true;
+  let logBoids = true;
   type Level = 'silent'|'failure'|'error'|'warning'|'information'|'debug'|'trace';
-  let consoleLevel: Level = 'silent';
-  let logToFile = false;
+  let consoleLevel: Level = 'trace'; // Changed to trace for debugging
+  let logToFile = true;
   let logFilePath: string | null = null;
 
   // Store originals for restoration
@@ -183,6 +183,47 @@ export function setupMenu(options: {
         { label: 'Entropic Help', accelerator: 'F1', click: onShowHelp },
         { type: 'separator' as const },
         {
+          label: 'Repair Project Metadata (Dry Run)…',
+          click: async () => {
+            try {
+              const { repairProjectMetadata } = await import('../maintenance/repair.js');
+              const win = getMainWindow ? getMainWindow() : null;
+              const res = await repairProjectMetadata?.(path.join(os.homedir(), '.claude', 'projects'), path.join(os.homedir(), '.claude', 'todos'), true);
+              const msg = res ? `DRY RUN\nProjects scanned: ${res.projectsScanned}\nTodo sessions scanned: ${res.todosScanned}\nWould write metadata: ${res.metadataPlanned}\nMatched via sidecar meta: ${res.matchedBySidecar}\nMatched via JSONL filename: ${res.matchedByJsonl}\nUnanchored sessions: ${res.unknownSessions.length}` : 'No result';
+              try { (await import('electron')).dialog.showMessageBox(win!, { type: 'info', title: 'Repair (Dry Run)', message: 'Repair Project Metadata', detail: msg }); } catch {}
+            } catch (e) {
+              try { (await import('electron')).dialog.showMessageBox(getMainWindow?.()!, { type: 'error', title: 'Repair Failed', message: String(e) }); } catch {}
+            }
+          }
+        },
+        {
+          label: 'Repair Project Metadata (Live)…',
+          click: async () => {
+            try {
+              const { repairProjectMetadata } = await import('../maintenance/repair.js');
+              const win = getMainWindow ? getMainWindow() : null;
+              const res = await repairProjectMetadata?.(path.join(os.homedir(), '.claude', 'projects'), path.join(os.homedir(), '.claude', 'todos'), false);
+              const msg = res ? `LIVE RUN\nProjects scanned: ${res.projectsScanned}\nTodo sessions scanned: ${res.todosScanned}\nMetadata files written: ${res.metadataWritten} (planned ${res.metadataPlanned})\nMatched via sidecar meta: ${res.matchedBySidecar}\nMatched via JSONL filename: ${res.matchedByJsonl}\nUnanchored sessions: ${res.unknownSessions.length}` : 'No result';
+              try { (await import('electron')).dialog.showMessageBox(win!, { type: 'info', title: 'Repair (Live)', message: 'Repair Project Metadata', detail: msg }); } catch {}
+            } catch (e) {
+              try { (await import('electron')).dialog.showMessageBox(getMainWindow?.()!, { type: 'error', title: 'Repair Failed', message: String(e) }); } catch {}
+            }
+          }
+        },
+        {
+          label: 'Show Diagnostics…',
+          click: async () => {
+            try {
+              const { collectDiagnostics } = await import('../maintenance/repair.js');
+              const win = getMainWindow ? getMainWindow() : null;
+              const d = await collectDiagnostics(path.join(os.homedir(), '.claude', 'projects'), path.join(os.homedir(), '.claude', 'todos'));
+              try { (await import('electron')).dialog.showMessageBox(win!, { type: 'info', title: 'Diagnostics', message: 'Unanchored Sessions', detail: d.text }); } catch {}
+            } catch (e) {
+              try { (await import('electron')).dialog.showMessageBox(getMainWindow?.()!, { type: 'error', title: 'Diagnostics Failed', message: String(e) }); } catch {}
+            }
+          }
+        },
+        {
           label: 'Logging Options',
           submenu: [
             {
@@ -209,6 +250,20 @@ export function setupMenu(options: {
               click: async (item) => { await updateLogToFile(!!item.checked); }
             },
           ] as Electron.MenuItemConstructorOptions[],
+        },
+        { type: 'separator' as const },
+        {
+          label: 'Copy Log Path',
+          click: async () => {
+            try {
+              if (!logFilePath) {
+                await ensureLogFile().catch(() => {});
+              }
+              if (logFilePath) {
+                clipboard.writeText(logFilePath);
+              }
+            } catch {}
+          },
         },
       ],
     },

@@ -1,72 +1,99 @@
-# Entropic - a Claude Code Todo GUI and Project History viewer
+# Entropic
 
-A real-time todo monitoring system for Claude Code that displays live updates of Todo items as they are created, modified, and completed. This tool provides a visual dashboard in your terminal or as a GUI that automatically updates whenever Claude Code uses the TodoWrite tool.  Terminal version is in original Bash (by [@JamesonNyp](@JamesonNyp)) and cross-platform PowerShell (by [dimension-zero](@dimension-zero)).  GUI is in cross-platform TypeScript.
+![License](https://img.shields.io/github/license/dimension-zero/Entropic)
+![Windows](https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white)
+![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white)
+![Linux](https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black)
+![TypeScript 5.9](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
+![Electron 38](https://img.shields.io/badge/Electron-38.0-47848F?logo=electron&logoColor=white)
+![Node.js 18+](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
+![PowerShell 7.x](https://img.shields.io/badge/PowerShell-7.x-5391FE?logo=powershell&logoColor=white)
+![Watchers](https://img.shields.io/github/watchers/dimension-zero/Entropic)
+![Stars](https://img.shields.io/github/stars/dimension-zero/Entropic)
+![Downloads](https://img.shields.io/github/downloads/dimension-zero/Entropic/total)
+![Commit activity](https://img.shields.io/github/commit-activity/m/dimension-zero/Entropic)
+![Contributors](https://img.shields.io/github/contributors/dimension-zero/Entropic)
+
+Note: The desktop GUI uses Node.js/TypeScript (Electron). PowerShell scripts target PowerShell 7.x; the GUI itself does not require .NET.
+
+Cross‑platform app to watch Claude Code TODO lists and project histories in one centralised GUI.
+
+Inspired by the Bash original of JamesonNyp/cc-todo-hook-tracker, it was first translated to a cross‑platform PowerShell equivalent and then evolved into the present desktop GUI in TypeScript/Electron.
 
 ![Claude Code Todo Tracker Live Monitor](Todo%20Tracker.png)
 
-## Overview
+## What It Does
 
-This project provides scripts that integrate with Claude Code's hook system to capture and display todo updates in real-time. When Claude Code uses its TodoWrite tool, these scripts intercept the data and provide a live monitoring dashboard showing the current state of all todos.
+Entropic listens to Claude Code’s TodoWrite activity and presents your work in three complementary ways:
 
-## Features
+- Project ToDo View: Focus on a single project’s sessions and todos with filtering, sorting, merging empty sessions, and quick copy actions.
+- Project History View: Browse per‑project prompt/history timelines (switchable from the Project view) to understand how work evolved.
+- Global View: See active todos across all projects in one place with fast navigation back into project context.
 
-- 🔄 **Live Updates**: Automatically refreshes when Claude Code modifies todos
-- 🎨 **Color-Coded Status**: Visual indicators for different todo states
-  - ✅ Green for completed items
-  - ▶️ Blue for active/in-progress items  
-  - ○ Default for pending items
-- 📊 **Session Tracking**: Displays session ID and working directory
-- ⚡ **Efficient Monitoring**: Uses native file watching for minimal resource usage
-- 🌍 **Cross-Platform**: Available in both Bash and PowerShell implementations
+The terminal implementations (PowerShell and Bash) provide lightweight live monitoring of the same Todo data written by Claude Code.
 
-## How It Works
+## Lineage & Credits
 
-1. **Hook Script**: Intercepts PostToolUse events for TodoWrite
-   - Captures todo data from Claude Code
-   - Extracts relevant information (todos, session, directory)
-   - Saves formatted JSON to `~/.claude/logs/current_todos.json`
+- Bash original: Jameson Nyp (@JamesonNyp)
+- PowerShell translation and TypeScript/Electron GUI: dimension-zero (@dimension-zero)
 
-2. **Monitor Script**: Displays live todo updates
-   - Watches the JSON file for changes
-   - Parses and displays todos with color coding
-   - Updates display in real-time
-   - Uses efficient file watching mechanisms
+## Key Functionality
 
-## Available Implementations
+GUI (TypeScript/Electron)
+- Three views: Project ToDo, Project History, and Global View
+- Real‑time updates from Claude Code sessions
+- Project/session selection, filtering and spacing controls
+- Clipboard helpers for project name/path and current/next task
+- Screenshot shortcut (menu and title bar) that copies saved path
 
-### Bash Version (`bash/`)
-- Works on Linux, macOS, and WSL2 (not native Windows)
-- Requires `jq` for JSON parsing
-- Optionally uses `inotifywait` (Linux) or `fswatch` (macOS) for file monitoring
-- See [README-sh.md](README-sh.md) for setup instructions
+PowerShell (cross‑platform terminal)
+- Native file watching across Windows, macOS, and Linux
+- Structured JSON handling without external tools
+- Color/status indicators and session context
 
-### PowerShell 7 Version (`powershell7/`) - Recommended for Cross-Platform Use
-- **Truly cross-platform**: Runs natively on Windows, macOS, and Linux
-- No external dependencies required
-- Built-in JSON parsing and file watching
-- While PowerShell may seem unfamiliar to Unix users, it solves many traditional shell scripting limitations:
-  - Consistent behavior across all platforms
-  - Structured data handling (objects vs text streams)
-  - No need for external tools like `jq`, `sed`, or `awk`
-  - Robust error handling and debugging
-- See [README-ps.md](README-ps.md) for setup instructions
+Bash (terminal)
+- Minimal dependency monitor driven by fs events
+- Uses jq for JSON and fswatch/inotify for file watching
 
-### TypeScript/Electron GUI Version (`typescript/`) - Desktop Application
-- **Modern Desktop GUI**: Slack-like interface with dark theme
-- **Cross-platform**: Runs as a native desktop app on Windows, macOS, and Linux
-- **Advanced Features**:
-  - Real-time monitoring of all Claude Code sessions across projects
-  - Tri-state toggle controls for sorting and spacing customization
-  - Session tabs with automatic deduplication
-  - Auto-refresh every 5 seconds
-  - Visual status indicators and progress tracking
-- **Easy Installation**: `npm install` and `npm start` to run
-- See [typescript/README.md](typescript/README.md) for setup instructions
+## Install, Configure, Run
+
+Prerequisites for all versions
+- Claude Code writing Todo state to the standard locations under `~/.claude/`
+- The project/session data under `~/.claude/projects` and active todos under `~/.claude/todos`
+
+GUI (TypeScript/Electron)
+- Requirements: Node.js 18+ and npm; Windows/macOS/Linux supported
+- Install
+  - `cd typescript`
+  - `npm install`
+- Run (development)
+  - `npm run dev` (starts main + renderer with hot reload)
+- Run (production locally)
+  - `npm run build`
+  - `npm start`
+- Package installers (optional)
+  - `npm run dist` (build + package for your platform)
+
+PowerShell (cross‑platform)
+- Requirements: PowerShell 7+ on Windows/macOS/Linux
+- Configure
+  - Point your Claude hook for TodoWrite PostToolUse to the PowerShell hook in `powershell7/` (see README‑ps.md)
+  - Ensure `~/.claude/logs` and `~/.claude/todos` exist
+- Run
+  - Launch the live monitor script from `powershell7/` (see README‑ps.md) or use `./Launch-TodoMonitor.ps1`
+
+Bash
+- Requirements: `jq`, plus `inotifywait` (Linux) or `fswatch` (macOS)
+- Configure
+  - Point your Claude hook for TodoWrite PostToolUse to the Bash hook in `bash/` (see README‑sh.md)
+  - Ensure `~/.claude/logs` and `~/.claude/todos` exist
+- Run
+  - Start the live monitor script from `bash/` (see README‑sh.md)
 
 ## Project Structure
 
 ```
-cc-todo-hook-tracker/
+Entropic/
 ├── README.md           # This file
 ├── README-sh.md        # Bash setup guide
 ├── README-ps.md        # PowerShell setup guide
@@ -78,49 +105,22 @@ cc-todo-hook-tracker/
 ├── powershell7/        # PowerShell 7 implementation
 │   ├── todo_hook_post_tool.ps1
 │   ├── todo_live_monitor.ps1
-│   └── tests/          # Test scripts
+│   └── tests/
 └── typescript/         # Electron GUI implementation
-    ├── src/            # React/TypeScript source
+    ├── src/            # React/TypeScript/Electron source
     ├── package.json    # Node dependencies
-    └── README.md       # GUI setup guide
-```
-
-## Quick Start
-
-1. Choose your preferred implementation:
-   - **Terminal (Bash)**: Follow [README-sh.md](README-sh.md)
-   - **Terminal (PowerShell 7)**: Follow [README-ps.md](README-ps.md)
-   - **Desktop GUI (Electron)**: Follow [typescript/README.md](typescript/README.md)
-
-2. Configure Claude Code hooks to use the appropriate script (for terminal versions)
-
-3. Start the monitor:
-   - Terminal versions: Run monitor script in a separate terminal
-   - GUI version: Launch the Electron app
-
-4. Use Claude Code normally - todos will appear automatically!
-
-## File Storage
-
-All implementations use the same file structure:
-```
-~/.claude/
-├── settings.json               # Claude Code configuration
-├── logs/
-│   └── current_todos.json      # Current todo state data
-└── scripts/                    # (Optional) Script installation location
+    └── README.md       # Additional GUI notes
 ```
 
 ## License
 
-MIT License - Feel free to modify and distribute
+MIT License
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
+Issues and PRs are welcome. Bug reports, small fixes, and feature suggestions all help.
 
-## Author
+## Credits
 
-* Original Bash CLI version created by Jameson Nyp (@JamesonNyp)
-* PowerShell implementation by Dimension Zero (@dimension-zero <zero@ditech.ai>)
-* TypeScript/Electron GUI by Dimension Zero (@dimension-zero <zero@ditech.ai>)
+- Original Bash version: Jameson Nyp (@JamesonNyp)
+- TypeScript and GUI versions by dimension-zero (@dimension-zero)

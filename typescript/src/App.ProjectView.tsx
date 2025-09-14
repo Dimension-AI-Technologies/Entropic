@@ -7,15 +7,18 @@ import { Project as MVVMProject } from './models/Project';
 import { Session, Todo } from './models/Todo';
 import { ProjectContextMenuController } from './components/menus/ProjectContextMenuController';
 import { useResize } from './components/hooks/useResize';
+import { dlog } from './utils/log';
 
 
 interface ProjectViewProps {
   activityMode: boolean;
   setActivityMode: (mode: boolean) => void;
+  spacingMode: 'wide' | 'normal' | 'compact';
+  onSpacingModeChange: (mode: 'wide' | 'normal' | 'compact') => void;
 }
 
-export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps) {
-  console.error('[ProjectView] ===== COMPONENT FUNCTION CALLED =====');
+export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpacingModeChange }: ProjectViewProps) {
+  dlog('[ProjectView] ===== COMPONENT FUNCTION CALLED =====');
   console.log('[ProjectView] Rendering');
   const [projects, setProjects] = useState<MVVMProject[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -23,7 +26,7 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [selectedTodoIndex, setSelectedTodoIndex] = useState<number | null>(null);
   const [projectSessionMap, setProjectSessionMap] = useState<Map<string, string>>(new Map());
-  const { leftPaneWidth, setLeftPaneWidth, isResizing, setIsResizing } = useResize(260, 200, 400);
+  const { leftPaneWidth, setLeftPaneWidth, isResizing, setIsResizing, setOffsetLeft } = useResize(260, 200, 600);
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, project: MVVMProject} | null>(null);
   const [deletedProjects, setDeletedProjects] = useState<Set<string>>(new Set());
   const [emptyMode, setEmptyMode] = useState<'all' | 'has_sessions' | 'has_todos' | 'active_only'>(() => {
@@ -36,6 +39,7 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
   const projectsViewModel = container.getProjectsViewModel();
   const todosViewModel = container.getTodosViewModel();
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Legacy project format for compatibility with existing components
   const [legacyProjects, setLegacyProjects] = useState<Array<{
@@ -94,7 +98,7 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
     };
     
     // Load legacy data immediately
-    console.error('[ProjectView] ===== LOADING LEGACY DATA =====');
+    dlog('[ProjectView] ===== LOADING LEGACY DATA =====');
     loadLegacyData();
     
     updateProjects();
@@ -155,7 +159,7 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
 
   // Resizing logic moved to useResize hook
 
-  // Auto-select most recent project and session on initial load
+  // Auto-select most recent project and session on initial load (run once)
   useEffect(() => {
     if (!selectedMVVMProject && projects.length > 0) {
       // Select the most recently modified project
@@ -164,7 +168,10 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
         setSelectedMVVMProject(sortedProjects[0]);
       }
     }
-    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projects.length, projectsViewModel]); // Only depend on length change, not objects
+  
+  useEffect(() => {
     if (!selectedSession && sessions.length > 0) {
       // Select the most recently modified session
       const sortedSessions = todosViewModel.getSessionsSortedByDate();
@@ -172,25 +179,29 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
         setSelectedSession(sortedSessions[0]);
       }
     }
-  }, [projects, sessions, selectedMVVMProject, selectedSession, projectsViewModel, todosViewModel]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessions.length, todosViewModel]); // Only depend on length change, not objects
 
-  // Update selected project when projects change
+  // Update selected items when their data changes (without causing loops)
   useEffect(() => {
     if (selectedMVVMProject) {
       const updated = projects.find(p => p.id === selectedMVVMProject.id);
-      if (updated) {
+      if (updated && updated !== selectedMVVMProject) {
+        // Only update if the object actually changed
         setSelectedMVVMProject(updated);
       }
     }
-    
-    // Update selected session when sessions change
+  }, [projects]); // Remove selectedMVVMProject from deps
+  
+  useEffect(() => {
     if (selectedSession) {
       const updated = sessions.find(s => s.id === selectedSession.id);
-      if (updated) {
+      if (updated && updated !== selectedSession) {
+        // Only update if the object actually changed
         setSelectedSession(updated);
       }
     }
-  }, [projects, sessions, selectedMVVMProject, selectedSession]);
+  }, [sessions]); // Remove selectedSession from deps
 
 
   // Handle MVVM project selection
@@ -371,7 +382,7 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
   };
 
   return (
-    <div className="app-main">
+    <div className="app-main" ref={containerRef}>
       {/* Projects Pane (Left) */}
       <div className="sidebar" style={{ width: leftPaneWidth }}>
         <ProjectsPane
@@ -417,7 +428,14 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
       {/* Resizable Divider */}
       <div 
         className="divider" 
-        onMouseDown={() => setIsResizing(true)}
+        onMouseDown={(e) => { 
+          try {
+            const rect = containerRef.current?.getBoundingClientRect();
+            setOffsetLeft(rect ? rect.left : 0);
+          } catch {}
+          setIsResizing(true);
+          e.preventDefault();
+        }}
       />
       
       {/* Single Project Pane (Right) */}
@@ -431,6 +449,8 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
           await todosViewModel.refresh();
         }}
         emptyMode={emptyMode}
+        spacingMode={spacingMode}
+        onSpacingModeChange={onSpacingModeChange}
       />
       
       {/* Context Menu */}

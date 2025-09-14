@@ -52,6 +52,8 @@ interface SingleProjectPaneProps {
   onSessionSelect: (session: Session) => void;
   onRefresh: () => Promise<void>;
   emptyMode: EmptyMode;
+  spacingMode: 'wide' | 'normal' | 'compact';
+  onSpacingModeChange: (mode: 'wide' | 'normal' | 'compact') => void;
 }
 
 export function SingleProjectPane({ 
@@ -60,7 +62,9 @@ export function SingleProjectPane({
   selectedTodoIndex,
   onSessionSelect,
   onRefresh,
-  emptyMode
+  emptyMode,
+  spacingMode,
+  onSpacingModeChange
 }: SingleProjectPaneProps) {
   // Initialize MVVM ViewModels
   const container = DIContainer.getInstance();
@@ -73,7 +77,7 @@ export function SingleProjectPane({
     }
   }, [selectedProject, todosViewModel]);
   
-  const [spacingMode, setSpacingMode] = useState<SpacingMode>('compact');
+  // spacingMode is managed by parent
   const [viewMode, setViewMode] = useState<'todo' | 'prompt'>('todo');
   const [filterState, setFilterState] = useState<FilterState>({
     completed: true,
@@ -141,7 +145,7 @@ export function SingleProjectPane({
     }
     
     const tabArray = Array.from(selectedTabs);
-    const sessions = selectedProject?.sessions.filter(s => 
+    const sessions = filteredSessions.filter(s => 
       tabArray.includes(s.id)
     ) || [];
     
@@ -284,7 +288,7 @@ export function SingleProjectPane({
         selectedTabs={selectedTabs}
         onStartMerge={startMerge}
         spacingMode={spacingMode}
-        onSpacingModeChange={setSpacingMode}
+        onSpacingModeChange={onSpacingModeChange}
         filterState={filterState}
         onFilterStateChange={setFilterState}
         showDeleteConfirm={showDeleteConfirm}

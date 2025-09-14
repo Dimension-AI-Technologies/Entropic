@@ -1,5 +1,5 @@
 import electron from 'electron';
-const { app, BrowserWindow, ipcMain, dialog } = electron;
+const { app, BrowserWindow, ipcMain, dialog, clipboard } = electron;
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
@@ -14,12 +14,14 @@ import type { BrowserWindow as BrowserWindowType } from 'electron';
 import { setupMenu } from './menu/setupMenu.js';
 import { showHelp as showHelpDialog } from './menu/showHelp.js';
 import { takeScreenshot } from './utils/screenshot.js';
+import { Ok, Err } from '../utils/Result.js';
 import { setupFileWatching as setupFileWatchingExt, cleanupFileWatchers as cleanupFileWatchersExt } from './watchers/fileWatchers.js';
 //
 import { registerProjectsIpc } from './ipc/projects.js';
 import { registerTodoIpc } from './ipc/todos.js';
 import { registerFileIpc } from './ipc/files.js';
 import { registerChatIpc } from './ipc/chat.js';
+import { registerMaintenanceIpc } from './ipc/maintenance.js';
 import { setupSingleInstance } from './lifecycle/singleInstance.js';
 import { wireAppEvents } from './lifecycle/appEvents.js';
 
@@ -39,15 +41,21 @@ const logsDir = path.join(claudeDir, 'logs');
 
 // setupMenu moved to src/main/menu/setupMenu.ts
 
-function createWindow() {
+async function createWindow() {
+  // Resolve preload; fall back to no-preload in dev without build
+  const preloadCandidate = path.join(__dirname, 'preload.js');
+  const hasPreload = fsSync.existsSync(preloadCandidate);
+  console.log('[MAIN] __dirname =', __dirname);
+  console.log('[MAIN] preload exists?', hasPreload, preloadCandidate);
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     title: 'ClaudeToDo - Session Monitor',
     webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      nodeIntegration: hasPreload ? false : true,
+      contextIsolation: hasPreload ? true : false,
+      preload: hasPreload ? preloadCandidate : undefined
     },
     // Remove hiddenInset to show normal title bar
     // titleBarStyle: 'hiddenInset',
@@ -56,18 +64,47 @@ function createWindow() {
   });
 
   // In development, load from Vite dev server
-  if (process.env.NODE_ENV === 'development') {
-    mainWindow!.loadURL('http://localhost:5173');
-    mainWindow!.webContents.openDevTools();
+  const devMode = process.env.NODE_ENV === 'development';
+  if (devMode) {
+    try {
+      await mainWindow!.loadURL('http://localhost:5173');
+      mainWindow!.webContents.openDevTools();
+    } catch {
+      // Fallback to local file if dev server not running
+      const devIndex = path.join(process.cwd(), 'typescript', 'index.html');
+      if (fsSync.existsSync(devIndex)) {
+        await mainWindow!.loadFile(devIndex);
+        mainWindow!.webContents.openDevTools();
+      }
+    }
   } else {
-    // In production, load the built files
-    mainWindow!.loadFile(path.join(__dirname, '../renderer/index.html'));
-    // TEMPORARILY open DevTools in production to debug
-    mainWindow!.webContents.openDevTools();
+    // In production, try built renderer; if missing (e.g., started without build), fall back sensibly
+    const builtIndex = path.join(__dirname, '../renderer/index.html');
+    if (fsSync.existsSync(builtIndex)) {
+      await mainWindow!.loadFile(builtIndex);
+    } else {
+      const devIndex = path.join(process.cwd(), 'typescript', 'index.html');
+      if (fsSync.existsSync(devIndex)) {
+        await mainWindow!.loadFile(devIndex);
+        try { mainWindow!.webContents.openDevTools(); } catch {}
+      } else {
+        await mainWindow!.loadURL('data:text/html,<h1 style="color:white;background:#1a1d21;font-family:sans-serif;">Renderer build not found. Run npm run build or npm run dev.</h1>');
+      }
+    }
   }
 
   mainWindow!.on('closed', () => {
     mainWindow = null;
+  });
+
+  // Verbose load tracing
+  mainWindow!.webContents.on('did-start-loading', () => console.log('[MAIN] Renderer did-start-loading'));
+  mainWindow!.webContents.on('did-finish-load', () => console.log('[MAIN] Renderer did-finish-load URL=', mainWindow?.webContents.getURL()));
+  mainWindow!.webContents.on('did-fail-load', (_e, errorCode, errorDescription, validatedURL) => {
+    console.error('[MAIN] Renderer did-fail-load', { errorCode, errorDescription, validatedURL });
+  });
+  mainWindow!.webContents.on('render-process-gone', (_e, details) => {
+    console.error('[MAIN] render-process-gone', details);
   });
   
   // Set up streamlined application menu (moved to separate module)
@@ -79,19 +116,10 @@ function createWindow() {
       if (!mainWindow) return;
       const result = await takeScreenshot(mainWindow);
       if (result.success) {
-        await dialog.showMessageBox(mainWindow, {
-          type: 'info',
-          title: 'Screenshot Saved',
-          message: 'Screenshot saved successfully.',
-          detail: result.value,
-        });
+        try { clipboard.writeText(result.value); } catch {}
+        try { mainWindow.webContents.send('screenshot-taken', { path: result.value }); } catch {}
       } else {
-        await dialog.showMessageBox(mainWindow, {
-          type: 'error',
-          title: 'Screenshot Failed',
-          message: 'Failed to take screenshot',
-          detail: result.error ? String(result.error) : 'Unknown error',
-        });
+        try { mainWindow.webContents.send('screenshot-taken', { path: '' }); } catch {}
       }
     },
     getMainWindow: () => mainWindow,
@@ -113,15 +141,18 @@ app.whenReady().then(() => {
   registerTodoIpc(ipcMain);
   registerFileIpc(ipcMain);
   registerChatIpc(ipcMain);
+  registerMaintenanceIpc(ipcMain, { projectsDir, todosDir });
 
   // Screenshot handler (used by renderer via preload)
   ipcMain.handle('take-screenshot', async () => {
-    if (!mainWindow) return { success: false, error: 'No window' };
+    if (!mainWindow) return Err('No window');
     const result = await takeScreenshot(mainWindow);
     if (result.success) {
-      return { success: true, path: result.value };
+      try { clipboard.writeText(result.value); } catch {}
+      try { mainWindow.webContents.send('screenshot-taken', { path: result.value }); } catch {}
+      return Ok({ path: result.value });
     }
-    return { success: false, error: result.error ? String(result.error) : 'Unknown error' };
+    return Err(result.error ? String(result.error) : 'Unknown error');
   });
   
   createWindow();
@@ -135,13 +166,38 @@ app.whenReady().then(() => {
     });
   }
 
-  // Take a screenshot after a longer delay for debugging to let app fully load
+  // One-time repair prompt on startup if unknown sessions exceed threshold
   setTimeout(async () => {
-    console.log('Taking automatic screenshot for debugging...');
-    if (mainWindow) {
-      await takeScreenshot(mainWindow);
-    }
-  }, 8000);
+    try {
+      const prefsPath = path.join(app.getPath('userData'), 'prefs.json');
+      let prefs: any = {};
+      try { prefs = JSON.parse(fsSync.readFileSync(prefsPath, 'utf-8')); } catch {}
+      if (prefs?.repairPromptedOnce) return;
+      // Ask diagnostics
+      const { collectDiagnostics } = await import('./maintenance/repair.js');
+      const d = await collectDiagnostics(projectsDir, todosDir);
+      const unknown = d.unknownCount ?? 0;
+      const threshold = 5;
+      if (unknown > threshold && mainWindow) {
+        const choice = await dialog.showMessageBox(mainWindow, {
+          type: 'warning',
+          buttons: ['Repair Live', 'Dry Run', 'Ignore'],
+          cancelId: 2,
+          title: 'Project Repair Suggested',
+          message: `Detected ${unknown} unanchored todo sessions`,
+          detail: 'You can run a dry run to see planned changes, or repair live to write metadata now.'
+        });
+        try { fsSync.writeFileSync(prefsPath, JSON.stringify({ ...(prefs||{}), repairPromptedOnce: true }, null, 2)); } catch {}
+        if (choice.response === 0) {
+          const { repairProjectMetadata } = await import('./maintenance/repair.js');
+          await repairProjectMetadata(projectsDir, todosDir, false);
+        } else if (choice.response === 1) {
+          const { repairProjectMetadata } = await import('./maintenance/repair.js');
+          await repairProjectMetadata(projectsDir, todosDir, true);
+        }
+      }
+    } catch {}
+  }, 3000);
 
   wireAppEvents(
     app,

@@ -38,7 +38,8 @@ declare global {
       deleteTodoFile?: (filePath: string) => Promise<boolean>;
       deleteProjectDirectory?: (projectDirPath: string) => Promise<{ success: boolean; value?: boolean; error?: string }>;
       getProjectPrompts?: (projectPath: string) => Promise<{ success: boolean; value?: any[]; error?: string }>;
-      takeScreenshot?: () => Promise<{ success: boolean; path?: string; error?: string }>;
+      takeScreenshot?: () => Promise<{ success: boolean; value?: { path: string } } | { success: false; error: string }>;
+      onScreenshotTaken?: (callback: (event: any, data: { path: string }) => void) => () => void;
       onTodoFilesChanged?: (callback: (event: any, data: any) => void) => () => void;
     };
   }

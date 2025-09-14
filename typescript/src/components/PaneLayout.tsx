@@ -37,19 +37,20 @@ interface PaneControlsProps {
 }
 
 export function PaneControls({ children, className = '' }: PaneControlsProps) {
+  const isSidebar = className.includes('sidebar-controls');
   return (
     <div 
       className={`pane-controls-component ${className}`}
       style={{
         height: '38px',
         display: 'flex',
-        justifyContent: 'space-between',
+        justifyContent: isSidebar ? 'flex-start' : 'space-between',
         alignItems: 'center',
         padding: '6px 20px',
         background: '#2f3136',
         borderBottom: '1px solid #35373b',
         boxSizing: 'border-box',
-        gap: '12px'
+        gap: isSidebar ? '8px' : '12px'
       }}
     >
       {children}

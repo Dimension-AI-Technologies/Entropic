@@ -7,6 +7,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteProjectDirectory: (projectDirPath: string) => ipcRenderer.invoke('delete-project-directory', projectDirPath),
   getProjectPrompts: (projectPath: string) => ipcRenderer.invoke('get-project-prompts', projectPath),
   takeScreenshot: () => ipcRenderer.invoke('take-screenshot'),
+  collectDiagnostics: () => ipcRenderer.invoke('collect-diagnostics'),
+  repairMetadata: (dryRun: boolean) => ipcRenderer.invoke('repair-metadata', { dryRun }),
+  onScreenshotTaken: (callback: (event: any, data: { path: string }) => void) => {
+    ipcRenderer.on('screenshot-taken', callback);
+    return () => ipcRenderer.removeListener('screenshot-taken', callback);
+  },
   // Add listener for file changes
   onTodoFilesChanged: (callback: (event: any, data: any) => void) => {
     ipcRenderer.on('todo-files-changed', callback);

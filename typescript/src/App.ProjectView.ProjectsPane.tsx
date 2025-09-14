@@ -178,29 +178,27 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
   }, [sortMethod]);
 
   return (
-    <div className="sidebar">
+    <>
       <PaneHeader className="sidebar-header">
         <div className="sidebar-header-top">
           <div className="projects-header-left">
             <h2>Projects ({sortedProjects.length})</h2>
           </div>
-          {/* Activity slider styled like Todo/History slider, stuck to right edge */}
-          <div className="activity-toggle" title="Auto-select the most recent session when navigating projects" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ color: activityMode ? '#ffffff' : '#8e9297', fontSize: 12 }}>Activity</span>
-            <div
-              role="button"
-              aria-label="Activity slider"
+          {/* Activity toggle (button, right-aligned) */}
+          <div style={{ marginLeft: 'auto' }}>
+            <button
+              className={`filter-toggle pane-button ${activityMode ? 'active' : ''}`}
               onClick={() => setActivityMode(!activityMode)}
-              style={{ position: 'relative', width: 56, height: 22, borderRadius: 16, background: '#2f3136', cursor: 'pointer', userSelect: 'none' }}
+              title="Auto-select the most recent session when navigating projects"
+              style={{ minWidth: 96 }}
             >
-              <div style={{ position: 'absolute', top: 2, bottom: 2, width: 24, left: activityMode ? 'calc(100% - 26px)' : 2, background: 'var(--accent)', borderRadius: 14, transition: 'left 120ms ease' }} />
-            </div>
+              ACTIVITY
+            </button>
           </div>
         </div>
       </PaneHeader>
       <PaneControls className="sidebar-controls">
           <div className="sort-controls">
-            <span className="sort-title">Sort</span>
             <button
               className="sort-button active"
               onMouseDown={(e) => {
@@ -219,7 +217,13 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
               }}
               onMouseLeave={() => { if (sortHoldTimerRef.current) { window.clearTimeout(sortHoldTimerRef.current); sortHoldTimerRef.current = null; } }}
               onContextMenu={(e) => { e.preventDefault(); if (sortHoldTimerRef.current) { window.clearTimeout(sortHoldTimerRef.current); sortHoldTimerRef.current = null; } setSortMenuPos({ x: e.clientX, y: e.clientY }); setSortMenuVisible(true); }}
-              title={sortMethod === 0 ? 'Sort: A→Z (click to cycle • hold/right-click for menu)' : sortMethod === 1 ? 'Sort: Recent (click to cycle • hold/right-click for menu)' : 'Sort: Todos (click to cycle • hold/right-click for menu)'}
+              title={
+                sortMethod === 0
+                  ? 'Sort projects alphabetically by name. Click to cycle • Hold/Right‑click to choose.'
+                  : sortMethod === 1
+                  ? 'Sort projects by most recent activity first. Click to cycle • Hold/Right‑click to choose.'
+                  : 'Sort projects by total todo count (highest first). Click to cycle • Hold/Right‑click to choose.'
+              }
             >
               {getSortSymbol(sortMethod)}
             </button>
@@ -278,7 +282,14 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
                 setModeMenuPos({ x: e.clientX, y: e.clientY });
                 setModeMenuVisible(true);
               }}
-              title={`Click to cycle • Hold/Right-click for menu (current: ${emptyMode.replace('_', ' ').toUpperCase()})`}
+              title={
+                `Filter projects (current: ${emptyMode.replace('_',' ').toUpperCase()}).\n` +
+                `ALL: show every project.\n` +
+                `SESSION: only projects with any sessions.\n` +
+                `TODOs: only projects with any todos.\n` +
+                `ACTIVE: only projects with any non‑completed todos.\n` +
+                `Click to cycle • Hold/Right‑click to choose.`
+              }
             >
               {emptyMode === 'all' ? 'ALL' : emptyMode === 'has_sessions' ? 'SESSION' : emptyMode === 'has_todos' ? 'TODOs' : 'ACTIVE'}
             </button>
@@ -304,14 +315,15 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
                 ))}
               </div>
             )}
-            <button
-              className={`filter-toggle pane-button ${showFailedReconstructions ? 'active' : ''} failed-btn`}
-              onClick={() => setShowFailedReconstructions(!showFailedReconstructions)}
-              title="Show/hide projects with invalid file paths"
-            >
-              Failed
-            </button>
           </div>
+          {/* Failed toggle continues the left-aligned strip */}
+          <button
+            className={`filter-toggle pane-button ${showFailedReconstructions ? 'active' : ''}`}
+            onClick={() => setShowFailedReconstructions(!showFailedReconstructions)}
+            title="Show/hide projects with invalid file paths"
+          >
+            Failed
+          </button>
       </PaneControls>
       <div className="sidebar-projects" style={{ overflowY: 'auto' }}>
         {sortedProjects && Array.isArray(sortedProjects) ? sortedProjects.map((project) => {
@@ -334,7 +346,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
           return (
             <div
               key={projectKey}
-              className={`project-item ${selectedProject === project ? 'selected' : ''} ${todoCount === 0 ? 'empty-project' : ''}`}
+              className={`project-item ${selectedProject && selectedProject.path === project.path ? 'selected' : ''} ${todoCount === 0 ? 'empty-project' : ''}`}
               onClick={() => handleProjectClick(project)}
               onContextMenu={(e) => handleProjectContextMenu(e, project)}
             >
@@ -350,6 +362,6 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
           );
         }).filter(Boolean) : null}
       </div>
-    </div>
+    </>
   );
 }

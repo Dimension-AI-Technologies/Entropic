@@ -5,18 +5,16 @@ import App from './App';
 // import TestApp from './TestApp';
 import './index.css';
 
-console.warn('[MAIN] Starting React app...');
-console.error('[MAIN] Starting React app...');
+console.log('[MAIN] Starting React app...');
 const rootElement = document.getElementById('root');
-console.warn('[MAIN] Root element:', rootElement);
-console.error('[MAIN] Root element:', rootElement);
+console.log('[MAIN] Root element found:', !!rootElement);
 
 if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
-  console.error('[MAIN] Created React root, rendering App...');
+  console.log('[MAIN] Created React root, rendering App...');
   try {
     root.render(<App />);
-    console.error('[MAIN] Render called successfully');
+    console.log('[MAIN] Render invoked successfully');
   } catch (error) {
     console.error('[MAIN] ERROR during render:', error);
   }

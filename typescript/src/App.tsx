@@ -10,8 +10,10 @@ import { DIContainer } from './services/DIContainer';
 
 
 function App() {
-  console.error('[APP] App component rendering!');
-  console.error('=== APP DEBUG: Function App() called ===');
+  const DEBUG = !!(import.meta as any)?.env?.DEV;
+  const dlog = (...args: any[]) => { if (DEBUG) console.log(...args); };
+  dlog('[APP] App component rendering!');
+  dlog('=== APP DEBUG: Function App() called ===');
   
   // Simple boolean loading state - no complex objects
   const [loading, setLoading] = useState(true);
@@ -30,16 +32,16 @@ function App() {
   
   // Initialize MVVM container and viewModels using useMemo to prevent recreation
   const { container, projectsViewModel, todosViewModel, initError } = useMemo(() => {
-    console.error('[APP] Getting DIContainer instance...');
+    dlog('[APP] Getting DIContainer instance...');
     try {
       const container = DIContainer.getInstance();
-      console.error('[APP] DIContainer obtained successfully');
+      dlog('[APP] DIContainer obtained successfully');
       
       const projectsViewModel = container.getProjectsViewModel();
-      console.error('[APP] ProjectsViewModel obtained successfully');
+      dlog('[APP] ProjectsViewModel obtained successfully');
       
       const todosViewModel = container.getTodosViewModel();
-      console.error('[APP] TodosViewModel obtained successfully');
+      dlog('[APP] TodosViewModel obtained successfully');
       
       return { container, projectsViewModel, todosViewModel, initError: null };
     } catch (error) {
@@ -55,12 +57,12 @@ function App() {
 
   // Simple loading timer - no complex state management
   useEffect(() => {
-    console.error('[App] Setting up initialization timer...');
+    dlog('[App] Setting up initialization timer...');
     
     const timer = setTimeout(() => {
-      console.error('[App] Timer fired - setting loading to false');
+      dlog('[App] Timer fired - setting loading to false');
       setLoading(false);
-      console.error('[App] Loading state updated to false');
+      dlog('[App] Loading state updated to false');
     }, 1500);
     
     // Cleanup timer on unmount
@@ -75,9 +77,14 @@ function App() {
     if (!projectsViewModel || !todosViewModel) return;
     const update = () => {
       try {
-        const projectCount = projectsViewModel.getProjects().length;
-        const activeTodos = todosViewModel.getSessions().reduce((sum, s) => sum + (s.todos?.filter(t => t.status !== 'completed').length || 0), 0);
-        setStatusText(`${projectCount} projects • ${activeTodos} active todos`);
+        const sessions = todosViewModel.getSessions();
+        const activeTodos = sessions.reduce((sum, s) => sum + (s.todos?.filter(t => t.status !== 'completed').length || 0), 0);
+        const uniqueProjects = new Set(
+          sessions
+            .map((s: any) => s.projectPath || '')
+            .filter((p: string) => p && p !== 'Unknown Project')
+        );
+        setStatusText(`${uniqueProjects.size} projects • ${activeTodos} active todos`);
       } catch {}
     };
     update();
@@ -114,9 +121,21 @@ function App() {
     return () => { try { delete (window as any).__addToast; } catch {} };
   }, []);
   
+  // Listen for screenshot notifications from main and show consistent toast
+  useEffect(() => {
+    const api: any = (window as any).electronAPI;
+    if (!api?.onScreenshotTaken) return;
+    const off = api.onScreenshotTaken((_e: any, data: any) => {
+      const p = data?.path;
+      if (p) (window as any).__addToast?.(`Screenshot saved. Path copied: ${p}`);
+      else (window as any).__addToast?.('Screenshot failed');
+    });
+    return () => { try { off?.(); } catch {} };
+  }, []);
+  
   // Add debugging for loading state changes
   useEffect(() => {
-    console.error('[App] loading state changed to:', loading);
+    dlog('[App] loading state changed to:', loading);
   }, [loading]);
 
   // Refresh function for ViewModels - with safety checks to prevent crashes
@@ -149,11 +168,11 @@ function App() {
 
 
   // Log current loading state
-  console.error('[App] Current loading state:', loading, 'viewMode:', viewMode);
+  dlog('[App] Current loading state:', loading, 'viewMode:', viewMode);
   
   // Check simple loading state
   if (loading) {
-    console.error('[App] Rendering SplashScreen, loading:', loading);
+    dlog('[App] Rendering SplashScreen, loading:', loading);
     return (
       <SplashScreen 
         loadingSteps={['Initializing application...']}
@@ -162,7 +181,7 @@ function App() {
     );
   }
   
-  console.error('[APP DEBUG] Past loading check, loading=false - SUCCESS!');
+  dlog('[APP DEBUG] Past loading check, loading=false - SUCCESS!');
   
   // Calculate stats for unified title bar - simplified without crashing functions
   const getSelectedProjectName = () => 'Project View';
@@ -195,13 +214,13 @@ function App() {
         {/* Content area - either project view or global view */}
         <div className="content-area" style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           {(() => {
-            console.error(`[APP RENDER DEBUG] viewMode = "${viewMode}", about to render ${viewMode === 'global' ? 'GlobalView' : 'ProjectView'}`);
+            dlog(`[APP RENDER DEBUG] viewMode = "${viewMode}", about to render ${viewMode === 'global' ? 'GlobalView' : 'ProjectView'}`);
             if (viewMode === 'global') {
-              console.error('[APP RENDER] Rendering GlobalView component');
+              dlog('[APP RENDER] Rendering GlobalView component');
               return <GlobalView spacingMode={spacingMode} />;
             } else {
-              console.error('[APP RENDER] Rendering ProjectView component');
-              return <ProjectView activityMode={activityMode} setActivityMode={setActivityMode} />;
+              dlog('[APP RENDER] Rendering ProjectView component');
+              return <ProjectView activityMode={activityMode} setActivityMode={setActivityMode} spacingMode={spacingMode} onSpacingModeChange={setSpacingMode} />;
             }
           })()}
           {/* Overlay during reload - scoped to content area only */}

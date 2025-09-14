@@ -159,26 +159,34 @@ export function PromptView({ selectedProject, spacingMode = 'compact' }: PromptV
     );
   }
 
+  const flatPath = getFlattenedProjectPath(selectedProject.path);
   return (
     <div className="prompt-history-view" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <PaneHeader className="project-header">
-        <h1 title={selectedProject.path}>{selectedProject.path}</h1>
-      </PaneHeader>
+      {/* Controls row: left = flattened path, right = sort toggle */}
       <PaneControls className="pane-controls">
-        <div className="sort-controls" title="Sort order">
-          <button
-            className={`spacing-btn spacing-cycle-btn active`}
-            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-            style={{ minWidth: 150 }}
-            title={sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}
-          >
-            {sortOrder === 'asc' ? '↑ Oldest First' : '↓ Newest First'}
-          </button>
+        {/* Left: flattened path */}
+        <div
+          style={{ flex: 1, color: '#b9bbbe', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+          title="Click or right-click to copy flattened path"
+          onClick={() => { try { navigator.clipboard.writeText(flatPath); (window as any).__addToast?.('Copied flattened path'); } catch {} }}
+          onContextMenu={(e) => { e.preventDefault(); try { navigator.clipboard.writeText(flatPath); (window as any).__addToast?.('Copied flattened path'); } catch {} }}
+        >
+          {flatPath}
         </div>
-        <div className="filter-toggles" style={{ flex: 1, display: 'flex', justifyContent: 'center', color: '#b9bbbe' }} title="Flattened path">
-          <span>{getFlattenedProjectPath(selectedProject.path)}</span>
+        {/* Right: sort order + loading */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="sort-controls" title="Sort order">
+            <button
+              className={`spacing-btn spacing-cycle-btn active`}
+              onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+              style={{ minWidth: 140 }}
+              title={sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}
+            >
+              {sortOrder === 'asc' ? '↑ Oldest First' : '↓ Newest First'}
+            </button>
+          </div>
+          <div style={{ minWidth: 120, textAlign: 'right', color: '#b9bbbe' }}>{loading ? 'Loading…' : ''}</div>
         </div>
-        <div style={{ minWidth: 140, textAlign: 'right', color: '#b9bbbe' }}>{loading ? 'Loading…' : ''}</div>
       </PaneControls>
 
       {error && (

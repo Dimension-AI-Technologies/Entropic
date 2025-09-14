@@ -150,8 +150,8 @@ export function UnifiedTitleBar({
                   (window as any).__addToast?.('Screenshot unavailable');
                   return;
                 }
-                const res = await window.electronAPI.takeScreenshot();
-                if (res.success) { (window as any).__addToast?.('Screenshot saved'); } else { (window as any).__addToast?.('Screenshot failed'); }
+                // Trigger screenshot; toast will be shown via screenshot-taken event
+                const _res = await window.electronAPI.takeScreenshot();
               } catch (e) {
                 console.error('Screenshot error', e);
                 (window as any).__addToast?.('Screenshot failed');
@@ -171,6 +171,7 @@ export function UnifiedTitleBar({
         {/* Center: Project View button + Claude logo + Global View button */}
         <div className="title-bar-center">
           <button
+            type="button"
             className={`view-toggle-btn ${viewMode === 'project' ? 'active' : ''}`}
             onClick={() => onViewModeChange('project')}
             title="View individual project todos"
@@ -190,6 +191,7 @@ export function UnifiedTitleBar({
           />
           
           <button
+            type="button"
             className={`view-toggle-btn ${viewMode === 'global' ? 'active' : ''}`}
             onClick={() => onViewModeChange('global')}
             title="View all active todos across projects"
