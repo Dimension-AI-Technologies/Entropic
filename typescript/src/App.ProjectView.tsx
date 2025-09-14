@@ -241,6 +241,25 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
     }
   };
 
+  // Handle navigation requests from GlobalView
+  useEffect(() => {
+    const onNav = (e: any) => {
+      const { projectPath, sessionId, todoIndex } = e.detail || {};
+      if (!projectPath || !sessionId) return;
+      const mvvm = projects.find(p => p.path === projectPath);
+      if (mvvm) {
+        setSelectedMVVMProject(mvvm);
+      }
+      const sess = sessions.find(s => s.id === sessionId) || todosViewModel.getSessionsForProject(projectPath).find(s => s.id === sessionId);
+      if (sess) {
+        setSelectedSession(sess);
+        if (typeof todoIndex === 'number') setSelectedTodoIndex(todoIndex);
+      }
+    };
+    window.addEventListener('navToSession', onNav as any);
+    return () => window.removeEventListener('navToSession', onNav as any);
+  }, [projects, sessions, todosViewModel]);
+
   // Project context menu closes via overlay in ProjectContextMenu
 
   const handleMVVMProjectContextMenu = (e: React.MouseEvent, mvvmProject: MVVMProject) => {

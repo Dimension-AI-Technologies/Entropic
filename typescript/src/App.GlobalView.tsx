@@ -27,10 +27,11 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
     };
   }, [projectsViewModel, todosViewModel]);
 
-  // Build rows per session, latest first
-  const allRows = projects.flatMap(p => {
-    const sessions = todosViewModel.getSessionsForProject(p.path);
-    return sessions.map(s => ({ p, s }));
+  // Build rows per session across all projects for better coverage
+  const allRows = todosViewModel.getSessions().map(s => {
+    const proj = projects.find(p => p.path === (s as any).projectPath);
+    const p = proj || ({ id: ((s as any).projectPath || '').replace(/[\\/:]/g, '-'), path: (s as any).projectPath || '', flattenedDir: '', pathExists: true, lastModified: s.lastModified } as any);
+    return { p, s };
   }).sort((a, b) => b.s.lastModified.getTime() - a.s.lastModified.getTime());
   const rows = allRows.filter(({ s }) => {
     if (!activeOnly) return true;
@@ -60,19 +61,29 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   const spacing = (() => {
     switch (spacingMode) {
       case 'wide':
-        return { pad: 14, headerPad: 12, dateWidth: 170, font: 13 };
+        return { padY: 12, headerPad: 12, dateWidth: 170, font: 13 };
       case 'normal':
-        return { pad: 10, headerPad: 10, dateWidth: 160, font: 13 };
+        return { padY: 6, headerPad: 10, dateWidth: 160, font: 13 };
       case 'compact':
       default:
-        return { pad: 8, headerPad: 8, dateWidth: 150, font: 12 };
+        return { padY: 0, headerPad: 8, dateWidth: 150, font: 12 };
     }
   })();
 
   // Column widths: Project | Current | Date | Next
   const gridCols = `2fr 4fr ${spacing.dateWidth}px 4fr`;
   const headerStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: gridCols, padding: `${spacing.headerPad}px 14px`, background: '#2a2d33', color: '#bfc3c8', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6 };
-  const cellBase: React.CSSProperties = { padding: `${spacing.pad}px 14px`, borderTop: '1px solid #30343a', display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center', background: '#23262b', fontSize: spacing.font };
+  const cellBase: React.CSSProperties = { padding: `${spacing.padY}px 14px`, borderTop: '1px solid #30343a', display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center', background: '#23262b', fontSize: spacing.font };
+  const formatDate = (d: Date) => {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const mon = months[d.getMonth()];
+    const yy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${dd}-${mon}-${yy} ${hh}:${mm}:${ss}`;
+  };
   const dot = (color: string) => ({ width: 8, height: 8, borderRadius: 8, background: color, display: 'inline-block', marginRight: 8 });
 
   return (
@@ -95,27 +106,29 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
           <div style={{ textAlign: 'left' }}>Date</div>
           <div>Next Task</div>
         </div>
-        <div>
+        <div style={{ overflowY: 'auto' }}>
           {rows.map(({ p, s }) => {
             const curr = pickCurrent(s.todos || []);
             const next = pickNext(s.todos || [], curr);
             const hasActive = (s.todos || []).some((t: any) => t.status !== 'completed');
             const accent = hasActive ? '#2ACB68' : '#5b6168';
+            const projName = (p.path || '').split(/[\\/]/).pop() || ((s as any).projectPath ? (s as any).projectPath.split(/[\\/]/).pop() : 'Unknown Project');
+            const shortId = s.id.substring(0,6);
+            const goto = (todo: any) => { const idx = (s.todos || []).indexOf(todo); (window as any).__navigateToProjectSession?.((s as any).projectPath || p.path, s.id, idx >= 0 ? idx : undefined); };
             return (
               <div key={`${p.id}-${s.id}`} style={cellBase}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <div style={{ width: 4, height: 24, background: accent, borderRadius: 2, marginRight: 10 }} />
                   <div>
-                    <div style={{ fontWeight: 600 }}>{p.path.split(/[\\/]/).pop()}</div>
-                    <div style={{ fontSize: 12, opacity: 0.7 }}>{s.id.substring(0, 6)}</div>
+                    <div style={{ fontWeight: 600 }}>{projName} <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.8 }}>({shortId})</span></div>
                   </div>
                 </div>
-                <div style={{ fontSize: 13, color: '#e6e7e8' }}>
+                <div style={{ fontSize: 13, color: '#e6e7e8', cursor: curr ? 'pointer' : 'default' }} onClick={() => curr && goto(curr)} title={curr ? 'Go to this task' : ''}>
                   <span style={dot('#e0b012')}></span>
                   {curr ? curr.content : <span style={{ opacity: 0.6 }}>No task</span>}
                 </div>
-                <div style={{ fontSize: 12, color: '#c9cbce' }}>{s.lastModified.toLocaleString()}</div>
-                <div style={{ fontSize: 13, color: '#c9cbce' }}>
+                <div style={{ fontSize: 12, color: '#c9cbce' }}>{formatDate(s.lastModified)}</div>
+                <div style={{ fontSize: 13, color: '#c9cbce', cursor: next ? 'pointer' : 'default' }} onClick={() => next && goto(next)} title={next ? 'Go to this task' : ''}>
                   <span style={dot('#7aa0f7')}></span>
                   {next ? next.content : <span style={{ opacity: 0.6 }}>No next task</span>}
                 </div>

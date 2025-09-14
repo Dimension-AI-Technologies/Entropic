@@ -415,6 +415,17 @@ body {
   position: relative;
 }
 
+/* Universal Status Bar at bottom */
+.universal-status-bar {
+  background: #202225;
+  border-top: 1px solid #35373b;
+  color: #b9bbbe;
+  font-size: 12px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+}
+
 /* Main content background - now handled by AnimatedBackground component */
 
 /* Boid System */

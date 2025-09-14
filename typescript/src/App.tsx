@@ -25,6 +25,7 @@ function App() {
   
   // Activity mode state for auto-selection
   const [activityMode, setActivityMode] = useState(false);
+  const [statusText, setStatusText] = useState('Ready');
   
   // Initialize MVVM container and viewModels using useMemo to prevent recreation
   const { container, projectsViewModel, todosViewModel, initError } = useMemo(() => {
@@ -67,6 +68,35 @@ function App() {
       clearTimeout(timer);
     };
   }, []); // Only run once on mount
+  
+  // Subscribe to VM changes for status bar counts
+  useEffect(() => {
+    if (!projectsViewModel || !todosViewModel) return;
+    const update = () => {
+      try {
+        const projectCount = projectsViewModel.getProjects().length;
+        const activeTodos = todosViewModel.getSessions().reduce((sum, s) => sum + (s.todos?.filter(t => t.status !== 'completed').length || 0), 0);
+        setStatusText(`${projectCount} projects • ${activeTodos} active todos`);
+      } catch {}
+    };
+    update();
+    const unP = projectsViewModel.onChange(update);
+    const unT = todosViewModel.onChange(update);
+    return () => { (unP as any)?.(); unT(); };
+  }, [projectsViewModel, todosViewModel]);
+
+  // Expose navigation helper for Global view
+  useEffect(() => {
+    (window as any).__navigateToProjectSession = (projectPath: string, sessionId: string, todoIndex?: number) => {
+      try {
+        setViewMode('project');
+        window.setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('navToSession', { detail: { projectPath, sessionId, todoIndex } }));
+        }, 0);
+      } catch {}
+    };
+    return () => { try { delete (window as any).__navigateToProjectSession; } catch {} };
+  }, []);
   
   // Persist spacingMode
   useEffect(() => {
@@ -173,6 +203,10 @@ function App() {
           {toasts.map(t => (
             <div key={t.id} className="toast">{t.text}</div>
           ))}
+        </div>
+        {/* Universal Status Bar */}
+        <div className="universal-status-bar" title="Application status">
+          <span>{statusText}</span>
         </div>
       </div>
     </div>
