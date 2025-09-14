@@ -93,14 +93,15 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   // Context menu state for project column
   const [projMenu, setProjMenu] = useState<{visible:boolean;x:number;y:number;row?:{p:any;s:any}}>(() => ({visible:false,x:0,y:0}));
 
+  // Counts reflecting current filter
+  const filteredProjects = new Set(rows.map(r => r.p.id)).size;
+  const filteredSessions = rows.length;
+  const filteredTodos = rows.reduce((sum, r) => sum + ((r.s.todos || []).filter((t: any) => activeOnly ? t.status !== 'completed' : true).length), 0);
+
   return (
     <div className="global-view" style={{ padding: 16, color: 'white' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-        <div style={{ width: 18, height: 18, borderRadius: 18, background: '#e79b5c', boxShadow: '0 0 8px rgba(231,155,92,0.6)' }} />
-        <div style={{ fontSize: 18, fontWeight: 600 }}>Global Activity Overview</div>
-      </div>
       <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span>{activeTodos} active todos across {activeProjects} projects</span>
+        <span>{filteredProjects} Projects • {filteredSessions} Sessions • {filteredTodos} Todos</span>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }} title="Hide sessions with only completed items">
           <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
           <span>Active only</span>
@@ -109,9 +110,9 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
       <div className={`global-table ${spacingMode}`}>
         <div className="global-header">
           <div>Project</div>
-          <div>Current Task</div>
           <div className="global-cell date" style={{ textAlign: 'left' }}>Date</div>
-          <div>Next Task</div>
+          <div>Current</div>
+          <div>Next</div>
         </div>
         <div className="global-rows">
           {rows.map(({ p, s }) => {
@@ -132,11 +133,11 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
                   <div className="accent" style={{ background: accent }} />
                   <div className="name">{projName}<span className="sid">({shortId})</span></div>
                 </div>
+                <div className="global-cell date">{formatDate(s.lastModified)}</div>
                 <div className={`global-cell ${curr ? 'clickable' : ''}`} onClick={() => curr && goto(curr)} title={curr ? 'Go to this task' : ''}>
                   <span className="dot dot-amber"></span>
                   {curr ? curr.content : <span style={{ opacity: 0.6 }}>No task</span>}
                 </div>
-                <div className="global-cell date">{formatDate(s.lastModified)}</div>
                 <div className={`global-cell ${next ? 'clickable' : ''}`} onClick={() => next && goto(next)} title={next ? 'Go to this task' : ''}>
                   <span className="dot dot-blue"></span>
                   {next ? next.content : <span style={{ opacity: 0.6 }}>No next task</span>}

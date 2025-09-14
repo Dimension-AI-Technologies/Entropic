@@ -3069,7 +3069,7 @@ body {
 
 .global-header {
   display: grid;
-  grid-template-columns: 2fr 4fr var(--date-col) 4fr;
+  grid-template-columns: 2fr var(--date-col) 4fr 4fr; /* PROJECT, DATE, CURRENT, NEXT */
   padding: 10px 14px;
   background: #2a2d33;
   color: #bfc3c8;
@@ -3080,7 +3080,7 @@ body {
 .global-rows { overflow-y: auto; }
 .global-row {
   display: grid;
-  grid-template-columns: 2fr 4fr var(--date-col) 4fr;
+  grid-template-columns: 2fr var(--date-col) 4fr 4fr; /* PROJECT, DATE, CURRENT, NEXT */
   border-top: 1px solid #30343a;
   align-items: center;
   background: #23262b;
