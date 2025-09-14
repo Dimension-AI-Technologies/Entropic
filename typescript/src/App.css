@@ -248,6 +248,8 @@ body {
   background: #2f3136;
   border-bottom: 1px solid #35373b;
 }
+.sidebar-controls .sort-controls { display: flex; align-items: center; gap: 6px; }
+.sidebar-controls .sort-title { color: #8e9297; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
 
 .sidebar-projects {
   flex: 1;
