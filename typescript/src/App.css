@@ -3120,6 +3120,7 @@ body {
   background: #23262b;
   font-size: var(--row-font);
 }
+.global-row:hover { background: #2b2e34; }
 .global-row.pad-wide { padding: 12px 14px; }
 .global-row.pad-normal { padding: 6px 14px; }
 .global-row.pad-compact { padding: 0 14px; }
@@ -3130,6 +3131,7 @@ body {
 .global-project .name { font-weight: 600; }
 .global-project .sid { font-weight: 400; font-size: 11px; opacity: 0.8; margin-left: 6px; }
 .global-cell.clickable { cursor: pointer; }
+.global-table .clickable:hover { background: transparent; }
 .dot { width: 8px; height: 8px; border-radius: 8px; display: inline-block; margin-right: 8px; }
 .dot-amber { background: #e0b012; }
 .dot-blue { background: #7aa0f7; }
