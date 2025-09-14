@@ -198,12 +198,4 @@ export class IPCChatRepository implements IChatRepository {
   }
 }
 
-// Add type declaration for window.electronAPI if not already present
-declare global {
-  interface Window {
-    electronAPI: {
-      getTodos: () => Promise<any[]>;
-      getProjectPrompts: (projectPath: string) => Promise<{ success: boolean; value?: PromptEntry[]; error?: string }>;
-    };
-  }
-}
+// Global electronAPI type is declared in src/types/index.ts

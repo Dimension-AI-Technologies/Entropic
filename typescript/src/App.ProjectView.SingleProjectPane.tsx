@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { BoidSystem } from './components/BoidSystem';
-import { AnimatedBackground } from './components/AnimatedBackground';
+// import { BoidSystem } from './components/BoidSystem';
+// import { AnimatedBackground } from './components/AnimatedBackground';
 import { SessionTabs } from './App.ProjectView.SessionTabs';
 import { SessionControls } from './App.ProjectView.SessionControls';
 import { TodoList } from './App.ProjectView.TodoList';
 import { MergeDialog } from './App.ProjectView.MergeDialog';
 import { PromptView } from './App.ProjectView.PromptView';
 import { Result, Ok, Err } from './utils/Result';
+import { calculateMergePreview as calcMergePreview } from './components/merge/preview';
 import { DIContainer } from './services/DIContainer';
-import { Todo as DomainTodo, Session as DomainSession } from './models/Todo';
+// import { Todo as DomainTodo, Session as DomainSession } from './models/Todo';
 
 interface Todo {
   content: string;
@@ -33,16 +34,7 @@ interface Project {
   mostRecentTodoDate?: Date;
 }
 
-declare global {
-  interface Window {
-    electronAPI: {
-      getTodos: () => Promise<Project[]>;
-      saveTodos: (filePath: string, todos: Todo[]) => Promise<boolean>;
-      deleteTodoFile: (filePath: string) => Promise<boolean>;
-      getProjectPrompts: (projectPath: string) => Promise<{ success: boolean; value?: any[]; error?: string }>;
-    };
-  }
-}
+// Global electronAPI type is declared in src/types/index.ts
 
 type SpacingMode = 'wide' | 'normal' | 'compact';
 type FilterState = {
@@ -51,12 +43,15 @@ type FilterState = {
   pending: boolean;
 };
 
+type EmptyMode = 'all' | 'has_sessions' | 'has_todos' | 'active_only';
+
 interface SingleProjectPaneProps {
   selectedProject: any | null; // MVVMProject or legacy Project
   selectedSession: Session | null;
   selectedTodoIndex: number | null;
   onSessionSelect: (session: Session) => void;
   onRefresh: () => Promise<void>;
+  emptyMode: EmptyMode;
 }
 
 export function SingleProjectPane({ 
@@ -64,7 +59,8 @@ export function SingleProjectPane({
   selectedSession,
   selectedTodoIndex,
   onSessionSelect,
-  onRefresh 
+  onRefresh,
+  emptyMode
 }: SingleProjectPaneProps) {
   // Initialize MVVM ViewModels
   const container = DIContainer.getInstance();
@@ -87,7 +83,7 @@ export function SingleProjectPane({
   
   // Edit state management
   const [editedTodos, setEditedTodos] = useState<Todo[] | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
+  // Removed unused isDirty state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // Tab multi-select for merging
@@ -99,20 +95,7 @@ export function SingleProjectPane({
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
 
-  // Click outside handler for context menus
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('.context-menu')) {
-        setShowContextMenu(false);
-      }
-    };
-    
-    if (showContextMenu) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [showContextMenu]);
+  // Session context menu closes via overlay in SessionContextMenu
 
   // Tab selection for merging
   const handleTabClick = (e: React.MouseEvent, session: Session) => {
@@ -174,7 +157,7 @@ export function SingleProjectPane({
       const sources = sorted.slice(1);
       
       // Calculate merge preview
-      const preview = calculateMergePreview(sources, target);
+      const preview = calcMergePreview(sources as any, target as any);
       
       setMergeTarget(target);
       setMergeSources(sources);
@@ -186,44 +169,7 @@ export function SingleProjectPane({
     }
   };
 
-  const calculateMergePreview = (sources: Session[], target: Session) => {
-    let totalNewTodos = 0;
-    let totalDuplicates = 0;
-    const steps: Array<{source: string; target: string; todos: number}> = [];
-    
-    const targetContents = new Set(target.todos.map(t => t.content.toLowerCase()));
-    const mergedContents = new Set(targetContents);
-    
-    for (const source of sources) {
-      let stepNewTodos = 0;
-      let stepDuplicates = 0;
-      
-      for (const todo of source.todos) {
-        const lowerContent = todo.content.toLowerCase();
-        if (mergedContents.has(lowerContent)) {
-          stepDuplicates++;
-        } else {
-          stepNewTodos++;
-          mergedContents.add(lowerContent);
-        }
-      }
-      
-      totalNewTodos += stepNewTodos;
-      totalDuplicates += stepDuplicates;
-      steps.push({
-        source: source.id.substring(0, 8),
-        target: target.id.substring(0, 8),
-        todos: stepNewTodos
-      });
-    }
-    
-    return {
-      totalTodos: target.todos.length + totalNewTodos,
-      duplicates: totalDuplicates,
-      newTodos: totalNewTodos,
-      steps
-    };
-  };
+  // Moved to helper for clarity
 
   const handleDeleteSession = async (): Promise<Result<void>> => {
     if (!selectedSession || !selectedSession.filePath) {
@@ -245,7 +191,7 @@ export function SingleProjectPane({
     if (deleteResult.success && deleteResult.value) {
       setShowDeleteConfirm(false);
       setEditedTodos(null);
-      setIsDirty(false);
+      // No local dirty state to reset here
       await onRefresh();
       return Ok(undefined);
     } else if (!deleteResult.success) {
@@ -272,6 +218,27 @@ export function SingleProjectPane({
     setMergePreview(null);
   };
 
+  // If the current selection is hidden by the filter, auto-select the most recent visible
+  useEffect(() => {
+    if (!selectedProject || !selectedSession) return;
+    const all = todosViewModel.getSessionsForProject(selectedProject.path);
+    const visible = all.filter(s => {
+      switch (emptyMode) {
+        case 'all':
+        case 'has_sessions':
+          return true;
+        case 'has_todos':
+          return Array.isArray(s.todos) && s.todos.length > 0;
+        case 'active_only':
+          return Array.isArray(s.todos) && s.todos.some(t => t.status !== 'completed');
+      }
+    });
+    if (!visible.some(s => s.id === selectedSession.id) && visible.length > 0) {
+      const mostRecent = [...visible].sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())[0];
+      onSessionSelect(mostRecent);
+    }
+  }, [selectedProject, selectedSession, emptyMode, todosViewModel, onSessionSelect]);
+
   const displayTodos = editedTodos || selectedSession?.todos || [];
 
   if (!selectedProject) {
@@ -285,11 +252,33 @@ export function SingleProjectPane({
     );
   }
 
+  // Enrich selected project with live sessions from TodosViewModel
+  const allSessions = todosViewModel.getSessionsForProject(selectedProject.path);
+  const filteredSessions = allSessions.filter(s => {
+    switch (emptyMode) {
+      case 'all':
+      case 'has_sessions':
+        return true;
+      case 'has_todos':
+        return Array.isArray(s.todos) && s.todos.length > 0;
+      case 'active_only':
+        return Array.isArray(s.todos) && s.todos.some(t => t.status !== 'completed');
+    }
+  });
+
+  const enrichedProject: Project = {
+    path: selectedProject.path,
+    sessions: filteredSessions,
+    mostRecentTodoDate: selectedProject.mostRecentTodoDate,
+  } as any;
+
+  
+
   return (
     <div className="main-content">
       
       <SessionControls
-        selectedProject={selectedProject}
+        selectedProject={enrichedProject}
         selectedSession={selectedSession}
         onRefresh={onRefresh}
         selectedTabs={selectedTabs}
@@ -309,7 +298,7 @@ export function SingleProjectPane({
       {viewMode === 'todo' && (
         <>
           <SessionTabs
-            selectedProject={selectedProject}
+            selectedProject={enrichedProject}
             selectedSession={selectedSession}
             onSessionSelect={onSessionSelect}
             selectedTabs={selectedTabs}
@@ -320,6 +309,7 @@ export function SingleProjectPane({
             contextMenuPosition={contextMenuPosition}
             onContextMenuCopyId={handleContextMenuCopyId}
             onContextMenuClose={() => setShowContextMenu(false)}
+            contextMenuSessionId={contextMenuTab}
             onContextMenuDelete={() => {
               setShowContextMenu(false);
               setShowDeleteConfirm(true);
@@ -327,7 +317,7 @@ export function SingleProjectPane({
           />
           
           <TodoList
-            selectedProject={selectedProject}
+            selectedProject={enrichedProject}
             selectedSession={selectedSession}
             selectedTodoIndex={selectedTodoIndex}
             onRefresh={onRefresh}
@@ -340,7 +330,7 @@ export function SingleProjectPane({
       )}
       
       {viewMode === 'prompt' && (
-        <PromptView selectedProject={selectedProject} />
+        <PromptView selectedProject={enrichedProject} />
       )}
       
       <MergeDialog

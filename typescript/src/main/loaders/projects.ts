@@ -27,6 +27,9 @@ interface Project {
   mostRecentTodoDate?: Date;
   flattenedDir?: string;
   pathExists?: boolean;
+  startDate?: Date;
+  totalTodos?: number;
+  activeTodos?: number;
 }
 
 const validatePath = (testPath: string): boolean => {
@@ -38,7 +41,7 @@ const guessPathFromFlattenedName = (flatPath: string): string => {
   return PathUtils.guessPathFromFlattenedName(flatPath);
 };
 
-export async function loadTodosData(projectsDir: string, logsDir: string): AsyncResult<Project[]> {
+export async function loadTodosData(projectsDir: string, logsDir: string, todosDir?: string): AsyncResult<Project[]> {
   const projects = new Map<string, Project>();
   const logPath = path.join(process.cwd(), 'project.load.log');
   const logEntries: string[] = [];
@@ -47,6 +50,7 @@ export async function loadTodosData(projectsDir: string, logsDir: string): Async
   logEntries.push(`=== Project Load Log - ${timestamp} ===`);
   logEntries.push(`Working Directory: ${process.cwd()}`);
   logEntries.push(`Projects Directory: ${projectsDir}`);
+  if (todosDir) logEntries.push(`Todos Directory: ${todosDir}`);
   logEntries.push('');
 
   const projectDirsResult = await ResultUtils.fromPromise(fs.readdir(projectsDir));
@@ -91,10 +95,16 @@ export async function loadTodosData(projectsDir: string, logsDir: string): Async
     const reconstructedPath = guessPathFromFlattenedName(flatDir);
     const pathExists = validatePath(reconstructedPath);
 
-    const sessionFiles = projectFiles.filter((file) => file.match(/^\.session_.+\.json$/));
+    // Look for JSONL files with UUID names (Claude session files)
+    const sessionFiles = projectFiles.filter((file) => file.match(/^[a-f0-9-]+\.jsonl$/));
 
     const status = pathExists ? '✅' : '⚠️';
     logEntries.push(`Processing project: ${flatDir} -> ${reconstructedPath} ${status}`);
+
+    // Capture directory stats as a fallback for dates
+    const dirStatResult = await ResultUtils.fromPromise(fs.stat(projectDirPath));
+    const dirBirth = dirStatResult.success ? dirStatResult.value.birthtime : new Date(0);
+    const dirMtime = dirStatResult.success ? dirStatResult.value.mtime : new Date(0);
 
     let mostRecentDate = new Date(0);
     for (const file of sessionFiles) {
@@ -108,9 +118,10 @@ export async function loadTodosData(projectsDir: string, logsDir: string): Async
     projects.set(reconstructedPath, {
       path: reconstructedPath,
       sessions: [],
-      mostRecentTodoDate: mostRecentDate,
+      mostRecentTodoDate: mostRecentDate.getTime() > 0 ? mostRecentDate : dirMtime,
       flattenedDir: flatDir,
       pathExists: pathExists,
+      startDate: dirBirth.getTime() > 0 ? dirBirth : undefined,
     });
 
     if (sessionFiles.length > 0) {
@@ -131,35 +142,44 @@ export async function loadTodosData(projectsDir: string, logsDir: string): Async
         const content = contentResult.value;
 
         let todos: Todo[] = [];
-        let sessionId = '';
+        // Extract session ID from filename (UUID.jsonl)
+        const sessionId = dataFile.replace('.jsonl', '');
         let actualProjectPath: string = reconstructedPath;
 
-        const parseResult = await ResultUtils.fromPromise(Promise.resolve(JSON.parse(content)));
-        if (!parseResult.success) {
-          logEntries.push(`  Error parsing JSON in ${dataFile}: ${parseResult.error}`);
-          continue;
-        }
-        const sessionData = parseResult.value;
-
-        if (Array.isArray(sessionData)) {
-          todos = sessionData;
-          const sessionMatch = dataFile.match(/^\.session_(.+)\.json$/);
-          sessionId = sessionMatch ? sessionMatch[1] : dataFile;
-        } else if (sessionData && typeof sessionData === 'object') {
-          todos = sessionData.todos || [];
-          sessionId = sessionData.sessionId || sessionData.id || '';
-          if (sessionData.projectPath && validatePath(sessionData.projectPath)) {
-            actualProjectPath = sessionData.projectPath;
+        // Parse JSONL format (JSON Lines - one JSON object per line)
+        const lines = content.split('\n').filter(line => line.trim());
+        
+        for (const line of lines) {
+          try {
+            const event = JSON.parse(line);
+            
+            // Look for todo-related events in Claude session data
+            if (event.type === 'todo' || event.todos) {
+              if (Array.isArray(event.todos)) {
+                todos.push(...event.todos);
+              } else if (event.content && event.status) {
+                // Single todo event
+                todos.push({
+                  content: event.content,
+                  status: event.status,
+                  activeForm: event.activeForm,
+                  id: event.id,
+                  created: event.created ? new Date(event.created) : undefined
+                });
+              }
+            }
+          } catch (err) {
+            // Skip lines that aren't valid JSON
+            continue;
           }
-          if (!sessionId) {
-            const sessionMatch = dataFile.match(/^\.session_(.+)\.json$/);
-            sessionId = sessionMatch ? sessionMatch[1] : dataFile;
-          }
-        } else {
-          continue;
+        }
+        
+        if (todos.length === 0) {
+          // If no todos found, create a placeholder session to show it exists
+          logEntries.push(`  Found session: ${sessionId} (no todos extracted from JSONL)`);
         }
 
-        if (!Array.isArray(todos)) continue;
+        // Continue even if no todos found - session still exists
 
         logEntries.push(`  Found session: ${sessionId} with ${todos.length} todos`);
 
@@ -192,6 +212,107 @@ export async function loadTodosData(projectsDir: string, logsDir: string): Async
           filePath: dataFilePath,
         });
       }
+    }
+  }
+
+  // --- Phase 2: Merge sessions from ~/.claude/todos JSON files (authoritative TODO lists)
+  if (todosDir && fsSync.existsSync(todosDir)) {
+    logEntries.push('');
+    logEntries.push('--- Todos Directory Merge ---');
+    const todoFilesResult = await ResultUtils.fromPromise(fs.readdir(todosDir));
+    if (todoFilesResult.success) {
+      const todoFiles = todoFilesResult.value.filter(f => /-agent(?:-[0-9a-f-]+)?\.json$/.test(f));
+      logEntries.push(`Found ${todoFiles.length} todo session files`);
+      for (const filename of todoFiles) {
+        const match = filename.match(/^([0-9a-f-]+)-agent(?:-[0-9a-f-]+)?\.json$/);
+        if (!match) continue;
+        const sessionId = match[1];
+        const filePath = path.join(todosDir, filename);
+        const statsResult = await ResultUtils.fromPromise(fs.stat(filePath));
+        if (!statsResult.success) {
+          logEntries.push(`  ✗ stat failed for ${filename}: ${statsResult.error}`);
+          continue;
+        }
+        const contentResult = await ResultUtils.fromPromise(fs.readFile(filePath, 'utf-8'));
+        if (!contentResult.success) {
+          logEntries.push(`  ✗ read failed for ${filename}: ${contentResult.error}`);
+          continue;
+        }
+        let todos: Todo[] = [];
+        try {
+          const arr = JSON.parse(contentResult.value);
+          if (Array.isArray(arr)) {
+            todos = arr.map((t: any) => ({
+              content: String(t.content || ''),
+              status: ['pending','in_progress','completed'].includes(t.status) ? t.status : 'pending',
+              activeForm: t.activeForm,
+              id: t.id,
+              created: t.created ? new Date(t.created) : undefined,
+            }));
+          }
+        } catch (e) {
+          logEntries.push(`  ✗ parse failed for ${filename}`);
+          continue;
+        }
+
+        // Resolve project real path from session
+        const projPathResult = await PathUtils.getRealProjectPath(sessionId);
+        const realPath = (projPathResult.success && projPathResult.value.path) ? projPathResult.value.path : null;
+        const flattenedDir = projPathResult.success ? projPathResult.value.flattenedDir : undefined;
+        const targetPath = realPath || (flattenedDir ? guessPathFromFlattenedName(flattenedDir) : 'Unknown Project');
+        const pathExists = realPath ? validatePath(realPath) : validatePath(targetPath);
+
+        if (!projects.has(targetPath)) {
+          projects.set(targetPath, {
+            path: targetPath,
+            sessions: [],
+            mostRecentTodoDate: statsResult.value.mtime,
+            flattenedDir: flattenedDir,
+            pathExists,
+          });
+        } else {
+          const p = projects.get(targetPath)!;
+          if (!p.mostRecentTodoDate || statsResult.value.mtime > p.mostRecentTodoDate) {
+            p.mostRecentTodoDate = statsResult.value.mtime;
+          }
+        }
+
+        const project = projects.get(targetPath)!;
+        const existingIndex = project.sessions.findIndex(s => s.id === sessionId);
+        const sessionData = {
+          id: sessionId,
+          todos,
+          lastModified: statsResult.value.mtime,
+          filePath,
+        } as Session;
+        if (existingIndex >= 0) {
+          // Prefer JSON todos when present
+          const existing = project.sessions[existingIndex];
+          const shouldReplace = (existing.todos?.length || 0) < todos.length;
+          if (shouldReplace) {
+            project.sessions[existingIndex] = sessionData;
+          } else {
+            // Keep existing but update lastModified if newer
+            if (statsResult.value.mtime > existing.lastModified) {
+              existing.lastModified = statsResult.value.mtime;
+            }
+          }
+        } else {
+          project.sessions.push(sessionData);
+        }
+
+        // Fallback: if project lacks dates, use directory stats when possible
+        if ((!project.startDate || !project.mostRecentTodoDate) && project.flattenedDir) {
+          const projDirPath = path.join(projectsDir, project.flattenedDir);
+          const projStat = await ResultUtils.fromPromise(fs.stat(projDirPath));
+          if (projStat.success) {
+            if (!project.startDate || project.startDate.getTime() === 0) project.startDate = projStat.value.birthtime;
+            if (!project.mostRecentTodoDate || project.mostRecentTodoDate.getTime() === 0) project.mostRecentTodoDate = projStat.value.mtime;
+          }
+        }
+      }
+    } else {
+      logEntries.push(`Error reading todos directory: ${todoFilesResult.error}`);
     }
   }
 
@@ -244,6 +365,25 @@ export async function loadTodosData(projectsDir: string, logsDir: string): Async
     console.error('Failed to validate project loading:', allProjectDirsResult.error);
   }
 
+  // Compute aggregate fields (startDate, totals)
+  for (const p of projects.values()) {
+    const dates = p.sessions.map(s => s.lastModified).filter(Boolean) as Date[];
+    if (dates.length > 0) {
+      p.startDate = new Date(Math.min(...dates.map(d => d.getTime())));
+      if (!p.mostRecentTodoDate) {
+        p.mostRecentTodoDate = new Date(Math.max(...dates.map(d => d.getTime())));
+      }
+    }
+    let total = 0;
+    let active = 0;
+    for (const s of p.sessions) {
+      total += (s.todos?.length || 0);
+      active += (s.todos?.filter(t => t.status !== 'completed').length || 0);
+    }
+    p.totalTodos = total;
+    p.activeTodos = active;
+  }
+
   logEntries.push('');
   logEntries.push(`=== Summary ===`);
   logEntries.push(`Expected project directories: ${expectedProjectCount}`);
@@ -261,4 +401,3 @@ export async function loadTodosData(projectsDir: string, logsDir: string): Async
 
   return Ok(Array.from(projects.values()));
 }
-

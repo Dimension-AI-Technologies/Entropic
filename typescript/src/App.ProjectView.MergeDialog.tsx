@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+// React import not required with automatic JSX runtime
 import { Result, Ok, Err } from './utils/Result';
 
 interface Todo {
@@ -63,8 +63,8 @@ export function MergeDialog({
   mergeTarget,
   mergeSources,
   mergePreview,
-  selectedTabs,
-  onPerformMerge,
+  selectedTabs: _selectedTabs,
+  onPerformMerge: _onPerformMerge,
   onCloseMergeDialog,
   onSessionSelect,
   onLoadTodos
@@ -269,12 +269,4 @@ export function MergeDialog({
   );
 }
 
-declare global {
-  interface Window {
-    electronAPI: {
-      getTodos: () => Promise<Project[]>;
-      saveTodos: (filePath: string, todos: Todo[]) => Promise<boolean>;
-      deleteTodoFile: (filePath: string) => Promise<boolean>;
-    };
-  }
-}
+// Global electronAPI type is declared in src/types/index.ts

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { ProjectsPaneMVVM } from './components/ProjectsPaneMVVM';
+import { ProjectsPane } from './App.ProjectView.ProjectsPane';
 import { SingleProjectPane } from './App.ProjectView.SingleProjectPane';
 import { DIContainer } from './services/DIContainer';
 import { Project as MVVMProject } from './models/Project';
 import { Session, Todo } from './models/Todo';
-import { ProjectContextMenu } from './components/ProjectContextMenu';
+import { ProjectContextMenuController } from './components/menus/ProjectContextMenuController';
 import { useResize } from './components/hooks/useResize';
 
 
@@ -15,6 +15,7 @@ interface ProjectViewProps {
 }
 
 export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps) {
+  console.error('[ProjectView] ===== COMPONENT FUNCTION CALLED =====');
   console.log('[ProjectView] Rendering');
   const [projects, setProjects] = useState<MVVMProject[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -25,6 +26,7 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
   const { leftPaneWidth, setLeftPaneWidth, isResizing, setIsResizing } = useResize(260, 200, 400);
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, project: MVVMProject} | null>(null);
   const [deletedProjects, setDeletedProjects] = useState<Set<string>>(new Set());
+  const [emptyMode, setEmptyMode] = useState<'all' | 'has_sessions' | 'has_todos' | 'active_only'>('has_todos');
 
   // Get ViewModels from container
   const container = DIContainer.getInstance();
@@ -32,9 +34,50 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
   const todosViewModel = container.getTodosViewModel();
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
+  // Legacy project format for compatibility with existing components
+  const [legacyProjects, setLegacyProjects] = useState<Array<{
+    path: string;
+    sessions: Array<{
+      id: string;
+      todos: Todo[];
+      lastModified: Date;
+      created?: Date;
+      filePath?: string;
+    }>;
+    mostRecentTodoDate?: Date;
+  }>>([]);
+  
+  // Enhanced legacy projects that merge in MVVM session data
+  const [enhancedLegacyProjects, setEnhancedLegacyProjects] = useState<Array<{
+    path: string;
+    sessions: Array<{
+      id: string;
+      todos: Todo[];
+      lastModified: Date;
+      created?: Date;
+      filePath?: string;
+    }>;
+    mostRecentTodoDate?: Date;
+  }>>([]);
+
   // Subscribe to ViewModel changes and sync local state
   useEffect(() => {
-    // Initial load
+    // Initial load - get the actual data from Electron API directly as fallback
+    const loadLegacyData = async () => {
+      try {
+        if (window.electronAPI?.getTodos) {
+          const rawProjects = await window.electronAPI.getTodos();
+          console.log('[ProjectView] Got raw projects directly:', rawProjects.length);
+          setLegacyProjects(rawProjects);
+        } else {
+          console.warn('[ProjectView] electronAPI.getTodos not available; skipping legacy load');
+          setLegacyProjects([]);
+        }
+      } catch (error) {
+        console.error('[ProjectView] Failed to load legacy data:', error);
+      }
+    };
+    
     const updateProjects = () => {
       const vmProjects = projectsViewModel.getProjects();
       setProjects(vmProjects);
@@ -47,6 +90,10 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
       console.log('[ProjectView] Updated sessions from ViewModel:', vmSessions.length);
     };
     
+    // Load legacy data immediately
+    console.error('[ProjectView] ===== LOADING LEGACY DATA =====');
+    loadLegacyData();
+    
     updateProjects();
     updateSessions();
     
@@ -58,7 +105,45 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
       unsubscribeProjects();
       unsubscribeTodos();
     };
-  }, [projectsViewModel, todosViewModel])
+  }, [projectsViewModel, todosViewModel]);
+
+  // Effect to merge MVVM sessions into legacy project format
+  useEffect(() => {
+    const mergeSessionsIntoProjects = () => {
+      const enhanced = legacyProjects.map(legacyProject => {
+        // Find all sessions for this project path
+        const projectSessions = sessions.filter(s => s.projectPath === legacyProject.path);
+        
+        // Convert MVVM sessions to legacy format
+        const legacySessions = projectSessions.map(s => ({
+          id: s.id,
+          todos: s.todos,
+          lastModified: s.lastModified,
+          created: s.created,
+          filePath: s.filePath
+        }));
+        
+        // Use existing sessions if no MVVM sessions found, otherwise merge
+        const finalSessions = legacySessions.length > 0 ? legacySessions : legacyProject.sessions || [];
+        
+        return {
+          ...legacyProject,
+          sessions: finalSessions,
+          mostRecentTodoDate: legacyProject.mostRecentTodoDate || 
+            (finalSessions.length > 0 ? 
+              finalSessions.reduce((latest, session) => 
+                session.lastModified > latest ? session.lastModified : latest, 
+                new Date(0)
+              ) : undefined)
+        };
+      });
+      
+      console.log('[ProjectView] Enhanced legacy projects:', enhanced.length, 'projects with merged sessions');
+      setEnhancedLegacyProjects(enhanced);
+    };
+    
+    mergeSessionsIntoProjects();
+  }, [legacyProjects, sessions]);
 
   // Resizing logic moved to useResize hook
 
@@ -148,22 +233,7 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
     }
   };
 
-  // Close context menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (contextMenuRef.current && !contextMenuRef.current.contains(e.target as Node)) {
-        setContextMenu(null);
-      }
-    };
-    
-    if (contextMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [contextMenu]);
+  // Project context menu closes via overlay in ProjectContextMenu
 
   const handleMVVMProjectContextMenu = (e: React.MouseEvent, mvvmProject: MVVMProject) => {
     e.preventDefault();
@@ -277,19 +347,43 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
     <div className="app-main">
       {/* Projects Pane (Left) */}
       <div className="sidebar" style={{ width: leftPaneWidth }}>
-        <ProjectsPaneMVVM
-          viewModel={projectsViewModel}
-          todosViewModel={todosViewModel}
-          selectedProject={selectedMVVMProject}
-          onSelectProject={selectMVVMProject}
+        <ProjectsPane
+          projects={enhancedLegacyProjects}
+          selectedProject={selectedMVVMProject ? {
+            path: selectedMVVMProject.path,
+            sessions: sessions.filter(s => s.projectPath === selectedMVVMProject.path).map(s => ({
+              id: s.id,
+              todos: s.todos,
+              lastModified: s.lastModified,
+              created: s.created,
+              filePath: s.filePath
+            })),
+            mostRecentTodoDate: selectedMVVMProject.lastModified
+          } : null}
+          onSelectProject={(project) => {
+            const mvvmProject = projects.find(p => p.path === project.path) || {
+              id: project.path.replace(/[/\\:]/g, '-'),
+              path: project.path,
+              flattenedDir: project.path.replace(/[/\\:]/g, '-'),
+              pathExists: true,
+              lastModified: project.mostRecentTodoDate || new Date()
+            };
+            selectMVVMProject(mvvmProject);
+          }}
           onProjectContextMenu={handleMVVMProjectContextMenu}
           onRefresh={async () => {
-            await projectsViewModel.refresh();
-            await todosViewModel.refresh();
-          }}
+          if (window.electronAPI?.getTodos) {
+            const rawProjects = await window.electronAPI.getTodos();
+            setLegacyProjects(rawProjects);
+          }
+          await projectsViewModel.refresh();
+          await todosViewModel.refresh();
+        }}
           activityMode={activityMode}
           setActivityMode={setActivityMode}
           deletedProjects={deletedProjects}
+          emptyMode={emptyMode}
+          onEmptyModeChange={setEmptyMode}
         />
       </div>
       
@@ -309,12 +403,13 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
           await projectsViewModel.refresh();
           await todosViewModel.refresh();
         }}
+        emptyMode={emptyMode}
       />
       
       {/* Context Menu */}
       {contextMenu && (
-        <ProjectContextMenu
-          ref={contextMenuRef}
+        <ProjectContextMenuController
+          visible={!!contextMenu}
           x={contextMenu.x}
           y={contextMenu.y}
           project={contextMenu.project}
@@ -322,6 +417,9 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
           onCopyProjectPath={handleCopyProjectPath}
           onCopyFlattenedPath={handleCopyFlattenedPath}
           onDeleteProject={handleDeleteProject}
+          isSelected={selectedMVVMProject?.path === contextMenu.project.path}
+          onEnsureSelected={() => selectMVVMProject(contextMenu.project)}
+          onClose={() => setContextMenu(null)}
         />
       )}
     </div>

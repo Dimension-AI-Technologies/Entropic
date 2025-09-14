@@ -31,9 +31,15 @@ export type FilterState = {
 declare global {
   interface Window {
     electronAPI: {
-      getTodos: () => Promise<Project[]>;
-      saveTodos: (filePath: string, todos: Todo[]) => Promise<boolean>;
-      deleteTodoFile: (filePath: string) => Promise<boolean>;
+      // Core
+      getTodos: () => Promise<any[]>;
+      // Optional methods exposed by preload depending on environment
+      saveTodos?: (filePath: string, todos: Todo[]) => Promise<boolean>;
+      deleteTodoFile?: (filePath: string) => Promise<boolean>;
+      deleteProjectDirectory?: (projectDirPath: string) => Promise<{ success: boolean; value?: boolean; error?: string }>;
+      getProjectPrompts?: (projectPath: string) => Promise<{ success: boolean; value?: any[]; error?: string }>;
+      takeScreenshot?: () => Promise<{ success: boolean; path?: string; error?: string }>;
+      onTodoFilesChanged?: (callback: (event: any, data: any) => void) => () => void;
     };
   }
 }

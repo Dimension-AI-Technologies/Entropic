@@ -5,6 +5,8 @@ import os from 'node:os';
 import { Result, AsyncResult, Ok, Err, ResultUtils } from './Result.js';
 import { createFlattenedPath as createFlattenedPathImpl } from './path/flatten.js';
 import { validatePathImpl, listDirectoryImpl } from './path/validate.js';
+import { buildAndValidatePath as buildAndValidatePathImpl } from './path/reconstruct.js';
+import { guessPathFromFlattenedName as guessFromFlatImpl } from './path/reconstruct.js';
 
 // Default projects directory - can be overridden for testing
 let projectsDir = path.join(os.homedir(), '.claude', 'projects');
@@ -128,87 +130,7 @@ export class PathUtils {
    * Build path incrementally with greedy matching against actual filesystem
    */
   static buildAndValidatePath(flatParts: string[], isWindows: boolean): string | null {
-    const pathSep = isWindows ? '\\' : '/';
-    let currentPath = isWindows ? `${flatParts[0]}:\\` : '/';
-    let consumedParts = isWindows ? 1 : 0;
-    
-    while (consumedParts < flatParts.length) {
-      const remainingParts = flatParts.slice(consumedParts);
-      
-      // List what's actually in the current directory
-      const dirResult = PathUtils.listDirectory(currentPath);
-      if (!dirResult.success) {
-        break;
-      }
-      const dirContents = dirResult.value;
-      
-      // Try to find the best match for the remaining parts
-      let bestMatch = null;
-      let bestMatchLength = 0;
-      
-      // Try increasingly longer combinations of the remaining parts
-      for (let numParts = Math.min(remainingParts.length, 5); numParts >= 1; numParts--) {
-        const testParts = remainingParts.slice(0, numParts);
-        
-        // Build possible directory names from these parts
-        const candidates = [];
-        
-        // Try as-is (parts joined with hyphens)
-        candidates.push(testParts.join('-'));
-        
-        // Try with dots between parts (for usernames like first.last)
-        if (numParts === 2) {
-          candidates.push(testParts.join('.'));
-        }
-        
-        // Try with dot prefix (hidden directories)
-        if (numParts === 1) {
-          candidates.push('.' + testParts[0]);
-        }
-        
-        // Check each candidate against actual directory contents
-        for (const candidate of candidates) {
-          // Look for exact match
-          if (dirContents.includes(candidate)) {
-            bestMatch = candidate;
-            bestMatchLength = numParts;
-            break;
-          }
-          
-          // Also check for directories that start with our candidate
-          // This handles cases where the flattened name is abbreviated
-          for (const dirEntry of dirContents) {
-            if (dirEntry.toLowerCase().startsWith(candidate.toLowerCase())) {
-              bestMatch = dirEntry;
-              bestMatchLength = numParts;
-              break;
-            }
-          }
-          
-          if (bestMatch) break;
-        }
-        
-        if (bestMatch) break;
-      }
-      
-      if (bestMatch) {
-        // Found a match, add it to the path
-        currentPath = currentPath + bestMatch;
-        consumedParts += bestMatchLength;
-      } else {
-        // No match found, try adding the part as-is (might be a new directory)
-        const part = remainingParts[0];
-        currentPath = currentPath + part;
-        consumedParts += 1;
-      }
-      
-      // Add path separator for next iteration unless we're done
-      if (consumedParts < flatParts.length) {
-        currentPath = currentPath + pathSep;
-      }
-    }
-    
-    return currentPath;
+    return buildAndValidatePathImpl(flatParts, isWindows);
   }
   
   /**
@@ -216,82 +138,7 @@ export class PathUtils {
    * Uses the same logic as the main.ts implementation
    */
   static guessPathFromFlattenedName(flatPath: string): string {
-    const isWindows = process.platform === 'win32';
-    
-    // First check if we have metadata for this project
-    const metadataPath = path.join(projectsDir, flatPath, 'metadata.json');
-    if (fsSync.existsSync(metadataPath)) {
-      // Read metadata without try-catch
-      const readResult = (() => {
-        const content = fsSync.readFileSync(metadataPath, 'utf-8');
-        const data = JSON.parse(content);
-        return Ok(data);
-      })();
-      
-      if (readResult.success && readResult.value.path) {
-        return readResult.value.path;
-      }
-      // No valid metadata, continue with reconstruction
-    }
-    
-    // Windows path with drive letter (e.g., C--Users-username-Source-repos-project-name)
-    const windowsMatch = flatPath.match(/^([A-Z])--(.+)$/);
-    if (windowsMatch) {
-      const [, driveLetter, restOfPath] = windowsMatch;
-      
-      // Split on single dashes, but preserve empty parts (which indicate dots)
-      const rawParts = restOfPath.split('-');
-      
-      // Process parts to handle double dashes (empty parts mean next part should have dot)
-      let flatParts = [];
-      for (let i = 0; i < rawParts.length; i++) {
-        if (rawParts[i] === '' && i + 1 < rawParts.length) {
-          // Empty part from double dash - next part should have dot prefix
-          flatParts.push('.' + rawParts[i + 1]);
-          i++; // Skip the next part as we've consumed it
-        } else if (rawParts[i] !== '') {
-          flatParts.push(rawParts[i]);
-        }
-      }
-      
-      // Build path with greedy filesystem validation
-      const allParts = [driveLetter, ...flatParts];
-      const validatedPath = PathUtils.buildAndValidatePath(allParts, true);
-      
-      // If validation failed or returned incomplete path, build it manually
-      if (!validatedPath || validatedPath === `${driveLetter}:\\`) {
-        // Build Windows path manually from parts
-        return `${driveLetter}:\\${flatParts.join('\\')}`;
-      }
-      
-      const pathValidation = PathUtils.validatePath(validatedPath);
-      if (pathValidation.success && pathValidation.value) {
-        return validatedPath;
-      } else {
-        // Return manual build if validation failed
-        return `${driveLetter}:\\${flatParts.join('\\')}`;
-      }
-    }
-    
-    // Unix absolute path
-    if (flatPath.startsWith('-')) {
-      const unixParts = flatPath.slice(1).split('-');
-      const validatedPath = PathUtils.buildAndValidatePath(unixParts, false);
-      
-      // Check if we got the full path or just a partial one
-      // If we didn't consume all parts during validation, use simple transformation
-      const expectedParts = unixParts.length;
-      const validatedParts = validatedPath ? validatedPath.split('/').filter(p => p !== '').length : 0;
-      
-      if (!validatedPath || validatedPath === '/' || validatedParts < expectedParts) {
-        // Simple transformation when filesystem validation fails or is incomplete
-        return '/' + flatPath.slice(1).replace(/-/g, '/');
-      }
-      return validatedPath;
-    }
-    
-    // Return as-is if we can't figure it out
-    return flatPath;
+    return guessFromFlatImpl(flatPath, projectsDir);
   }
   
   /**

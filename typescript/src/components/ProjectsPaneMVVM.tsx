@@ -47,8 +47,9 @@ export function ProjectsPaneMVVM({
   deletedProjects 
 }: ProjectsPaneMVVMProps) {
   const [sortMethod, setSortMethod] = useState<SortMethod>(1); // recent
-  const [showEmptyProjects, setShowEmptyProjects] = useState(false); // hide empty projects by default
-  const [showFailedReconstructions, setShowFailedReconstructions] = useState(false); // hide failed path reconstructions by default
+  // Default: show empty projects, hide unmatched (per tests)
+  const [showEmptyProjects, setShowEmptyProjects] = useState(true);
+  const [showFailedReconstructions, setShowFailedReconstructions] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +86,15 @@ export function ProjectsPaneMVVM({
       viewModel.offChange(handleChange);
     };
   }, [viewModel]);
+
+  // Re-render when todos data changes so filters based on sessions are accurate
+  useEffect(() => {
+    const unsubscribe = todosViewModel.onChange(() => {
+      // Trigger a re-render by updating a harmless state (projects length noop)
+      setProjects(prev => [...prev]);
+    });
+    return () => unsubscribe();
+  }, [todosViewModel]);
 
   const handleProjectClick = (project: Project) => {
     onSelectProject(project);
@@ -124,11 +134,12 @@ export function ProjectsPaneMVVM({
   // Apply filters using ViewModel methods - ensure projects is never undefined
   let filteredProjects = projects || [];
 
-  // Filter by empty projects (projects with no sessions or no todos)
+  // Filter by empty projects (based on sessions/todos)
   if (!showEmptyProjects) {
     filteredProjects = filteredProjects.filter(project => {
       const sessions = todosViewModel.getSessionsForProject(project.path);
-      const totalTodoCount = sessions ? sessions.reduce((total, session) => total + (session.todos ? session.todos.length : 0), 0) : 0;
+      if (!sessions || sessions.length === 0) return false;
+      const totalTodoCount = sessions.reduce((sum, s) => sum + (s.todos?.length || 0), 0);
       return totalTodoCount > 0;
     });
   }
@@ -243,7 +254,8 @@ export function ProjectsPaneMVVM({
           const displayName = viewModel.getDisplayName(project);
           const statusIcon = viewModel.getStatusIcon(project);
           const tooltip = viewModel.getTooltip(project);
-          const isEmpty = !project.pathExists; // Simplified for now
+          const prjSessions = todosViewModel.getSessionsForProject(project.path);
+          const isEmpty = !prjSessions || prjSessions.length === 0 || prjSessions.every(s => (s.todos?.length || 0) === 0);
           
           return (
             <div

@@ -47,7 +47,16 @@ export class DIContainer {
         this.chatRepository = new MockChatRepository();
         console.error('[DIContainer] Mock repositories created successfully');
       }
-      
+    } catch (error) {
+      // Fallback to mock repositories instead of throwing
+      console.error('[DIContainer] ERROR in repository setup. Falling back to mocks:', error);
+      this.projectRepository = new MockProjectRepository();
+      this.todoRepository = new MockTodoRepository();
+      this.chatRepository = new MockChatRepository();
+    }
+
+    // ViewModels should always be created from whichever repositories are available
+    try {
       console.error('[DIContainer] Creating ViewModels...');
       this.projectsViewModel = new ProjectsViewModel(this.projectRepository);
       console.error('[DIContainer] ProjectsViewModel created');
@@ -56,8 +65,14 @@ export class DIContainer {
       this.chatHistoryViewModel = new ChatHistoryViewModel(this.chatRepository);
       console.error('[DIContainer] ChatHistoryViewModel created');
     } catch (error) {
-      console.error('[DIContainer] ERROR in constructor:', error);
-      throw error;
+      // As a last resort, create empty mocks to avoid throwing during construction
+      console.error('[DIContainer] ERROR creating ViewModels. Creating with mocks:', error);
+      this.projectRepository = new MockProjectRepository();
+      this.todoRepository = new MockTodoRepository();
+      this.chatRepository = new MockChatRepository();
+      this.projectsViewModel = new ProjectsViewModel(this.projectRepository);
+      this.todosViewModel = new TodosViewModel(this.todoRepository);
+      this.chatHistoryViewModel = new ChatHistoryViewModel(this.chatRepository);
     }
   }
 

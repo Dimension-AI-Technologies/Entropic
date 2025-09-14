@@ -2986,3 +2986,25 @@ body {
   border-color: #5865f2;
   color: #ffffff;
 }
+
+/* Fix title bar centering */
+.unified-title-bar-content {
+  position: relative;
+}
+
+.title-bar-left {
+  flex: 1;
+  min-width: 200px;
+}
+
+.title-bar-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.title-bar-right {
+  flex: 1;
+  min-width: 200px;
+}

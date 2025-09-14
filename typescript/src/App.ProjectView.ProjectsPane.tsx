@@ -42,6 +42,8 @@ function formatUKTime(date: Date): string {
   return `${hours}:${minutes}`;
 }
 
+type EmptyMode = 'all' | 'has_sessions' | 'has_todos' | 'active_only';
+
 interface ProjectsPaneProps {
   projects: Project[];
   selectedProject: Project | null;
@@ -51,11 +53,12 @@ interface ProjectsPaneProps {
   activityMode: boolean;
   setActivityMode: (mode: boolean) => void;
   deletedProjects?: Set<string>;
+  emptyMode: EmptyMode;
+  onEmptyModeChange: (mode: EmptyMode) => void;
 }
 
-export function ProjectsPane({ projects, selectedProject, onSelectProject, onProjectContextMenu, onRefresh, activityMode, setActivityMode, deletedProjects }: ProjectsPaneProps) {
+export function ProjectsPane({ projects, selectedProject, onSelectProject, onProjectContextMenu, onRefresh, activityMode, setActivityMode, deletedProjects, emptyMode, onEmptyModeChange }: ProjectsPaneProps) {
   const [sortMethod, setSortMethod] = useState<SortMethod>(1); // recent
-  const [showEmptyProjects, setShowEmptyProjects] = useState(false); // hide empty projects by default
   const [showFailedReconstructions, setShowFailedReconstructions] = useState(false); // hide failed path reconstructions by default
 
   const handleProjectClick = (project: Project) => {
@@ -77,10 +80,24 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
     }
   };
 
-  // Filter projects based on settings - ensure projects is never undefined
-  let filteredProjects = showEmptyProjects 
-    ? (projects || []) 
-    : (projects || []).filter(p => p.sessions && p.sessions.some(s => s.todos && s.todos.length > 0));
+  // Filter projects based on emptyMode
+  let filteredProjects = (projects || []).filter(p => {
+    if (!p || typeof p !== 'object') return false;
+    const hasSessions = Array.isArray(p.sessions) && p.sessions.length > 0;
+    const hasTodos = hasSessions && p.sessions.some(s => Array.isArray(s.todos) && s.todos.length > 0);
+    const hasActive = hasSessions && p.sessions.some(s => Array.isArray(s.todos) && s.todos.some(t => t.status !== 'completed'));
+
+    switch (emptyMode) {
+      case 'all':
+        return true; // show all projects
+      case 'has_sessions':
+        return hasSessions;
+      case 'has_todos':
+        return hasTodos;
+      case 'active_only':
+        return hasActive;
+    }
+  });
   
   // Further filter based on failed reconstructions
   if (!showFailedReconstructions) {
@@ -110,22 +127,35 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
     return mostRecent;
   };
 
-  const sortedProjects = filteredProjects && filteredProjects.length ? [...filteredProjects].sort((a, b) => {
-    switch(sortMethod) {
-      case 0: // alphabetic
-        return a.path.localeCompare(b.path);
-      case 1: // recent
-        const dateA = getMostRecentTodoDate(a);
-        const dateB = getMostRecentTodoDate(b);
-        return dateB.getTime() - dateA.getTime();
-      case 2: // todos
-        const countA = a.sessions ? a.sessions.reduce((sum, s) => sum + (s.todos ? s.todos.length : 0), 0) : 0;
-        const countB = b.sessions ? b.sessions.reduce((sum, s) => sum + (s.todos ? s.todos.length : 0), 0) : 0;
-        return countB - countA;
-      default:
+  const sortedProjects = filteredProjects && Array.isArray(filteredProjects) && filteredProjects.length ? 
+    [...filteredProjects].sort((a, b) => {
+      // Enhanced null safety for sorting
+      if (!a || !b) return 0;
+      
+      try {
+        switch(sortMethod) {
+          case 0: // alphabetic
+            const pathA = a.path || '';
+            const pathB = b.path || '';
+            return pathA.localeCompare(pathB);
+          case 1: // recent
+            const dateA = getMostRecentTodoDate(a);
+            const dateB = getMostRecentTodoDate(b);
+            return dateB.getTime() - dateA.getTime();
+          case 2: // todos
+            const countA = a.sessions && Array.isArray(a.sessions) ? 
+              a.sessions.reduce((sum, s) => sum + (s && s.todos && Array.isArray(s.todos) ? s.todos.length : 0), 0) : 0;
+            const countB = b.sessions && Array.isArray(b.sessions) ? 
+              b.sessions.reduce((sum, s) => sum + (s && s.todos && Array.isArray(s.todos) ? s.todos.length : 0), 0) : 0;
+            return countB - countA;
+          default:
+            return 0;
+        }
+      } catch (error) {
+        console.error('[ProjectsPane] Error in sorting:', error);
         return 0;
-    }
-  }) : [];
+      }
+    }) : [];
 
   return (
     <div className="sidebar">
@@ -167,11 +197,16 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
           </div>
           <div className="filter-toggles">
             <button
-              className={`filter-toggle ${showEmptyProjects ? 'active' : ''}`}
-              onClick={() => setShowEmptyProjects(!showEmptyProjects)}
-              title="Show/hide projects with no todos"
+              className={`filter-toggle active`}
+              onClick={() => {
+                const modes: EmptyMode[] = ['all', 'has_sessions', 'has_todos', 'active_only'];
+                const idx = modes.indexOf(emptyMode);
+                const next = modes[(idx + 1) % modes.length];
+                onEmptyModeChange(next);
+              }}
+              title={`Cycle: ALL → SESSION → TODOs → ACTIVE (current: ${emptyMode.replace('_', ' ').toUpperCase()})`}
             >
-              Empty
+              {emptyMode === 'all' ? 'ALL' : emptyMode === 'has_sessions' ? 'SESSION' : emptyMode === 'has_todos' ? 'TODOs' : 'ACTIVE'}
             </button>
             <button
               className={`filter-toggle ${showFailedReconstructions ? 'active' : ''}`}
@@ -183,28 +218,46 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
           </div>
       </PaneControls>
       <div className="sidebar-projects">
-        {sortedProjects.map((project) => {
-          const todoCount = project.sessions ? project.sessions.reduce((sum, s) => sum + (s.todos ? s.todos.length : 0), 0) : 0;
+        {sortedProjects && Array.isArray(sortedProjects) ? sortedProjects.map((project) => {
+          if (!project || typeof project !== 'object') return null;
+          
+          const todoCount = project.sessions && Array.isArray(project.sessions) ? 
+            project.sessions.reduce((sum, s) => sum + (s && s.todos && Array.isArray(s.todos) ? s.todos.length : 0), 0) : 0;
+          const activeCount = project.sessions && Array.isArray(project.sessions) ?
+            project.sessions.reduce((sum, s) => sum + (s && s.todos && Array.isArray(s.todos) ? s.todos.filter(t => t.status !== 'completed').length : 0), 0) : 0;
+          
+          const sessionCount = project.sessions && Array.isArray(project.sessions) ? project.sessions.length : 0;
+          const projectPath = project.path || '';
+          const projectKey = projectPath || `project-${Math.random()}`;
+          const startDate = (() => {
+            if (!project.sessions || project.sessions.length === 0) return null;
+            const earliest = new Date(Math.min(...project.sessions.map(s => new Date(s.lastModified).getTime())));
+            return earliest;
+          })();
+          
           return (
             <div
-              key={project.path}
+              key={projectKey}
               className={`project-item ${selectedProject === project ? 'selected' : ''} ${todoCount === 0 ? 'empty-project' : ''}`}
               onClick={() => handleProjectClick(project)}
               onContextMenu={(e) => handleProjectContextMenu(e, project)}
             >
               <div className="project-name">
-                {project.path ? project.path.split(/[\\/]/).pop() : 'Unknown Project'}
+                {projectPath ? projectPath.split(/[\\/]/).pop() : 'Unknown Project'}
                 {todoCount === 0 && <span className="empty-badge"> (empty)</span>}
               </div>
               <div className="project-stats">
-                {project.sessions.length} • {todoCount}
+                {sessionCount} • {todoCount}{activeCount > 0 ? ` • ${activeCount} active` : ''}
+                {startDate && (
+                  <> • since {formatUKDate(startDate)}</>
+                )}
                 {project.mostRecentTodoDate && (
-                  <> • {formatUKDate(project.mostRecentTodoDate)} {formatUKTime(project.mostRecentTodoDate)}</>
+                  <> • {formatUKDate(new Date(project.mostRecentTodoDate))} {formatUKTime(new Date(project.mostRecentTodoDate))}</>
                 )}
               </div>
             </div>
           );
-        })}
+        }).filter(Boolean) : null}
       </div>
     </div>
   );

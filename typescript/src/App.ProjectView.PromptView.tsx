@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Result, Ok, Err } from '../utils/Result';
+import { useState, useEffect } from 'react';
+// Result helpers are not needed here
 
 interface PromptEntry {
   timestamp: string;

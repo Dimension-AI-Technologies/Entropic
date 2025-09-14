@@ -21,10 +21,10 @@ export class IPCProjectRepository implements IProjectRepository {
       
       // Convert raw projects to MVVM Project model
       const projects: Project[] = rawProjects.map(p => ({
-        id: p.path.replace(/[/\\:]/g, '-'),
+        id: (p.flattenedDir || p.path || '').replace(/[/\\:]/g, '-'),
         path: p.path,
-        flattenedDir: this.getFlattenedPath(p.path),
-        pathExists: true, // Assume exists since it came from filesystem
+        flattenedDir: p.flattenedDir || this.getFlattenedPath(p.path),
+        pathExists: typeof p.pathExists === 'boolean' ? p.pathExists : true,
         lastModified: p.mostRecentTodoDate ? new Date(p.mostRecentTodoDate) : new Date()
       }));
       
@@ -200,13 +200,4 @@ export class IPCProjectRepository implements IProjectRepository {
   }
 }
 
-// Add type declaration for window.electronAPI if not already present
-declare global {
-  interface Window {
-    electronAPI: {
-      getTodos: () => Promise<any[]>;
-      deleteProjectDirectory: (projectDirPath: string) => Promise<{ success: boolean; value?: boolean; error?: string }>;
-      onTodoFilesChanged: (callback: (event: any, data: any) => void) => () => void;
-    };
-  }
-}
+// Global electronAPI type is declared in src/types/index.ts

@@ -10,8 +10,13 @@ export const getStatusSymbol = (status: string) => {
 };
 
 export const getStatusCounts = (session: Session) => {
+  if (!session || !session.todos || !Array.isArray(session.todos)) {
+    return { completed: 0, in_progress: 0, pending: 0 };
+  }
   const counts = session.todos.reduce((acc, todo) => {
-    acc[todo.status] = (acc[todo.status] || 0) + 1;
+    if (todo && todo.status) {
+      acc[todo.status] = (acc[todo.status] || 0) + 1;
+    }
     return acc;
   }, {} as Record<string, number>);
   

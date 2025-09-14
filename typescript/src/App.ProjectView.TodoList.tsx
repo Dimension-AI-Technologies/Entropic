@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { TodoItem } from './components/todos/TodoItem';
-import { Result, Ok, Err } from './utils/Result';
+import { useTodoEditing } from './components/todos/useTodoEditing';
+import { useTodoSelectionDnd } from './components/todos/useTodoSelectionDnd';
 
 interface Todo {
   content: string;
@@ -59,256 +60,62 @@ export function TodoList({
   spacingMode,
   filterState
 }: TodoListProps) {
-  // Edit state management
-  const [editedTodos, setEditedTodos] = useState<Todo[] | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [editingContent, setEditingContent] = useState<string>('');
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
-  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+  const {
+    editedTodos,
+    setEditedTodos,
+    isDirty,
+    setIsDirty,
+    editingIndex,
+    editingContent,
+    setEditingContent,
+    startEdit,
+    saveEdit,
+    cancelEdit,
+    handleDelete,
+    handleStatusToggle,
+    handleSave,
+    handleCancel,
+  } = useTodoEditing({ selectedSession, onLoadTodos });
+
+  const {
+    dragOverIndex,
+    setDragOverIndex,
+    selectedIndices,
+    lastSelectedIndex,
+    clearSelection,
+    moveSelectedItems,
+    handleTodoClick,
+    handleDragStart,
+    handleDragOver,
+    handleDrop,
+    isContiguousSelection,
+  } = useTodoSelectionDnd({ selectedSession, editedTodos: editedTodos, setEditedTodos: (t) => setEditedTodos(t as any), editingIndex, setIsDirty });
   
   // Auto-select the todo when selectedTodoIndex changes
   useEffect(() => {
-    if (selectedTodoIndex !== null && selectedTodoIndex >= 0) {
-      setSelectedIndices(new Set([selectedTodoIndex]));
-      setLastSelectedIndex(selectedTodoIndex);
+    if (selectedTodoIndex !== null && selectedTodoIndex >= 0 && selectedSession) {
+      const fakeEvent = {
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        preventDefault() {},
+        stopPropagation() {},
+      } as any;
+      handleTodoClick(fakeEvent, selectedTodoIndex);
     }
   }, [selectedTodoIndex, selectedSession?.id]); // Re-run when session changes too
   
-  // Keyboard event handler
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Handle Escape key to clear selection
-      if (e.key === 'Escape') {
-        clearSelection();
-        return;
-      }
-      
-      // Handle arrow keys for moving selected items
-      if (selectedIndices.size > 0 && !editingIndex) {
-        if (e.key === 'ArrowUp' && (e.ctrlKey || e.metaKey)) {
-          e.preventDefault();
-          moveSelectedItems('up');
-        } else if (e.key === 'ArrowDown' && (e.ctrlKey || e.metaKey)) {
-          e.preventDefault();
-          moveSelectedItems('down');
-        }
-      }
-    };
+  // Keyboard handling moved into hook
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIndices, editingIndex]);
+  // Selection and DnD moved into hook
 
-  const clearSelection = () => {
-    setSelectedIndices(new Set());
-    setLastSelectedIndex(null);
-  };
+  // Click selection moved into hook
 
-  const moveSelectedItems = (direction: 'up' | 'down') => {
-    if (selectedIndices.size === 0 || !editedTodos) return;
-    
-    // Check if selection is contiguous
-    const sorted = Array.from(selectedIndices).sort((a, b) => a - b);
-    for (let i = 1; i < sorted.length; i++) {
-      if (sorted[i] !== sorted[i - 1] + 1) return; // Non-contiguous, don't move
-    }
-    
-    const firstIndex = sorted[0];
-    const lastIndex = sorted[sorted.length - 1];
-    
-    if (direction === 'up' && firstIndex > 0) {
-      const newTodos = [...editedTodos];
-      const itemToMove = newTodos[firstIndex - 1];
-      
-      // Move all selected items up
-      for (let i = firstIndex; i <= lastIndex; i++) {
-        newTodos[i - 1] = newTodos[i];
-      }
-      newTodos[lastIndex] = itemToMove;
-      
-      // Update selection indices
-      const newSelection = new Set(Array.from(selectedIndices).map(i => i - 1));
-      setSelectedIndices(newSelection);
-      setLastSelectedIndex((lastSelectedIndex || 0) - 1);
-      
-      setEditedTodos(newTodos);
-      setIsDirty(true);
-    } else if (direction === 'down' && lastIndex < editedTodos.length - 1) {
-      const newTodos = [...editedTodos];
-      const itemToMove = newTodos[lastIndex + 1];
-      
-      // Move all selected items down
-      for (let i = lastIndex; i >= firstIndex; i--) {
-        newTodos[i + 1] = newTodos[i];
-      }
-      newTodos[firstIndex] = itemToMove;
-      
-      // Update selection indices
-      const newSelection = new Set(Array.from(selectedIndices).map(i => i + 1));
-      setSelectedIndices(newSelection);
-      setLastSelectedIndex((lastSelectedIndex || 0) + 1);
-      
-      setEditedTodos(newTodos);
-      setIsDirty(true);
-    }
-  };
+  // DnD moved into hook
 
-  const handleTodoClick = (e: React.MouseEvent, index: number) => {
-    if (e.shiftKey && lastSelectedIndex !== null) {
-      // Range selection
-      const start = Math.min(lastSelectedIndex, index);
-      const end = Math.max(lastSelectedIndex, index);
-      const newSelection = new Set<number>();
-      for (let i = start; i <= end; i++) {
-        newSelection.add(i);
-      }
-      setSelectedIndices(newSelection);
-      setLastSelectedIndex(index);
-    } else if (e.ctrlKey || e.metaKey) {
-      // Toggle selection
-      const newSelection = new Set(selectedIndices);
-      if (newSelection.has(index)) {
-        newSelection.delete(index);
-      } else {
-        newSelection.add(index);
-      }
-      setSelectedIndices(newSelection);
-      setLastSelectedIndex(index);
-    } else {
-      // Single selection
-      setSelectedIndices(new Set([index]));
-      setLastSelectedIndex(index);
-    }
-  };
-
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    // Initialize edited todos if not already
-    if (!editedTodos && selectedSession) {
-      setEditedTodos([...selectedSession.todos]);
-    }
-    setDraggedIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverIndex(index);
-  };
-
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    if (draggedIndex !== null && draggedIndex !== dropIndex && editedTodos) {
-      const newTodos = [...editedTodos];
-      const [movedTodo] = newTodos.splice(draggedIndex, 1);
-      newTodos.splice(dropIndex, 0, movedTodo);
-      setEditedTodos(newTodos);
-      setIsDirty(true);
-    }
-    setDraggedIndex(null);
-    setDragOverIndex(null);
-  };
-
-  const startEdit = (index: number) => {
-    if (!editedTodos && selectedSession) {
-      setEditedTodos([...selectedSession.todos]);
-    }
-    setEditingIndex(index);
-    setEditingContent(editedTodos ? editedTodos[index].content : selectedSession?.todos[index].content || '');
-  };
-
-  const saveEdit = () => {
-    if (editingIndex !== null && editingContent.trim() && editedTodos) {
-      const newTodos = [...editedTodos];
-      newTodos[editingIndex] = { ...newTodos[editingIndex], content: editingContent.trim() };
-      setEditedTodos(newTodos);
-      setIsDirty(true);
-      setEditingIndex(null);
-      setEditingContent('');
-    }
-  };
-
-  const cancelEdit = () => {
-    setEditingIndex(null);
-    setEditingContent('');
-  };
-
-  const handleDelete = (index: number) => {
-    if (!editedTodos && selectedSession) {
-      setEditedTodos([...selectedSession.todos]);
-    }
-    if (editedTodos) {
-      const newTodos = editedTodos.filter((_, i) => i !== index);
-      setEditedTodos(newTodos);
-      setIsDirty(true);
-      clearSelection();
-    }
-  };
-
-  const handleSave = async (): Promise<Result<void>> => {
-    if (!selectedSession || !editedTodos || !selectedSession.filePath) {
-      return Err('Invalid session or todos state');
-    }
-    
-    // Use Result pattern instead of try-catch
-    const saveResult = await (async (): Promise<Result<boolean>> => {
-      try {
-        const success = await window.electronAPI.saveTodos(selectedSession.filePath!, editedTodos);
-        return Ok(success);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        console.error('Failed to save todos:', error);
-        return Err(`Failed to save todos: ${errorMessage}`, error);
-      }
-    })();
-    
-    if (saveResult.success && saveResult.value) {
-      setIsDirty(false);
-      await onLoadTodos();
-      return Ok(undefined);
-    } else if (!saveResult.success) {
-      // Error already logged in the inner function
-      return saveResult;
-    } else {
-      return Err('Save operation returned false');
-    }
-  };
-
-  const handleCancel = () => {
-    setEditedTodos(null);
-    setIsDirty(false);
-    clearSelection();
-  };
-
-  const getStatusSymbol = (status: string) => {
-    switch (status) {
-      case 'completed': return '✓';
-      case 'in_progress': return '▶';
-      case 'pending': return '○';
-      default: return '?';
-    }
-  };
-
-  const handleStatusToggle = (index: number) => {
-    const todos = editedTodos || selectedSession?.todos || [];
-    const newTodos = [...todos];
-    const todo = newTodos[index];
-    
-    // Cycle through statuses: pending -> in_progress -> completed -> pending
-    if (todo.status === 'pending') {
-      todo.status = 'in_progress';
-    } else if (todo.status === 'in_progress') {
-      todo.status = 'completed';
-    } else {
-      todo.status = 'pending';
-    }
-    
-    setEditedTodos(newTodos);
-    setIsDirty(true);
-  };
+  // Edit handling moved into hook; wrap cancel/delete to also clear selection
+  const handleCancelAndClear = () => { handleCancel(); clearSelection(); };
+  const handleDeleteAndClear = (index: number) => { handleDelete(index); clearSelection(); };
 
   const displayTodos = editedTodos || selectedSession?.todos || [];
   
@@ -325,14 +132,6 @@ export function TodoList({
     }
   });
 
-  const isContiguousSelection = () => {
-    if (selectedIndices.size <= 1) return true;
-    const sorted = Array.from(selectedIndices).sort((a, b) => a - b);
-    for (let i = 1; i < sorted.length; i++) {
-      if (sorted[i] !== sorted[i - 1] + 1) return false;
-    }
-    return true;
-  };
 
   if (!selectedSession) {
     return null;
@@ -373,7 +172,7 @@ export function TodoList({
         {isDirty && (
           <div className="edit-controls">
             <button className="save-btn" onClick={handleSave}>Save</button>
-            <button className="discard-btn" onClick={handleCancel}>Discard</button>
+            <button className="discard-btn" onClick={handleCancelAndClear}>Discard</button>
           </div>
         )}
         <div className={`todos-list padding-${spacingMode}`}>
@@ -395,7 +194,7 @@ export function TodoList({
                 onChangeEdit={setEditingContent}
                 onSaveEdit={saveEdit}
                 onCancelEdit={cancelEdit}
-                onDelete={handleDelete}
+                onDelete={handleDeleteAndClear}
                 onToggleStatus={handleStatusToggle}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}

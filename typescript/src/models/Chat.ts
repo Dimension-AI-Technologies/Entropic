@@ -48,7 +48,7 @@ export interface ChatStatistics {
 
 /**
  * Repository interface for chat/prompt data access
- * Abstracts the ~/.claude/projects/*/. jsonl files
+ * Abstracts access to the Claude projects JSONL files under ~/.claude/projects
  */
 export interface IChatRepository {
   /**

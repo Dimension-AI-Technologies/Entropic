@@ -1,4 +1,5 @@
 import React from 'react';
+import { SessionContextMenu } from './components/SessionContextMenu';
 
 interface Todo {
   content: string;
@@ -51,6 +52,7 @@ interface SessionTabsProps {
   onContextMenuCopyId: () => void;
   onContextMenuClose: () => void;
   onContextMenuDelete?: () => void;
+  contextMenuSessionId?: string | null;
 }
 
 export function SessionTabs({ 
@@ -63,12 +65,19 @@ export function SessionTabs({
   showContextMenu,
   contextMenuPosition,
   onContextMenuCopyId,
-  onContextMenuDelete
+  onContextMenuDelete,
+  onContextMenuClose,
+  contextMenuSessionId
 }: SessionTabsProps) {
 
   const getStatusCounts = (session: Session) => {
+    if (!session || !session.todos || !Array.isArray(session.todos)) {
+      return { completed: 0, in_progress: 0, pending: 0 };
+    }
     const counts = session.todos.reduce((acc, todo) => {
-      acc[todo.status] = (acc[todo.status] || 0) + 1;
+      if (todo && todo.status) {
+        acc[todo.status] = (acc[todo.status] || 0) + 1;
+      }
       return acc;
     }, {} as Record<string, number>);
     
@@ -124,7 +133,6 @@ export function SessionTabs({
       {selectedProject.sessions && selectedProject.sessions.length ? selectedProject.sessions
         .sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())
         .map((session) => {
-        const counts = getStatusCounts(session);
         const isSelected = selectedSession?.id === session.id;
         const isMultiSelected = selectedTabs.has(session.id);
         
@@ -151,21 +159,29 @@ export function SessionTabs({
         </button>
       )}
 
-      {/* Context Menu */}
       {showContextMenu && (
-        <div
-          className="context-menu"
-          style={{ left: contextMenuPosition.x, top: contextMenuPosition.y }}
-        >
-          <div className="context-menu-item" onClick={onContextMenuCopyId}>
-            Copy Session ID
-          </div>
-          {onContextMenuDelete && (
-            <div className="context-menu-item" onClick={onContextMenuDelete}>
-              Delete Session
-            </div>
-          )}
-        </div>
+        <SessionContextMenu
+          x={contextMenuPosition.x}
+          y={contextMenuPosition.y}
+          onCopyId={onContextMenuCopyId}
+          onDelete={onContextMenuDelete}
+          onClose={onContextMenuClose}
+          sessionId={contextMenuSessionId || ''}
+          isSelected={contextMenuSessionId ? selectedTabs.has(contextMenuSessionId) : false}
+          onEnsureSelected={() => {
+            if (!contextMenuSessionId || !selectedProject) return;
+            const sess = selectedProject.sessions.find(s => s.id === contextMenuSessionId);
+            if (!sess) return;
+            const fakeEvent = {
+              shiftKey: true,
+              ctrlKey: false,
+              metaKey: false,
+              preventDefault() {},
+              stopPropagation() {},
+            } as any;
+            onTabClick(fakeEvent, sess);
+          }}
+        />
       )}
     </div>
   );

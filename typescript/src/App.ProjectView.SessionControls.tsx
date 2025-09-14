@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ProgressOverlay } from './components/ProgressOverlay';
 import { PaneHeader, PaneControls } from './components/PaneLayout';
 import { Result, Ok, Err } from './utils/Result';
@@ -57,8 +57,8 @@ export function SessionControls({
   onLoadTodos,
   selectedTabs,
   onStartMerge,
-  spacingMode,
-  onSpacingModeChange,
+  spacingMode: _spacingMode,
+  onSpacingModeChange: _onSpacingModeChange,
   filterState,
   onFilterStateChange,
   showDeleteConfirm,
@@ -161,7 +161,7 @@ export function SessionControls({
     
     // The finally block replacement - always execute cleanup
     // Call onLoadTodos so overlay stays visible
-    const refreshResult = await (async (): Promise<Result<void>> => {
+    const _refreshResult = await (async (): Promise<Result<void>> => {
       try {
         await onLoadTodos();
         console.log("Project data refreshed successfully");
