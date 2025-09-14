@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useDismissableMenu } from './hooks/useDismissableMenu';
 import ClaudeLogo from '../../assets/ClaudeLogo.png';
 
 type ViewMode = 'project' | 'global';
@@ -110,20 +111,7 @@ export function UnifiedTitleBar({
     animationFrameRef.current = requestAnimationFrame(animate);
   }, [throbSpeed, rotationSpeed, updateSpeeds]);
 
-  useEffect(() => {
-    const onDocDown = (e: MouseEvent) => {
-      if (spacingMenuVisible && spacingMenuRef.current && !spacingMenuRef.current.contains(e.target as Node)) {
-        setSpacingMenuVisible(false);
-      }
-    };
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setSpacingMenuVisible(false); };
-    document.addEventListener('mousedown', onDocDown);
-    document.addEventListener('keydown', onEsc);
-    return () => {
-      document.removeEventListener('mousedown', onDocDown);
-      document.removeEventListener('keydown', onEsc);
-    };
-  }, [spacingMenuVisible]);
+  useDismissableMenu(spacingMenuVisible, setSpacingMenuVisible, spacingMenuRef);
 
   useEffect(() => {
     // Start animation after a small delay to ensure React has finished initial renders

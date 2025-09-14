@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { DIContainer } from './services/DIContainer';
 import { Project as MVVMProject } from './models/Project';
+import { useDismissableMenu } from './components/hooks/useDismissableMenu';
 
 interface GlobalViewProps {
   spacingMode?: 'wide' | 'normal' | 'compact';
@@ -92,6 +93,8 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
 
   // Context menu state for project column
   const [projMenu, setProjMenu] = useState<{visible:boolean;x:number;y:number;row?:{p:any;s:any}}>(() => ({visible:false,x:0,y:0}));
+  const projMenuRef = useRef<HTMLDivElement>(null);
+  useDismissableMenu(projMenu.visible, (v) => setProjMenu(s => ({ ...s, visible: v })), projMenuRef);
 
   // Counts reflecting current filter
   const filteredProjects = new Set(rows.map(r => r.p.id)).size;
@@ -151,7 +154,7 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
         </div>
       </div>
       {projMenu.visible && projMenu.row && (
-        <div style={{ position: 'fixed', top: projMenu.y + 6, left: projMenu.x + 6, background: '#2f3136', color: '#e6e7e8', border: '1px solid #3b3e44', borderRadius: 6, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 9999, minWidth: 200, padding: 6 }} onMouseLeave={() => setProjMenu(s => ({...s, visible:false}))}>
+        <div ref={projMenuRef} style={{ position: 'fixed', top: projMenu.y + 6, left: projMenu.x + 6, background: '#2f3136', color: '#e6e7e8', border: '1px solid #3b3e44', borderRadius: 6, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 9999, minWidth: 200, padding: 6 }} onMouseLeave={() => setProjMenu(s => ({...s, visible:false}))}>
           <button className="filter-toggle" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }} onClick={() => { navigator.clipboard.writeText((projMenu.row!.p.path || '').split(/[\\/]/).pop() || ''); (window as any).__addToast?.('Copied project name'); setProjMenu(s => ({...s, visible:false})); }}>Copy Project Name</button>
           <button className="filter-toggle" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }} onClick={() => { navigator.clipboard.writeText(projMenu.row!.p.path || (projMenu.row as any).s.projectPath || ''); (window as any).__addToast?.('Copied project path'); setProjMenu(s => ({...s, visible:false})); }}>Copy Project Path</button>
           <button className="filter-toggle" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }} onClick={() => { navigator.clipboard.writeText(projMenu.row!.s.id); (window as any).__addToast?.('Copied session ID'); setProjMenu(s => ({...s, visible:false})); }}>Copy Session ID</button>

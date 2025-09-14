@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PaneHeader, PaneControls } from './components/PaneLayout';
+import { useRef } from 'react';
+import { useDismissableMenu } from './components/hooks/useDismissableMenu';
 // Result helpers are not needed here
 
 interface PromptEntry {
@@ -30,6 +32,8 @@ export function PromptView({ selectedProject, spacingMode = 'compact' }: PromptV
     return saved === 'asc' || saved === 'desc' ? saved : 'asc';
   });
   const [menuState, setMenuState] = useState<{ visible: boolean; x: number; y: number; prompt?: PromptEntry }>(() => ({ visible: false, x: 0, y: 0 }));
+  const promptMenuRef = useRef<HTMLDivElement>(null);
+  useDismissableMenu(menuState.visible, (v) => setMenuState(s => ({ ...s, visible: v })), promptMenuRef);
 
   // Convert project path to flattened path format (replace both forward and backslashes)
   const getFlattenedProjectPath = (projectPath: string): string => {
@@ -217,6 +221,7 @@ export function PromptView({ selectedProject, spacingMode = 'compact' }: PromptV
 
       {menuState.visible && (
         <div
+          ref={promptMenuRef}
           style={{ position: 'fixed', top: menuState.y + 6, left: menuState.x + 6, background: '#2f3136', color: '#e6e7e8', border: '1px solid #3b3e44', borderRadius: 6, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 9999, minWidth: 160, padding: 6 }}
           onMouseLeave={() => setMenuState(s => ({ ...s, visible: false }))}
         >

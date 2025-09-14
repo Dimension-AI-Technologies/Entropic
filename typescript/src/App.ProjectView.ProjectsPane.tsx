@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useDismissableMenu } from './components/hooks/useDismissableMenu';
 import './App.css';
 import { PaneHeader, PaneControls } from './components/PaneLayout';
 
@@ -72,19 +73,8 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
   const sortHoldTimerRef = useRef<number | null>(null);
   const sortMenuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const onDocMouseDown = (e: MouseEvent) => {
-      if (modeMenuVisible && menuRef.current && !menuRef.current.contains(e.target as Node)) setModeMenuVisible(false);
-      if (sortMenuVisible && sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) setSortMenuVisible(false);
-    };
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setModeMenuVisible(false); setSortMenuVisible(false); } };
-    document.addEventListener('mousedown', onDocMouseDown);
-    document.addEventListener('keydown', onEsc);
-    return () => {
-      document.removeEventListener('mousedown', onDocMouseDown);
-      document.removeEventListener('keydown', onEsc);
-    };
-  }, [modeMenuVisible, sortMenuVisible]);
+  useDismissableMenu(modeMenuVisible, setModeMenuVisible, menuRef);
+  useDismissableMenu(sortMenuVisible, setSortMenuVisible, sortMenuRef);
 
   const handleProjectClick = (project: Project) => {
     onSelectProject(project);
