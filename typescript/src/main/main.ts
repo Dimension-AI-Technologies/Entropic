@@ -1,5 +1,5 @@
 import electron from 'electron';
-const { app, BrowserWindow, ipcMain } = electron;
+const { app, BrowserWindow, ipcMain, dialog } = electron;
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
@@ -75,8 +75,24 @@ function createWindow() {
     onShowHelp: () => {
       if (mainWindow) showHelpDialog(mainWindow);
     },
-    onTakeScreenshot: () => {
-      if (mainWindow) void takeScreenshot(mainWindow);
+    onTakeScreenshot: async () => {
+      if (!mainWindow) return;
+      const result = await takeScreenshot(mainWindow);
+      if (result.success) {
+        await dialog.showMessageBox(mainWindow, {
+          type: 'info',
+          title: 'Screenshot Saved',
+          message: 'Screenshot saved successfully.',
+          detail: result.value,
+        });
+      } else {
+        await dialog.showMessageBox(mainWindow, {
+          type: 'error',
+          title: 'Screenshot Failed',
+          message: 'Failed to take screenshot',
+          detail: result.error ? String(result.error) : 'Unknown error',
+        });
+      }
     },
   });
 }
