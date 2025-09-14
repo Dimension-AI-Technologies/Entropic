@@ -77,10 +77,7 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
     }
   })();
 
-  // Column widths: Project | Current | Date | Next
-  const gridCols = `2fr 4fr ${spacing.dateWidth}px 4fr`;
-  const headerStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: gridCols, padding: `${spacing.headerPad}px 14px`, background: '#2a2d33', color: '#bfc3c8', fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6 };
-  const cellBase: React.CSSProperties = { padding: `${spacing.padY}px 14px`, borderTop: '1px solid #30343a', display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center', background: '#23262b', fontSize: spacing.font };
+  // CSS classes for layout; spacing applied via pad-[mode] class
   const formatDate = (d: Date) => {
     const dd = String(d.getDate()).padStart(2, '0');
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -109,14 +106,14 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
           <span>Active only</span>
         </label>
       </div>
-      <div style={{ border: '1px solid #3a3d42', borderRadius: 6, overflow: 'hidden', background: '#202328' }}>
-        <div style={headerStyle}>
+      <div className={`global-table ${spacingMode}`}>
+        <div className="global-header">
           <div>Project</div>
           <div>Current Task</div>
-          <div style={{ textAlign: 'left' }}>Date</div>
+          <div className="global-cell date" style={{ textAlign: 'left' }}>Date</div>
           <div>Next Task</div>
         </div>
-        <div style={{ overflowY: 'auto' }}>
+        <div className="global-rows">
           {rows.map(({ p, s }) => {
             const curr = pickCurrent(s.todos || []);
             const next = pickNext(s.todos || [], curr);
@@ -126,24 +123,22 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
             const shortId = s.id.substring(0,6);
             const goto = (todo: any) => { const idx = (s.todos || []).indexOf(todo); (window as any).__navigateToProjectSession?.((s as any).projectPath || p.path, s.id, idx >= 0 ? idx : undefined); };
             return (
-              <div key={`${p.id}-${s.id}`} style={cellBase}>
+              <div key={`${p.id}-${s.id}`} className={`global-row pad-${spacingMode}`}>
                 <div
-                  style={{ display: 'flex', alignItems: 'center', cursor: 'context-menu' }}
+                  className="global-cell global-project"
                   onContextMenu={(e) => { e.preventDefault(); setProjMenu({ visible: true, x: e.clientX, y: e.clientY, row: { p, s } }); }}
                   title="Right-click for options"
                 >
-                  <div style={{ width: 4, height: 24, background: accent, borderRadius: 2, marginRight: 10 }} />
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{projName} <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.8 }}>({shortId})</span></div>
-                  </div>
+                  <div className="accent" style={{ background: accent }} />
+                  <div className="name">{projName}<span className="sid">({shortId})</span></div>
                 </div>
-                <div style={{ fontSize: 13, color: '#e6e7e8', cursor: curr ? 'pointer' : 'default' }} onClick={() => curr && goto(curr)} title={curr ? 'Go to this task' : ''}>
-                  <span style={dot('#e0b012')}></span>
+                <div className={`global-cell ${curr ? 'clickable' : ''}`} onClick={() => curr && goto(curr)} title={curr ? 'Go to this task' : ''}>
+                  <span className="dot dot-amber"></span>
                   {curr ? curr.content : <span style={{ opacity: 0.6 }}>No task</span>}
                 </div>
-                <div style={{ fontSize: 12, color: '#c9cbce' }}>{formatDate(s.lastModified)}</div>
-                <div style={{ fontSize: 13, color: '#c9cbce', cursor: next ? 'pointer' : 'default' }} onClick={() => next && goto(next)} title={next ? 'Go to this task' : ''}>
-                  <span style={dot('#7aa0f7')}></span>
+                <div className="global-cell date">{formatDate(s.lastModified)}</div>
+                <div className={`global-cell ${next ? 'clickable' : ''}`} onClick={() => next && goto(next)} title={next ? 'Go to this task' : ''}>
+                  <span className="dot dot-blue"></span>
                   {next ? next.content : <span style={{ opacity: 0.6 }}>No next task</span>}
                 </div>
               </div>
