@@ -186,29 +186,32 @@ export function SessionControls({
   return (
     <>
       <PaneHeader className="project-header">
-        <h1>
+        <h1
+          onClick={() => { try { navigator.clipboard.writeText(selectedProject.path); } catch(e) { console.warn('Clipboard write failed', e); } }}
+          onContextMenu={(e) => { e.preventDefault(); try { navigator.clipboard.writeText(selectedProject.path); } catch(err) {} }}
+          title="Click or right-click to copy project path"
+        >
           {selectedProject.path}
           {selectedSession && viewMode === 'todo' && (
             <span className="todo-count-badge"> ({displayTodosLength})</span>
           )}
         </h1>
         
-        {/* View mode toggle */}
-        <div className="view-mode-toggle">
-          <button
-            className={`view-toggle-btn ${viewMode === 'todo' ? 'active' : ''}`}
-            onClick={() => onViewModeChange('todo')}
-            title="View todos for this project"
-          >
-            Todo
-          </button>
-          <button
-            className={`view-toggle-btn ${viewMode === 'prompt' ? 'active' : ''}`}
-            onClick={() => onViewModeChange('prompt')}
-            title="View prompt history for this project"
-          >
-            History
-          </button>
+        {/* View mode slider */}
+        <div
+          className="view-mode-slider"
+          role="button"
+          title="Toggle between Todo and History"
+          onClick={(e) => {
+            const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+            const isLeft = (e.clientX - rect.left) < rect.width / 2;
+            onViewModeChange(isLeft ? 'todo' : 'prompt');
+          }}
+          style={{ position: 'relative', width: 180, height: 28, borderRadius: 16, background: '#2f3136', display: 'grid', gridTemplateColumns: '1fr 1fr', cursor: 'pointer', userSelect: 'none' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: viewMode === 'todo' ? '#fff' : '#b9bbbe' }}>Todo</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: viewMode === 'prompt' ? '#fff' : '#b9bbbe' }}>History</div>
+          <div style={{ position: 'absolute', top: 2, bottom: 2, width: '50%', left: viewMode === 'todo' ? 2 : 'calc(50% + 2px)', background: '#1264a3', borderRadius: 14, transition: 'left 120ms ease' }} />
         </div>
       </PaneHeader>
       {viewMode === 'todo' && (

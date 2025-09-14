@@ -31,6 +31,10 @@ export function UnifiedTitleBar({
   // Animation state - only track speed changes, not frame-by-frame values
   const [throbSpeed, setThrobSpeed] = useState(4);
   const [rotationSpeed, setRotationSpeed] = useState(30);
+  const [spacingMenuVisible, setSpacingMenuVisible] = useState(false);
+  const [spacingMenuPos, setSpacingMenuPos] = useState<{x:number;y:number}>({x:0,y:0});
+  const spacingHoldRef = useRef<number | null>(null);
+  const spacingMenuRef = useRef<HTMLDivElement>(null);
   
   // Use refs for animation values to avoid React state updates on every frame
   const logoRef = useRef<HTMLImageElement>(null);
@@ -107,6 +111,21 @@ export function UnifiedTitleBar({
   }, [throbSpeed, rotationSpeed, updateSpeeds]);
 
   useEffect(() => {
+    const onDocDown = (e: MouseEvent) => {
+      if (spacingMenuVisible && spacingMenuRef.current && !spacingMenuRef.current.contains(e.target as Node)) {
+        setSpacingMenuVisible(false);
+      }
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setSpacingMenuVisible(false); };
+    document.addEventListener('mousedown', onDocDown);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onDocDown);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [spacingMenuVisible]);
+
+  useEffect(() => {
     // Start animation after a small delay to ensure React has finished initial renders
     const startTimer = setTimeout(() => {
       animationFrameRef.current = requestAnimationFrame(animate);
@@ -150,9 +169,14 @@ export function UnifiedTitleBar({
                 alert('Screenshot failed');
               }
             }}
-            title="Take screenshot"
+            title="Take screenshot (saved to Desktop)"
           >
-            📸
+            {/* Simple camera-lens icon */}
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+              <rect x="2" y="4" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+              <circle cx="9" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
+              <circle cx="9" cy="9" r="1.5" fill="currentColor"/>
+            </svg>
           </button>
         </div>
 
@@ -186,25 +210,43 @@ export function UnifiedTitleBar({
           </button>
         </div>
 
-        {/* Right: Spacing controls only */}
+        {/* Right: Spacing control (cycle + menu) */}
         <div className="title-bar-right">
-
-          {/* Spacing controls */}
           <div className="title-bar-spacing-controls">
-            <label className="spacing-label" title="Adjust the spacing between rows">SPACING:</label>
             <div className="spacing-buttons">
               <button
                 className="spacing-btn spacing-cycle-btn active"
-                onClick={() => {
-                  const modes: SpacingMode[] = ['wide', 'normal', 'compact'];
-                  const currentIndex = modes.indexOf(spacingMode);
-                  const nextIndex = (currentIndex + 1) % modes.length;
-                  onSpacingModeChange(modes[nextIndex]);
+                onMouseDown={(e) => {
+                  if (spacingHoldRef.current) clearTimeout(spacingHoldRef.current);
+                  spacingHoldRef.current = window.setTimeout(() => { setSpacingMenuPos({ x: e.clientX, y: e.clientY }); setSpacingMenuVisible(true); }, 400);
                 }}
-                title="Click to cycle through spacing modes: Wide → Normal → Compact"
+                onMouseUp={() => {
+                  if (spacingHoldRef.current) {
+                    clearTimeout(spacingHoldRef.current);
+                    spacingHoldRef.current = null;
+                    if (!spacingMenuVisible) {
+                      const modes: SpacingMode[] = ['wide', 'normal', 'compact'];
+                      const currentIndex = modes.indexOf(spacingMode);
+                      const nextIndex = (currentIndex + 1) % modes.length;
+                      onSpacingModeChange(modes[nextIndex]);
+                    }
+                  }
+                }}
+                onMouseLeave={() => { if (spacingHoldRef.current) { clearTimeout(spacingHoldRef.current); spacingHoldRef.current = null; } }}
+                onContextMenu={(e) => { e.preventDefault(); if (spacingHoldRef.current) { clearTimeout(spacingHoldRef.current); spacingHoldRef.current = null; } setSpacingMenuPos({ x: e.clientX, y: e.clientY }); setSpacingMenuVisible(true); }}
+                title="Click to cycle spacing • Hold/Right-click to choose"
               >
                 {spacingMode === 'wide' ? 'Wide' : spacingMode === 'normal' ? 'Normal' : 'Compact'}
               </button>
+              {spacingMenuVisible && (
+                <div ref={spacingMenuRef} style={{ position: 'fixed', top: spacingMenuPos.y + 6, left: spacingMenuPos.x + 6, background: '#2f3136', color: '#e6e7e8', border: '1px solid #3b3e44', borderRadius: 6, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 9999, minWidth: 150, padding: 6 }}>
+                  {(['wide','normal','compact'] as SpacingMode[]).map(m => (
+                    <button key={m} onClick={() => { onSpacingModeChange(m); setSpacingMenuVisible(false); }} className={`spacing-btn ${spacingMode === m ? 'active' : ''}`} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }}>
+                      {m === 'wide' ? 'Wide' : m === 'normal' ? 'Normal' : 'Compact'}{spacingMode === m ? ' ✓' : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
