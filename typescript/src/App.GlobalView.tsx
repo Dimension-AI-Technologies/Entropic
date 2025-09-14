@@ -93,6 +93,9 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   };
   const dot = (color: string) => ({ width: 8, height: 8, borderRadius: 8, background: color, display: 'inline-block', marginRight: 8 });
 
+  // Context menu state for project column
+  const [projMenu, setProjMenu] = useState<{visible:boolean;x:number;y:number;row?:{p:any;s:any}}>(() => ({visible:false,x:0,y:0}));
+
   return (
     <div className="global-view" style={{ padding: 16, color: 'white' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -124,7 +127,11 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
             const goto = (todo: any) => { const idx = (s.todos || []).indexOf(todo); (window as any).__navigateToProjectSession?.((s as any).projectPath || p.path, s.id, idx >= 0 ? idx : undefined); };
             return (
               <div key={`${p.id}-${s.id}`} style={cellBase}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', cursor: 'context-menu' }}
+                  onContextMenu={(e) => { e.preventDefault(); setProjMenu({ visible: true, x: e.clientX, y: e.clientY, row: { p, s } }); }}
+                  title="Right-click for options"
+                >
                   <div style={{ width: 4, height: 24, background: accent, borderRadius: 2, marginRight: 10 }} />
                   <div>
                     <div style={{ fontWeight: 600 }}>{projName} <span style={{ fontWeight: 400, fontSize: 11, opacity: 0.8 }}>({shortId})</span></div>
@@ -147,6 +154,15 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
           )}
         </div>
       </div>
+      {projMenu.visible && projMenu.row && (
+        <div style={{ position: 'fixed', top: projMenu.y + 6, left: projMenu.x + 6, background: '#2f3136', color: '#e6e7e8', border: '1px solid #3b3e44', borderRadius: 6, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 9999, minWidth: 200, padding: 6 }} onMouseLeave={() => setProjMenu(s => ({...s, visible:false}))}>
+          <button className="filter-toggle" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }} onClick={() => { navigator.clipboard.writeText((projMenu.row!.p.path || '').split(/[\\/]/).pop() || ''); (window as any).__addToast?.('Copied project name'); setProjMenu(s => ({...s, visible:false})); }}>Copy Project Name</button>
+          <button className="filter-toggle" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }} onClick={() => { navigator.clipboard.writeText(projMenu.row!.p.path || (projMenu.row as any).s.projectPath || ''); (window as any).__addToast?.('Copied project path'); setProjMenu(s => ({...s, visible:false})); }}>Copy Project Path</button>
+          <button className="filter-toggle" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }} onClick={() => { navigator.clipboard.writeText(projMenu.row!.s.id); (window as any).__addToast?.('Copied session ID'); setProjMenu(s => ({...s, visible:false})); }}>Copy Session ID</button>
+          <button className="filter-toggle" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }} onClick={() => { const curr = (projMenu.row!.s.todos || []).find((t:any)=>t.status==='in_progress') || (projMenu.row!.s.todos||[]).find((t:any)=>t.status==='pending'); if (curr) navigator.clipboard.writeText(curr.content); (window as any).__addToast?.('Copied current task'); setProjMenu(s => ({...s, visible:false})); }}>Copy Current Task</button>
+          <button className="filter-toggle" style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }} onClick={() => { const todos=(projMenu.row!.s.todos||[]); const curr=todos.find((t:any)=>t.status==='in_progress')||todos.find((t:any)=>t.status==='pending'); const idx=curr?todos.indexOf(curr):-1; const next=idx>=0?todos.slice(idx+1).find((t:any)=>t.status==='pending')||todos.find((t:any)=>t.status==='pending'):null; if (next) navigator.clipboard.writeText(next.content); (window as any).__addToast?.('Copied next task'); setProjMenu(s => ({...s, visible:false})); }}>Copy Next Task</button>
+        </div>
+      )}
     </div>
   );
 }

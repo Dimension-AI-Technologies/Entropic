@@ -25,7 +25,10 @@ export function PromptView({ selectedProject, spacingMode = 'compact' }: PromptV
   const [prompts, setPrompts] = useState<PromptEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(() => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.historySortOrder') as any : null;
+    return saved === 'asc' || saved === 'desc' ? saved : 'asc';
+  });
   const [menuState, setMenuState] = useState<{ visible: boolean; x: number; y: number; prompt?: PromptEntry }>(() => ({ visible: false, x: 0, y: 0 }));
 
   // Convert project path to flattened path format (replace both forward and backslashes)
@@ -110,6 +113,11 @@ export function PromptView({ selectedProject, spacingMode = 'compact' }: PromptV
     loadPrompts();
   }, [selectedProject?.path, sortOrder]);
 
+  // Persist sort order
+  useEffect(() => {
+    try { localStorage.setItem('ui.historySortOrder', sortOrder); } catch {}
+  }, [sortOrder]);
+
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -155,9 +163,9 @@ export function PromptView({ selectedProject, spacingMode = 'compact' }: PromptV
       <PaneControls className="pane-controls">
         <div className="sort-controls" title="Sort order">
           <button
-            className="sort-button active"
+            className={`spacing-btn spacing-cycle-btn active`}
             onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-            style={{ minWidth: 140, background: '#2f3136', color: '#e6e7e8' }}
+            style={{ minWidth: 150 }}
             title={sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}
           >
             {sortOrder === 'asc' ? '↑ Oldest First' : '↓ Newest First'}
