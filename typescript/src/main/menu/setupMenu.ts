@@ -1,4 +1,4 @@
-import { app, Menu, shell } from 'electron';
+import { app, Menu } from 'electron';
 
 export type ShowHelpHandler = () => void;
 export type TakeScreenshotHandler = () => void | Promise<void>;
@@ -10,19 +10,22 @@ export function setupMenu(options: {
   const { onShowHelp, onTakeScreenshot } = options;
   const isMac = process.platform === 'darwin';
 
+  // Ensure app name appears as "Entropic" in OS-native menus
+  try { app.setName('Entropic'); } catch {}
+
   const template: Electron.MenuItemConstructorOptions[] = [
     ...(isMac
       ? [
           {
-            label: app.getName(),
+            label: 'Entropic',
             submenu: [
-              { role: 'about' as const },
+              { role: 'about' as const, label: 'About Entropic' },
               { type: 'separator' as const },
-              { role: 'hide' as const },
+              { role: 'hide' as const, label: 'Hide Entropic' },
               { role: 'hideOthers' as const },
               { role: 'unhide' as const },
               { type: 'separator' as const },
-              { role: 'quit' as const },
+              { role: 'quit' as const, label: 'Quit Entropic' },
             ],
           },
         ]
@@ -36,13 +39,7 @@ export function setupMenu(options: {
     {
       label: 'Edit',
       submenu: [
-        { role: 'undo' as const },
-        { role: 'redo' as const },
-        { type: 'separator' as const },
-        { role: 'cut' as const },
         { role: 'copy' as const },
-        { role: 'paste' as const },
-        { role: 'selectAll' as const },
       ],
     },
     {
@@ -82,18 +79,7 @@ export function setupMenu(options: {
     {
       role: 'help',
       submenu: [
-        {
-          label: 'ClaudeToDo Help',
-          accelerator: 'F1',
-          click: onShowHelp,
-        },
-        { type: 'separator' as const },
-        {
-          label: 'Claude Code',
-          click: () => {
-            shell.openExternal('https://claude.ai/code');
-          },
-        },
+        { label: 'Entropic Help', accelerator: 'F1', click: onShowHelp },
       ],
     },
   ];
@@ -101,4 +87,3 @@ export function setupMenu(options: {
   const menu = Menu.buildFromTemplate(template);
   Menu.setApplicationMenu(menu);
 }
-
