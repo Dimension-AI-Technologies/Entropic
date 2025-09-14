@@ -157,8 +157,12 @@ export function UnifiedTitleBar({
             className="screenshot-btn" 
             onClick={async () => {
               try {
-                const res = await window.electronAPI?.takeScreenshot?.();
-                if (!res) return;
+                if (!window.electronAPI?.takeScreenshot) {
+                  console.warn('electronAPI.takeScreenshot not available');
+                  (window as any).__addToast?.('Screenshot unavailable');
+                  return;
+                }
+                const res = await window.electronAPI.takeScreenshot();
                 if (res.success) { (window as any).__addToast?.('Screenshot saved'); } else { (window as any).__addToast?.('Screenshot failed'); }
               } catch (e) {
                 console.error('Screenshot error', e);

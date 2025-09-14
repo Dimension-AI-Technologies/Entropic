@@ -200,7 +200,7 @@ body {
 .sidebar {
   background: #19171d;
   flex-shrink: 0;
-  border-right: 1px solid #35373b;
+  /* border-right removed to sit flush against divider */
   display: flex;
   flex-direction: column;
   overflow: hidden;
