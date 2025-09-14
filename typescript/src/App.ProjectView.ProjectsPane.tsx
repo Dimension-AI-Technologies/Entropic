@@ -208,6 +208,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
       </PaneHeader>
       <PaneControls className="sidebar-controls">
           <div className="sort-controls">
+            <span className="sort-title">Sort</span>
             <button
               className="sort-button active"
               onMouseDown={(e) => {
@@ -239,7 +240,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
                   <button
                     key={String(method)}
                     onClick={() => { setSortMethod(method as SortMethod); setSortMenuVisible(false); }}
-                    className={`filter-toggle ${sortMethod === method ? 'active' : ''}`}
+                    className={`filter-toggle pane-button ${sortMethod === method ? 'active' : ''}`}
                     style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }}
                   >
                     {label as string}{sortMethod === method ? ' ✓' : ''}
@@ -250,7 +251,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
           </div>
           <div className="filter-toggles" style={{ position: 'relative' }}>
             <button
-              className={`filter-toggle active mode-btn`}
+              className={`filter-toggle pane-button active mode-btn`}
               onMouseDown={(e) => {
                 if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
                 holdTimerRef.current = window.setTimeout(() => {
@@ -294,7 +295,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
                 ref={menuRef}
                 style={{ position: 'fixed', top: modeMenuPos.y + 6, left: modeMenuPos.x + 6, background: '#2f3136', color: '#e6e7e8', border: '1px solid #3b3e44', borderRadius: 6, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 9999, minWidth: 140, padding: 6 }}
               >
-                {([
+                {([ 
                   ['ALL', 'all'],
                   ['SESSION', 'has_sessions'],
                   ['TODOs', 'has_todos'],
@@ -303,7 +304,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
                   <button
                     key={mode}
                     onClick={() => { onEmptyModeChange(mode as EmptyMode); setModeMenuVisible(false); }}
-                    className={`filter-toggle ${emptyMode === (mode as EmptyMode) ? 'active' : ''}`}
+                    className={`filter-toggle pane-button ${emptyMode === (mode as EmptyMode) ? 'active' : ''}`}
                     style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }}
                   >
                     {label}{emptyMode === mode ? ' ✓' : ''}
@@ -312,7 +313,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
               </div>
             )}
             <button
-              className={`filter-toggle ${showFailedReconstructions ? 'active' : ''} failed-btn`}
+              className={`filter-toggle pane-button ${showFailedReconstructions ? 'active' : ''} failed-btn`}
               onClick={() => setShowFailedReconstructions(!showFailedReconstructions)}
               title="Show/hide projects with invalid file paths"
             >

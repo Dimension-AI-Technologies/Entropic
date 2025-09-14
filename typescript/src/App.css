@@ -283,7 +283,7 @@ body {
 .sidebar-controls .filter-toggles { flex: 1; display: flex; align-items: center; }
 .sidebar-controls .filter-toggles .mode-btn { margin: 0 auto; }
 .sidebar-controls .filter-toggles .failed-btn { margin-left: auto; }
-.sort-button, .filter-toggle { min-width: 110px; }
+.sort-button, .filter-toggle, .pane-button { min-width: 120px; }
 
 .sort-title {
   font-size: 12px;
