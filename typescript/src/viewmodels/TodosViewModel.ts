@@ -224,6 +224,16 @@ export class TodosViewModel {
   }
 
   /**
+   * Clear all sessions and notify listeners (used for visible reloads)
+   */
+  clearAll(): void {
+    this.sessions = [];
+    this.loading = false;
+    this.error = null;
+    this.notifyChange();
+  }
+
+  /**
    * Refresh sessions (reload from repository)
    */
   async refresh(): AsyncResult<Session[]> {

@@ -22,6 +22,7 @@ function App() {
     return saved === 'wide' || saved === 'normal' || saved === 'compact' ? saved : 'compact';
   });
   const [toasts, setToasts] = useState<Array<{ id: number; text: string }>>([]);
+  const [reloading, setReloading] = useState(false);
   
   // Activity mode state for auto-selection
   const [activityMode, setActivityMode] = useState(false);
@@ -121,24 +122,28 @@ function App() {
   // Refresh function for ViewModels - with safety checks to prevent crashes
   const handleRefresh = async () => {
     console.log('[App] Refreshing data...');
+    setReloading(true);
+    setStatusText('Reloading...');
     try {
+      // Clear models so UI empties before reload
+      if (projectsViewModel && typeof projectsViewModel.setProjects === 'function') {
+        projectsViewModel.setProjects([]);
+      }
+      try { (todosViewModel as any)?.clearAll?.(); } catch {}
+      (window as any).__addToast?.('Reloading...');
+
       if (projectsViewModel && typeof projectsViewModel.refresh === 'function') {
         await projectsViewModel.refresh();
-        console.log('[App] ProjectsViewModel refreshed successfully');
-      } else {
-        console.warn('[App] ProjectsViewModel.refresh not available');
       }
-      
       if (todosViewModel && typeof todosViewModel.refresh === 'function') {
         await todosViewModel.refresh();
-        console.log('[App] TodosViewModel refreshed successfully');
-      } else {
-        console.warn('[App] TodosViewModel.refresh not available');
       }
       (window as any).__addToast?.('Refresh complete');
     } catch (error) {
       console.error('[App] Error during refresh:', error);
       (window as any).__addToast?.('Refresh failed');
+    } finally {
+      setReloading(false);
     }
   };
 
@@ -200,6 +205,15 @@ function App() {
             }
           })()}
         </div>
+        {/* Overlay during reload */}
+        {reloading && (
+          <div className="reloading-overlay">
+            <div className="reloading-card">
+              <div className="reloading-title">Reloading...</div>
+              <div className="reloading-sub">Please wait while data is refreshed</div>
+            </div>
+          </div>
+        )}
         {/* Toasts */}
         <div className="toast-container">
           {toasts.map(t => (
