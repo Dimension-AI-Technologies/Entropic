@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { PaneHeader, PaneControls } from './components/PaneLayout';
 
@@ -60,6 +60,26 @@ interface ProjectsPaneProps {
 export function ProjectsPane({ projects, selectedProject, onSelectProject, onProjectContextMenu, onRefresh, activityMode, setActivityMode, deletedProjects, emptyMode, onEmptyModeChange }: ProjectsPaneProps) {
   const [sortMethod, setSortMethod] = useState<SortMethod>(1); // recent
   const [showFailedReconstructions, setShowFailedReconstructions] = useState(false); // hide failed path reconstructions by default
+  const [modeMenuVisible, setModeMenuVisible] = useState(false);
+  const [modeMenuPos, setModeMenuPos] = useState<{x:number;y:number}>({x:0,y:0});
+  const holdTimerRef = useRef<number | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (!modeMenuVisible) return;
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setModeMenuVisible(false);
+      }
+    };
+    const onEsc = (e: KeyboardEvent) => { if (modeMenuVisible && e.key === 'Escape') setModeMenuVisible(false); };
+    document.addEventListener('mousedown', onDocMouseDown);
+    document.addEventListener('keydown', onEsc);
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown);
+      document.removeEventListener('keydown', onEsc);
+    };
+  }, [modeMenuVisible]);
 
   const handleProjectClick = (project: Project) => {
     onSelectProject(project);
@@ -195,19 +215,69 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
               {getSortSymbol(sortMethod)}
             </button>
           </div>
-          <div className="filter-toggles">
+          <div className="filter-toggles" style={{ position: 'relative' }}>
             <button
               className={`filter-toggle active`}
-              onClick={() => {
-                const modes: EmptyMode[] = ['all', 'has_sessions', 'has_todos', 'active_only'];
-                const idx = modes.indexOf(emptyMode);
-                const next = modes[(idx + 1) % modes.length];
-                onEmptyModeChange(next);
+              onMouseDown={(e) => {
+                if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
+                holdTimerRef.current = window.setTimeout(() => {
+                  setModeMenuPos({ x: e.clientX, y: e.clientY });
+                  setModeMenuVisible(true);
+                }, 400);
               }}
-              title={`Cycle: ALL → SESSION → TODOs → ACTIVE (current: ${emptyMode.replace('_', ' ').toUpperCase()})`}
+              onMouseUp={() => {
+                if (holdTimerRef.current) {
+                  window.clearTimeout(holdTimerRef.current);
+                  holdTimerRef.current = null;
+                  if (!modeMenuVisible) {
+                    const modes: EmptyMode[] = ['all', 'has_sessions', 'has_todos', 'active_only'];
+                    const idx = modes.indexOf(emptyMode);
+                    const next = modes[(idx + 1) % modes.length];
+                    onEmptyModeChange(next);
+                  }
+                }
+              }}
+              onMouseLeave={() => {
+                if (holdTimerRef.current) {
+                  window.clearTimeout(holdTimerRef.current);
+                  holdTimerRef.current = null;
+                }
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                if (holdTimerRef.current) {
+                  window.clearTimeout(holdTimerRef.current);
+                  holdTimerRef.current = null;
+                }
+                setModeMenuPos({ x: e.clientX, y: e.clientY });
+                setModeMenuVisible(true);
+              }}
+              title={`Click to cycle • Hold/Right-click for menu (current: ${emptyMode.replace('_', ' ').toUpperCase()})`}
             >
               {emptyMode === 'all' ? 'ALL' : emptyMode === 'has_sessions' ? 'SESSION' : emptyMode === 'has_todos' ? 'TODOs' : 'ACTIVE'}
             </button>
+            {modeMenuVisible && (
+              <div
+                ref={menuRef}
+                style={{ position: 'fixed', top: modeMenuPos.y + 6, left: modeMenuPos.x + 6, background: '#2f3136', color: '#e6e7e8', border: '1px solid #3b3e44', borderRadius: 6, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 9999, minWidth: 140, padding: 6 }}
+              >
+                {([
+                  ['ALL', 'all'],
+                  ['SESSION', 'has_sessions'],
+                  ['TODOs', 'has_todos'],
+                  ['ACTIVE', 'active_only'],
+                ] as Array<[string, EmptyMode]>).map(([label, mode]) => (
+                  <button
+                    key={mode}
+                    onClick={() => { onEmptyModeChange(mode as EmptyMode); setModeMenuVisible(false); }}
+                    className={`filter-toggle ${emptyMode === (mode as EmptyMode) ? 'active' : ''}`}
+                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }}
+                  >
+                    {label}{emptyMode === mode ? ' ✓' : ''}
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               className={`filter-toggle ${showFailedReconstructions ? 'active' : ''}`}
               onClick={() => setShowFailedReconstructions(!showFailedReconstructions)}
