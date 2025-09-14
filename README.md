@@ -1,6 +1,9 @@
 # Entropic - a Claude Code Todo GUI and Project History viewer
 
-A real-time todo monitoring system for Claude Code that displays live updates of Todo items as they are created, modified, and completed. This tool provides a visual dashboard in your terminal or as a GUI that automatically updates whenever Claude Code uses the TodoWrite tool.  Terminal version is in original Bash (by [@JamesonNyp](@JamesonNyp)) and cross-platform PowerShell (by [dimension-zero](@dimension-zero)).  GUI is in cross-platform TypeScript.
+A real-time ToDo monitoring system for Claude Code that displays live updates of Todo items as they are created, modified, and completed.
+This tool provides a visual dashboard in your terminal or as a GUI that automatically updates whenever Claude Code uses the TodoWrite tool.
+GUI versuib is in cross-platform TypeScript / Electron.
+Terminal version is in cross-platform PowerShell by [dimension-zero](@dimension-zero) and original Bash by [@JamesonNyp](@JamesonNyp).
 
 ![Claude Code Todo Tracker Live Monitor](Todo%20Tracker.png)
 
@@ -34,11 +37,17 @@ This project provides scripts that integrate with Claude Code's hook system to c
 
 ## Available Implementations
 
-### Bash Version (`bash/`)
-- Works on Linux, macOS, and WSL2 (not native Windows)
-- Requires `jq` for JSON parsing
-- Optionally uses `inotifywait` (Linux) or `fswatch` (macOS) for file monitoring
-- See [README-sh.md](README-sh.md) for setup instructions
+### TypeScript/Electron GUI Version (`typescript/`) - Cross-Platform Desktop Application
+- **Modern Desktop GUI**: Slack-like interface with dark theme
+- **Cross-platform**: Runs as a native desktop app on Windows, macOS, and Linux
+- **Advanced Features**:
+  - Real-time monitoring of all Claude Code sessions across projects
+  - Tri-state toggle controls for sorting and spacing customization
+  - Session tabs with automatic deduplication
+  - Auto-refresh every 5 seconds
+  - Visual status indicators and progress tracking
+- **Easy Installation**: `npm install` and `npm start` to run
+- See [typescript/README.md](typescript/README.md) for setup instructions
 
 ### PowerShell 7 Version (`powershell7/`) - Recommended for Cross-Platform Use
 - **Truly cross-platform**: Runs natively on Windows, macOS, and Linux
@@ -51,17 +60,11 @@ This project provides scripts that integrate with Claude Code's hook system to c
   - Robust error handling and debugging
 - See [README-ps.md](README-ps.md) for setup instructions
 
-### TypeScript/Electron GUI Version (`typescript/`) - Desktop Application
-- **Modern Desktop GUI**: Slack-like interface with dark theme
-- **Cross-platform**: Runs as a native desktop app on Windows, macOS, and Linux
-- **Advanced Features**:
-  - Real-time monitoring of all Claude Code sessions across projects
-  - Tri-state toggle controls for sorting and spacing customization
-  - Session tabs with automatic deduplication
-  - Auto-refresh every 5 seconds
-  - Visual status indicators and progress tracking
-- **Easy Installation**: `npm install` and `npm start` to run
-- See [typescript/README.md](typescript/README.md) for setup instructions
+### Bash Version (`bash/`) - For macOS and Linux
+- Works on Linux, macOS, and WSL2 (not native Windows)
+- Requires `jq` for JSON parsing
+- Optionally uses `inotifywait` (Linux) or `fswatch` (macOS) for file monitoring
+- See [README-sh.md](README-sh.md) for setup instructions
 
 ## Project Structure
 
@@ -121,6 +124,6 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 
 ## Author
 
+* TypeScript/Electron GUI by Dimension Zero (@dimension-zero)
+* PowerShell implementation by Dimension Zero (@dimension-zero)
 * Original Bash CLI version created by Jameson Nyp (@JamesonNyp)
-* PowerShell implementation by Dimension Zero (@dimension-zero <zero@ditech.ai>)
-* TypeScript/Electron GUI by Dimension Zero (@dimension-zero <zero@ditech.ai>)
