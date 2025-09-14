@@ -194,15 +194,17 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
           <div className="projects-header-left">
             <h2>Projects ({sortedProjects.length})</h2>
           </div>
-          <div className="activity-toggle" title="Auto-select the most recent session when navigating projects">
-            <label>
-              <span>Activity</span>
-              <input
-                type="checkbox"
-                checked={activityMode}
-                onChange={(e) => setActivityMode(e.target.checked)}
-              />
-            </label>
+          {/* Activity slider styled like Todo/History slider, stuck to right edge */}
+          <div className="activity-toggle" title="Auto-select the most recent session when navigating projects" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ color: activityMode ? '#ffffff' : '#8e9297', fontSize: 12 }}>Activity</span>
+            <div
+              role="button"
+              aria-label="Activity slider"
+              onClick={() => setActivityMode(!activityMode)}
+              style={{ position: 'relative', width: 56, height: 22, borderRadius: 16, background: '#2f3136', cursor: 'pointer', userSelect: 'none' }}
+            >
+              <div style={{ position: 'absolute', top: 2, bottom: 2, width: 24, left: activityMode ? 'calc(100% - 26px)' : 2, background: 'var(--accent)', borderRadius: 14, transition: 'left 120ms ease' }} />
+            </div>
           </div>
         </div>
       </PaneHeader>
@@ -348,7 +350,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
             >
               <div className="project-name" title={projectPath}>
                 {projectPath ? projectPath.split(/[\\/]/).pop() : 'Unknown Project'}
-                <span style={{ opacity: 0.8 }}> — {sessionCount} • {todoCount}{activeCount > 0 ? ` • ${activeCount} active` : ''}</span>
+                <span style={{ opacity: 0.8, fontSize: 12, fontWeight: 400 }}> ({sessionCount} • {todoCount} • {activeCount})</span>
               </div>
               <div className="project-stats">
                 {startDate && (<>{formatUKDate(startDate)}</>)}
