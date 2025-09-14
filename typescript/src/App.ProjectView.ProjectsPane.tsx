@@ -64,22 +64,24 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
   const [modeMenuPos, setModeMenuPos] = useState<{x:number;y:number}>({x:0,y:0});
   const holdTimerRef = useRef<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [sortMenuVisible, setSortMenuVisible] = useState(false);
+  const [sortMenuPos, setSortMenuPos] = useState<{x:number;y:number}>({x:0,y:0});
+  const sortHoldTimerRef = useRef<number | null>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onDocMouseDown = (e: MouseEvent) => {
-      if (!modeMenuVisible) return;
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setModeMenuVisible(false);
-      }
+      if (modeMenuVisible && menuRef.current && !menuRef.current.contains(e.target as Node)) setModeMenuVisible(false);
+      if (sortMenuVisible && sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) setSortMenuVisible(false);
     };
-    const onEsc = (e: KeyboardEvent) => { if (modeMenuVisible && e.key === 'Escape') setModeMenuVisible(false); };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { setModeMenuVisible(false); setSortMenuVisible(false); } };
     document.addEventListener('mousedown', onDocMouseDown);
     document.addEventListener('keydown', onEsc);
     return () => {
       document.removeEventListener('mousedown', onDocMouseDown);
       document.removeEventListener('keydown', onEsc);
     };
-  }, [modeMenuVisible]);
+  }, [modeMenuVisible, sortMenuVisible]);
 
   const handleProjectClick = (project: Project) => {
     onSelectProject(project);
@@ -209,11 +211,43 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
           <div className="sort-controls">
             <button
               className="sort-button active"
-              onClick={() => setSortMethod(((sortMethod + 1) % 3) as SortMethod)}
-              title={sortMethod === 0 ? 'Sort projects alphabetically by name (click for date sort)' : sortMethod === 1 ? 'Sort projects by most recent activity (click for count sort)' : 'Sort projects by number of todos (click for alphabetic sort)'}
+              onMouseDown={(e) => {
+                if (sortHoldTimerRef.current) window.clearTimeout(sortHoldTimerRef.current);
+                sortHoldTimerRef.current = window.setTimeout(() => {
+                  setSortMenuPos({ x: e.clientX, y: e.clientY });
+                  setSortMenuVisible(true);
+                }, 400);
+              }}
+              onMouseUp={() => {
+                if (sortHoldTimerRef.current) {
+                  window.clearTimeout(sortHoldTimerRef.current);
+                  sortHoldTimerRef.current = null;
+                  if (!sortMenuVisible) setSortMethod(((sortMethod + 1) % 3) as SortMethod);
+                }
+              }}
+              onMouseLeave={() => { if (sortHoldTimerRef.current) { window.clearTimeout(sortHoldTimerRef.current); sortHoldTimerRef.current = null; } }}
+              onContextMenu={(e) => { e.preventDefault(); if (sortHoldTimerRef.current) { window.clearTimeout(sortHoldTimerRef.current); sortHoldTimerRef.current = null; } setSortMenuPos({ x: e.clientX, y: e.clientY }); setSortMenuVisible(true); }}
+              title={sortMethod === 0 ? 'Sort: A→Z (click to cycle • hold/right-click for menu)' : sortMethod === 1 ? 'Sort: Recent (click to cycle • hold/right-click for menu)' : 'Sort: Todos (click to cycle • hold/right-click for menu)'}
             >
               {getSortSymbol(sortMethod)}
             </button>
+            {sortMenuVisible && (
+              <div
+                ref={sortMenuRef}
+                style={{ position: 'fixed', top: sortMenuPos.y + 6, left: sortMenuPos.x + 6, background: '#2f3136', color: '#e6e7e8', border: '1px solid #3b3e44', borderRadius: 6, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 9999, minWidth: 160, padding: 6 }}
+              >
+                {[['⏱ Recent', 1], ['# Todos', 2], ['AZ Alphabetic', 0]].map(([label, method]) => (
+                  <button
+                    key={String(method)}
+                    onClick={() => { setSortMethod(method as SortMethod); setSortMenuVisible(false); }}
+                    className={`filter-toggle ${sortMethod === method ? 'active' : ''}`}
+                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }}
+                  >
+                    {label as string}{sortMethod === method ? ' ✓' : ''}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <div className="filter-toggles" style={{ position: 'relative' }}>
             <button
@@ -287,7 +321,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
             </button>
           </div>
       </PaneControls>
-      <div className="sidebar-projects">
+      <div className="sidebar-projects" style={{ overflowY: 'auto' }}>
         {sortedProjects && Array.isArray(sortedProjects) ? sortedProjects.map((project) => {
           if (!project || typeof project !== 'object') return null;
           
@@ -312,18 +346,13 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
               onClick={() => handleProjectClick(project)}
               onContextMenu={(e) => handleProjectContextMenu(e, project)}
             >
-              <div className="project-name">
+              <div className="project-name" title={projectPath}>
                 {projectPath ? projectPath.split(/[\\/]/).pop() : 'Unknown Project'}
-                {todoCount === 0 && <span className="empty-badge"> (empty)</span>}
+                <span style={{ opacity: 0.8 }}> — {sessionCount} • {todoCount}{activeCount > 0 ? ` • ${activeCount} active` : ''}</span>
               </div>
               <div className="project-stats">
-                {sessionCount} • {todoCount}{activeCount > 0 ? ` • ${activeCount} active` : ''}
-                {startDate && (
-                  <> • since {formatUKDate(startDate)}</>
-                )}
-                {project.mostRecentTodoDate && (
-                  <> • {formatUKDate(new Date(project.mostRecentTodoDate))} {formatUKTime(new Date(project.mostRecentTodoDate))}</>
-                )}
+                {startDate && (<>{formatUKDate(startDate)}</>)}
+                {project.mostRecentTodoDate && (<> • {formatUKDate(new Date(project.mostRecentTodoDate))} {formatUKTime(new Date(project.mostRecentTodoDate))}</>)}
               </div>
             </div>
           );
