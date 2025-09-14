@@ -94,6 +94,7 @@ function createWindow() {
         });
       }
     },
+    getMainWindow: () => mainWindow,
   });
 }
 
