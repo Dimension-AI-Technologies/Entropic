@@ -330,7 +330,7 @@ export function SingleProjectPane({
       )}
       
       {viewMode === 'prompt' && (
-        <PromptView selectedProject={enrichedProject} />
+        <PromptView selectedProject={enrichedProject} spacingMode={spacingMode} />
       )}
       
       <MergeDialog

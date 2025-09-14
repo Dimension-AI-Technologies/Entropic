@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { PaneHeader, PaneControls } from './components/PaneLayout';
 // Result helpers are not needed here
 
 interface PromptEntry {
@@ -17,13 +18,15 @@ interface PromptViewProps {
     sessions: any[];
     mostRecentTodoDate?: Date;
   } | null;
+  spacingMode?: 'wide' | 'normal' | 'compact';
 }
 
-export function PromptView({ selectedProject }: PromptViewProps) {
+export function PromptView({ selectedProject, spacingMode = 'compact' }: PromptViewProps) {
   const [prompts, setPrompts] = useState<PromptEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [menuState, setMenuState] = useState<{ visible: boolean; x: number; y: number; prompt?: PromptEntry }>(() => ({ visible: false, x: 0, y: 0 }));
 
   // Convert project path to flattened path format (replace both forward and backslashes)
   const getFlattenedProjectPath = (projectPath: string): string => {
@@ -127,32 +130,44 @@ export function PromptView({ selectedProject }: PromptViewProps) {
     return content;
   };
 
+  // Spacing settings for tiles
+  const tileSpacing = useMemo(() => {
+    switch (spacingMode) {
+      case 'wide': return 12;
+      case 'normal': return 6;
+      default: return 0;
+    }
+  }, [spacingMode]);
+
   if (!selectedProject) {
     return (
-      <div className="prompt-history-view">
-        <h3>Select a project to view prompt history</h3>
+      <div className="prompt-history-view" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <PaneHeader className="project-header"><h1>Select a project</h1></PaneHeader>
       </div>
     );
   }
 
   return (
-    <div className="prompt-history-view">
-      <div className="prompt-history-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3>Prompt History: {selectedProject.path}</h3>
+    <div className="prompt-history-view" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <PaneHeader className="project-header">
+        <h1 title={selectedProject.path}>{selectedProject.path}</h1>
+      </PaneHeader>
+      <PaneControls className="pane-controls">
+        <div className="sort-controls" title="Sort order">
           <button
+            className="sort-button active"
             onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-            className="sort-toggle-btn"
-            title={`Sort ${sortOrder === 'asc' ? 'newest first' : 'oldest first'}`}
+            style={{ minWidth: 140, background: '#2f3136', color: '#e6e7e8' }}
+            title={sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}
           >
             {sortOrder === 'asc' ? '↑ Oldest First' : '↓ Newest First'}
           </button>
         </div>
-        <p className="flattened-path">
-          Flattened path: {getFlattenedProjectPath(selectedProject.path)}
-        </p>
-        {loading && <span className="loading-indicator">Loading...</span>}
-      </div>
+        <div className="filter-toggles" style={{ flex: 1, display: 'flex', justifyContent: 'center', color: '#b9bbbe' }} title="Flattened path">
+          <span>{getFlattenedProjectPath(selectedProject.path)}</span>
+        </div>
+        <div style={{ minWidth: 140, textAlign: 'right', color: '#b9bbbe' }}>{loading ? 'Loading…' : ''}</div>
+      </PaneControls>
 
       {error && (
         <div className="error-message">
@@ -168,9 +183,17 @@ export function PromptView({ selectedProject }: PromptViewProps) {
         </div>
       )}
 
-      <div className="prompts-list">
+      <div className="prompts-list" style={{ overflowY: 'auto', padding: 12 }}>
         {prompts.map((prompt, index) => (
-          <div key={prompt.uuid || `prompt-${index}`} className={`prompt-entry ${prompt.message.role}`}>
+          <div
+            key={prompt.uuid || `prompt-${index}`}
+            className={`prompt-entry ${prompt.message.role}`}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setMenuState({ visible: true, x: e.clientX, y: e.clientY, prompt });
+            }}
+            style={{ marginBottom: tileSpacing }}
+          >
             <div className="prompt-header">
               <span className="prompt-number">#{index + 1}</span>
               <span className="prompt-time">{formatTime(prompt.timestamp)}</span>
@@ -183,6 +206,28 @@ export function PromptView({ selectedProject }: PromptViewProps) {
           </div>
         ))}
       </div>
+
+      {menuState.visible && (
+        <div
+          style={{ position: 'fixed', top: menuState.y + 6, left: menuState.x + 6, background: '#2f3136', color: '#e6e7e8', border: '1px solid #3b3e44', borderRadius: 6, boxShadow: '0 6px 20px rgba(0,0,0,0.4)', zIndex: 9999, minWidth: 160, padding: 6 }}
+          onMouseLeave={() => setMenuState(s => ({ ...s, visible: false }))}
+        >
+          <button
+            className="filter-toggle"
+            onClick={() => { if (menuState.prompt) { navigator.clipboard.writeText(menuState.prompt.message.content); (window as any).__addToast?.('Copied prompt'); } setMenuState(s => ({ ...s, visible: false })); }}
+            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }}
+          >
+            Copy Prompt
+          </button>
+          <button
+            className="filter-toggle"
+            onClick={() => { if (menuState.prompt) { navigator.clipboard.writeText(menuState.prompt.uuid || menuState.prompt.sessionId || ''); (window as any).__addToast?.('Copied prompt ID'); } setMenuState(s => ({ ...s, visible: false })); }}
+            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 10px', margin: 0 }}
+          >
+            Copy Prompt ID
+          </button>
+        </div>
+      )}
     </div>
   );
 }
