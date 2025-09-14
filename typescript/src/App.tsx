@@ -193,7 +193,7 @@ function App() {
         />
         
         {/* Content area - either project view or global view */}
-        <div style={{ flex: 1, overflow: 'hidden' }}>
+        <div className="content-area" style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           {(() => {
             console.error(`[APP RENDER DEBUG] viewMode = "${viewMode}", about to render ${viewMode === 'global' ? 'GlobalView' : 'ProjectView'}`);
             if (viewMode === 'global') {
@@ -204,16 +204,17 @@ function App() {
               return <ProjectView activityMode={activityMode} setActivityMode={setActivityMode} />;
             }
           })()}
-        </div>
-        {/* Overlay during reload */}
-        {reloading && (
-          <div className="reloading-overlay">
-            <div className="reloading-card">
-              <div className="reloading-title">Reloading...</div>
-              <div className="reloading-sub">Please wait while data is refreshed</div>
+          {/* Overlay during reload - scoped to content area only */}
+          {reloading && (
+            <div className="reloading-overlay">
+              <div className="reloading-card">
+                <div className="reloading-spinner" aria-label="Refreshing" />
+                <div className="reloading-title">Refreshing...</div>
+                <div className="reloading-sub">Please wait while data is refreshed</div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
         {/* Toasts */}
         <div className="toast-container">
           {toasts.map(t => (
