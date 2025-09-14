@@ -167,11 +167,11 @@ export function UnifiedTitleBar({
             }}
             title="Take screenshot (saved to Desktop)"
           >
-            {/* Simple camera-lens icon */}
+            {/* Simple camera-lens icon (white) */}
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-              <rect x="2" y="4" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.5"/>
-              <circle cx="9" cy="9" r="3.5" stroke="currentColor" strokeWidth="1.5"/>
-              <circle cx="9" cy="9" r="1.5" fill="currentColor"/>
+              <rect x="2" y="4" width="14" height="10" rx="2" stroke="white" strokeWidth="1.5"/>
+              <circle cx="9" cy="9" r="3.5" stroke="white" strokeWidth="1.5"/>
+              <circle cx="9" cy="9" r="1.5" fill="white"/>
             </svg>
           </button>
         </div>

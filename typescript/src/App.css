@@ -872,8 +872,8 @@ body {
 }
 
 .filter-btn.active {
-  background: #1264a3;
-  color: white;
+  background: #5865f2; /* unify purple-blue */
+  color: #ffffff;
 }
 
 /* Control buttons */
@@ -3026,6 +3026,17 @@ body {
   flex: 1;
   min-width: 200px;
 }
+
+.screenshot-btn {
+  background: #2a2d33;
+  border: 1px solid #4f545c;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.screenshot-btn:hover { background: #4f545c; }
 
 .title-bar-center {
   position: absolute;
