@@ -123,7 +123,26 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
             const next = pickNext(s.todos || [], curr);
             const hasActive = (s.todos || []).some((t: any) => t.status !== 'completed');
             const accent = hasActive ? '#2ACB68' : '#5b6168';
-            const projName = (p.path || '').split(/[\\/]/).pop() || ((s as any).projectPath ? (s as any).projectPath.split(/[\\/]/).pop() : 'Unknown Project');
+            // Robust project name inference
+            const inferFromFile = () => {
+              const fp = (s as any).filePath || '';
+              const m = fp.match(/\.claude[\\\/]projects[\\\/]([^\\\/]+)/);
+              if (m && m[1]) {
+                const flat = m[1];
+                const parts = flat.split('-').filter(Boolean);
+                return parts.length ? parts[parts.length - 1] : flat;
+              }
+              return '';
+            };
+            const projName = (() => {
+              const byPath = (p.path || '').split(/[\\/]/).pop();
+              if (byPath) return byPath;
+              const bySessionPath = ((s as any).projectPath || '').split(/[\\/]/).pop();
+              if (bySessionPath) return bySessionPath;
+              const byFile = inferFromFile();
+              if (byFile) return byFile;
+              return 'Unknown Project';
+            })();
             const shortId = s.id.substring(0,6);
             const goto = (todo: any) => { const idx = (s.todos || []).indexOf(todo); (window as any).__navigateToProjectSession?.((s as any).projectPath || p.path, s.id, idx >= 0 ? idx : undefined); };
             return (
