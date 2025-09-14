@@ -1,3 +1,4 @@
+:root { --accent: #5865f2; }
 * {
   margin: 0;
   padding: 0;
@@ -91,6 +92,14 @@ body {
   flex: 1;
   min-height: 0;
 }
+
+/* Ensure left/right panes stretch and inner content can scroll */
+.sidebar { display: flex; flex-direction: column; min-height: 0; }
+.sidebar-projects { min-height: 0; }
+.main-content { min-height: 0; }
+
+/* Global view container fills available space so rows can scroll */
+.global-view { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 
 /* Splash screen */
 .splash-screen {
@@ -528,7 +537,7 @@ body {
   transition: background 0.2s;
 }
 
-.activity-toggle input[type="checkbox"]:checked { background: #5865f2; }
+.activity-toggle input[type="checkbox"]:checked { background: var(--accent); }
 
 .activity-toggle input[type="checkbox"]::before {
   content: '';
@@ -871,10 +880,7 @@ body {
   color: #b9bbbe;
 }
 
-.filter-btn.active {
-  background: #5865f2; /* unify purple-blue */
-  color: #ffffff;
-}
+.filter-btn.active { background: var(--accent); color: #ffffff; }
 
 /* Control buttons */
 .control-buttons {
@@ -1329,7 +1335,7 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.sort-button.active { background: #5865f2; border-color: #5865f2; color: #ffffff; }
+.sort-button.active { background: var(--accent); border-color: var(--accent); color: #ffffff; }
 
 /* Filter toggles */
 .filter-toggles {
@@ -1356,7 +1362,7 @@ body {
   border-color: #484a4f;
 }
 
-.filter-toggle.active { background: #5865f2; color: #ffffff; border-color: #5865f2; }
+.filter-toggle.active { background: var(--accent); color: #ffffff; border-color: var(--accent); }
 
 .filter-toggle.active:hover {
   background: #0e5490;

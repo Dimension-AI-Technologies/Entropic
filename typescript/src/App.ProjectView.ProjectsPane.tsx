@@ -192,15 +192,6 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
       <PaneHeader className="sidebar-header">
         <div className="sidebar-header-top">
           <div className="projects-header-left">
-            {onRefresh && (
-              <button 
-                className="refresh-btn" 
-                onClick={onRefresh}
-                title="Refresh projects and todos"
-              >
-                ↻
-              </button>
-            )}
             <h2>Projects ({sortedProjects.length})</h2>
           </div>
           <div className="activity-toggle" title="Auto-select the most recent session when navigating projects">

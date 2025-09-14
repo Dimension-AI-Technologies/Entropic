@@ -197,21 +197,23 @@ export function SessionControls({
           )}
         </h1>
         
-        {/* View mode slider */}
-        <div
-          className="view-mode-slider"
-          role="button"
-          title="Toggle between Todo and History"
-          onClick={(e) => {
-            const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-            const isLeft = (e.clientX - rect.left) < rect.width / 2;
-            onViewModeChange(isLeft ? 'todo' : 'prompt');
-          }}
-          style={{ position: 'relative', width: 180, height: 28, borderRadius: 16, background: '#2f3136', display: 'grid', gridTemplateColumns: '1fr 1fr', cursor: 'pointer', userSelect: 'none' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: viewMode === 'todo' ? '#fff' : '#b9bbbe' }}>Todo</div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: viewMode === 'prompt' ? '#fff' : '#b9bbbe' }}>History</div>
-          <div style={{ position: 'absolute', top: 2, bottom: 2, width: '50%', left: viewMode === 'todo' ? 2 : 'calc(50% + 2px)', background: '#1264a3', borderRadius: 14, transition: 'left 120ms ease' }} />
+        {/* View mode slider with external labels */}
+        <div className="view-mode-toggle" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ color: viewMode === 'todo' ? '#ffffff' : '#8e9297', fontSize: 12 }}>Todo</span>
+          <div
+            className="view-mode-slider"
+            role="button"
+            title="Toggle between Todo and History"
+            onClick={(e) => {
+              const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+              const isLeft = (e.clientX - rect.left) < rect.width / 2;
+              onViewModeChange(isLeft ? 'todo' : 'prompt');
+            }}
+            style={{ position: 'relative', width: 56, height: 22, borderRadius: 16, background: '#2f3136', cursor: 'pointer', userSelect: 'none' }}
+          >
+            <div style={{ position: 'absolute', top: 2, bottom: 2, width: 24, left: viewMode === 'todo' ? 2 : 'calc(100% - 26px)', background: '#5865f2', borderRadius: 14, transition: 'left 120ms ease' }} />
+          </div>
+          <span style={{ color: viewMode === 'prompt' ? '#ffffff' : '#8e9297', fontSize: 12 }}>History</span>
         </div>
       </PaneHeader>
       {viewMode === 'todo' && (
