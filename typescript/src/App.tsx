@@ -17,7 +17,11 @@ function App() {
   const [loading, setLoading] = useState(true);
   
   const [viewMode, setViewMode] = useState<'project' | 'global'>('project');
-  const [spacingMode, setSpacingMode] = useState<'wide' | 'normal' | 'compact'>('compact');
+  const [spacingMode, setSpacingMode] = useState<'wide' | 'normal' | 'compact'>(() => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.spacingMode') as any : null;
+    return saved === 'wide' || saved === 'normal' || saved === 'compact' ? saved : 'compact';
+  });
+  const [toasts, setToasts] = useState<Array<{ id: number; text: string }>>([]);
   
   // Activity mode state for auto-selection
   const [activityMode, setActivityMode] = useState(false);
@@ -63,6 +67,21 @@ function App() {
       clearTimeout(timer);
     };
   }, []); // Only run once on mount
+  
+  // Persist spacingMode
+  useEffect(() => {
+    try { localStorage.setItem('ui.spacingMode', spacingMode); } catch {}
+  }, [spacingMode]);
+
+  // Expose toast helper
+  useEffect(() => {
+    (window as any).__addToast = (text: string) => {
+      const id = Date.now() + Math.random();
+      setToasts((prev) => [...prev, { id, text }]);
+      setTimeout(() => setToasts((prev) => prev.filter(t => t.id !== id)), 2500);
+    };
+    return () => { try { delete (window as any).__addToast; } catch {} };
+  }, []);
   
   // Add debugging for loading state changes
   useEffect(() => {
@@ -148,6 +167,12 @@ function App() {
               return <ProjectView activityMode={activityMode} setActivityMode={setActivityMode} />;
             }
           })()}
+        </div>
+        {/* Toasts */}
+        <div className="toast-container">
+          {toasts.map(t => (
+            <div key={t.id} className="toast">{t.text}</div>
+          ))}
         </div>
       </div>
     </div>

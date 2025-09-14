@@ -159,14 +159,10 @@ export function UnifiedTitleBar({
               try {
                 const res = await window.electronAPI?.takeScreenshot?.();
                 if (!res) return;
-                if (res.success) {
-                  alert(`Screenshot saved to\n${res.path}`);
-                } else {
-                  alert(`Screenshot failed${res.error ? `: ${res.error}` : ''}`);
-                }
+                if (res.success) { (window as any).__addToast?.('Screenshot saved'); } else { (window as any).__addToast?.('Screenshot failed'); }
               } catch (e) {
                 console.error('Screenshot error', e);
-                alert('Screenshot failed');
+                (window as any).__addToast?.('Screenshot failed');
               }
             }}
             title="Take screenshot (saved to Desktop)"

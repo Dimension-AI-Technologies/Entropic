@@ -58,7 +58,10 @@ interface ProjectsPaneProps {
 }
 
 export function ProjectsPane({ projects, selectedProject, onSelectProject, onProjectContextMenu, onRefresh, activityMode, setActivityMode, deletedProjects, emptyMode, onEmptyModeChange }: ProjectsPaneProps) {
-  const [sortMethod, setSortMethod] = useState<SortMethod>(1); // recent
+  const [sortMethod, setSortMethod] = useState<SortMethod>(() => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.sortMethod') : null;
+    return saved === '0' || saved === '1' || saved === '2' ? (Number(saved) as SortMethod) : 1;
+  }); // recent
   const [showFailedReconstructions, setShowFailedReconstructions] = useState(false); // hide failed path reconstructions by default
   const [modeMenuVisible, setModeMenuVisible] = useState(false);
   const [modeMenuPos, setModeMenuPos] = useState<{x:number;y:number}>({x:0,y:0});
@@ -179,6 +182,11 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
       }
     }) : [];
 
+  // Persist sort method
+  useEffect(() => {
+    try { localStorage.setItem('ui.sortMethod', String(sortMethod)); } catch {}
+  }, [sortMethod]);
+
   return (
     <div className="sidebar">
       <PaneHeader className="sidebar-header">
@@ -251,7 +259,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
           </div>
           <div className="filter-toggles" style={{ position: 'relative' }}>
             <button
-              className={`filter-toggle active`}
+              className={`filter-toggle active mode-btn`}
               onMouseDown={(e) => {
                 if (holdTimerRef.current) window.clearTimeout(holdTimerRef.current);
                 holdTimerRef.current = window.setTimeout(() => {
@@ -313,7 +321,7 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
               </div>
             )}
             <button
-              className={`filter-toggle ${showFailedReconstructions ? 'active' : ''}`}
+              className={`filter-toggle ${showFailedReconstructions ? 'active' : ''} failed-btn`}
               onClick={() => setShowFailedReconstructions(!showFailedReconstructions)}
               title="Show/hide projects with invalid file paths"
             >

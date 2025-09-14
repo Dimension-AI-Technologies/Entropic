@@ -26,7 +26,10 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
   const { leftPaneWidth, setLeftPaneWidth, isResizing, setIsResizing } = useResize(260, 200, 400);
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, project: MVVMProject} | null>(null);
   const [deletedProjects, setDeletedProjects] = useState<Set<string>>(new Set());
-  const [emptyMode, setEmptyMode] = useState<'all' | 'has_sessions' | 'has_todos' | 'active_only'>('has_todos');
+  const [emptyMode, setEmptyMode] = useState<'all' | 'has_sessions' | 'has_todos' | 'active_only'>(() => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.emptyMode') as any : null;
+    return saved === 'all' || saved === 'has_sessions' || saved === 'has_todos' || saved === 'active_only' ? saved : 'has_todos';
+  });
 
   // Get ViewModels from container
   const container = DIContainer.getInstance();
@@ -144,6 +147,11 @@ export function ProjectView({ activityMode, setActivityMode }: ProjectViewProps)
     
     mergeSessionsIntoProjects();
   }, [legacyProjects, sessions]);
+
+  // Persist empty mode
+  useEffect(() => {
+    try { localStorage.setItem('ui.emptyMode', emptyMode); } catch {}
+  }, [emptyMode]);
 
   // Resizing logic moved to useResize hook
 

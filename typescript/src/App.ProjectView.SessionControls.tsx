@@ -187,8 +187,8 @@ export function SessionControls({
     <>
       <PaneHeader className="project-header">
         <h1
-          onClick={() => { try { navigator.clipboard.writeText(selectedProject.path); } catch(e) { console.warn('Clipboard write failed', e); } }}
-          onContextMenu={(e) => { e.preventDefault(); try { navigator.clipboard.writeText(selectedProject.path); } catch(err) {} }}
+          onClick={() => { try { navigator.clipboard.writeText(selectedProject.path); (window as any).__addToast?.('Copied project path'); } catch(e) { console.warn('Clipboard write failed', e); } }}
+          onContextMenu={(e) => { e.preventDefault(); try { navigator.clipboard.writeText(selectedProject.path); (window as any).__addToast?.('Copied project path'); } catch(err) {} }}
           title="Click or right-click to copy project path"
         >
           {selectedProject.path}

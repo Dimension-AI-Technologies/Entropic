@@ -268,6 +268,14 @@ body {
   overflow: hidden;
 }
 
+/* Distribute controls across left pane */
+.sidebar-controls { display: flex; align-items: center; gap: 12px; }
+.sidebar-controls .sort-controls { flex: 1; }
+.sidebar-controls .filter-toggles { flex: 1; display: flex; align-items: center; }
+.sidebar-controls .filter-toggles .mode-btn { margin: 0 auto; }
+.sidebar-controls .filter-toggles .failed-btn { margin-left: auto; }
+.sort-button, .filter-toggle { min-width: 110px; }
+
 .sort-title {
   font-size: 12px;
   color: #8e9297;
@@ -419,6 +427,26 @@ body {
   pointer-events: none;
   z-index: 1;
   overflow: hidden;
+}
+
+/* Toasts */
+.toast-container {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 99999;
+}
+.toast {
+  background: rgba(20, 20, 20, 0.9);
+  color: #eaeaea;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
 }
 
 .boid {
