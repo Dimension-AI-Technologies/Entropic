@@ -91,15 +91,15 @@ cc-todo-hook-tracker/
 ## Quick Start
 
 1. Choose your preferred implementation:
-   - **Terminal (Bash)**: Follow [README-sh.md](README-sh.md)
-   - **Terminal (PowerShell 7)**: Follow [README-ps.md](README-ps.md)
    - **Desktop GUI (Electron)**: Follow [typescript/README.md](typescript/README.md)
+   - **Terminal (PowerShell 7)**: Follow [README-ps.md](README-ps.md)
+   - **Terminal (Bash)**: Follow [README-sh.md](README-sh.md)
 
-2. Configure Claude Code hooks to use the appropriate script (for terminal versions)
+2. Configure Claude Code hooks to use the appropriate script; the GUI is triggered by hooks
 
 3. Start the monitor:
+   - GUI version: from typescript directory, run `npm run build` and `npm start` to launch the Electron app
    - Terminal versions: Run monitor script in a separate terminal
-   - GUI version: Launch the Electron app
 
 4. Use Claude Code normally - todos will appear automatically!
 
@@ -120,10 +120,10 @@ MIT License - Feel free to modify and distribute
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
+Contributions are welcome. Please feel free to submit pull requests or open issues for bugs and feature requests.
 
 ## Author
 
 * TypeScript/Electron GUI by Dimension Zero (@dimension-zero)
 * PowerShell implementation by Dimension Zero (@dimension-zero)
-* Original Bash CLI version created by Jameson Nyp (@JamesonNyp)
+* Original Bash CLI version created by Jameson Nyp (@JamesonNyp) [cc-todo-hook-tracker](https://github.com/JamesonNyp/cc-todo-hook-tracker)
