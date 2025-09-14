@@ -101,7 +101,7 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   return (
     <div className="global-view" style={{ padding: 16, color: 'white' }}>
       <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span>{filteredProjects} Projects • {filteredSessions} Sessions • {filteredTodos} Todos</span>
+        <span>{filteredProjects} Projects • {filteredSessions} Sessions • {filteredTodos} ToDos</span>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }} title="Hide sessions with only completed items">
           <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
           <span>Active only</span>
