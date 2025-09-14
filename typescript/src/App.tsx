@@ -135,8 +135,10 @@ function App() {
       } else {
         console.warn('[App] TodosViewModel.refresh not available');
       }
+      (window as any).__addToast?.('Refresh complete');
     } catch (error) {
       console.error('[App] Error during refresh:', error);
+      (window as any).__addToast?.('Refresh failed');
     }
   };
 

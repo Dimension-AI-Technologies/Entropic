@@ -528,9 +528,7 @@ body {
   transition: background 0.2s;
 }
 
-.activity-toggle input[type="checkbox"]:checked {
-  background: #1264a3;
-}
+.activity-toggle input[type="checkbox"]:checked { background: #5865f2; }
 
 .activity-toggle input[type="checkbox"]::before {
   content: '';
@@ -1331,10 +1329,7 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
-.sort-button.active {
-  background: #1264a3;
-  color: white;
-}
+.sort-button.active { background: #5865f2; border-color: #5865f2; color: #ffffff; }
 
 /* Filter toggles */
 .filter-toggles {
@@ -1361,11 +1356,7 @@ body {
   border-color: #484a4f;
 }
 
-.filter-toggle.active {
-  background: #1264a3;
-  color: white;
-  border-color: #1264a3;
-}
+.filter-toggle.active { background: #5865f2; color: #ffffff; border-color: #5865f2; }
 
 .filter-toggle.active:hover {
   background: #0e5490;

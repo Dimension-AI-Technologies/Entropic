@@ -10,7 +10,10 @@ interface GlobalViewProps {
 export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   const [projects, setProjects] = useState<MVVMProject[]>([]);
   const [version, setVersion] = useState(0);
-  const [activeOnly, setActiveOnly] = useState(false);
+  const [activeOnly, setActiveOnly] = useState<boolean>(() => {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.globalActiveOnly') : null;
+    return saved === '1';
+  });
 
   const container = DIContainer.getInstance();
   const projectsViewModel = container.getProjectsViewModel();
@@ -26,6 +29,10 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
       unTodos();
     };
   }, [projectsViewModel, todosViewModel]);
+  
+  useEffect(() => {
+    try { localStorage.setItem('ui.globalActiveOnly', activeOnly ? '1' : '0'); } catch {}
+  }, [activeOnly]);
 
   // Build rows per session across all projects for better coverage
   const allRows = todosViewModel.getSessions().map(s => {
