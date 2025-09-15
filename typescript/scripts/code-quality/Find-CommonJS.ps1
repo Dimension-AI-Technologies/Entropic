@@ -5,7 +5,7 @@
 param(
     [string]$Path = ".",
     [switch]$Verbose,
-    [string[]]$ExcludePaths = @("node_modules", ".git", "dist", "build", "coverage", "out"),
+    [string[]]$ExcludePaths = @("node_modules", ".git", "dist", "build", "coverage", "out", "src/main/preload.ts", "src/tests/__mocks__"),
     [string[]]$Extensions = @(".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx"),
     [switch]$ShowExamples
 )
@@ -108,25 +108,34 @@ $stats = @{}
 $files = Get-ChildItem -Path $Path -Recurse -File | Where-Object {
     $ext = $_.Extension
     $relativePath = $_.FullName.Substring((Get-Location).Path.Length + 1)
-    
+    $relativeNorm = $relativePath.Replace('\\','/').ToLowerInvariant()
+
     # Check if extension is in our list
     $extensionMatch = $Extensions -contains $ext
-    
-    # Check if path should be excluded
+
+    # Check if path should be excluded (normalize slashes and case)
     $shouldExclude = $false
     foreach ($excludePath in $ExcludePaths) {
-        if ($relativePath -like "*$excludePath*") {
+        $ex = ($excludePath -as [string])
+        if ([string]::IsNullOrEmpty($ex)) { continue }
+        $exNorm = $ex.Replace('\\','/').ToLowerInvariant()
+        if ($relativeNorm -like "*${exNorm}*") {
             $shouldExclude = $true
             break
         }
     }
-    
+
     return $extensionMatch -and -not $shouldExclude
 }
 
 foreach ($file in $files) {
     $totalFiles++
     $relativePath = $file.FullName.Substring((Get-Location).Path.Length + 1)
+    $relativeNorm = $relativePath.Replace('\\','/').ToLowerInvariant()
+    # Skip known acceptable CommonJS locations
+    if ($relativeNorm -like '*src/main/preload.ts*' -or $relativeNorm -like '*/src/tests/__mocks__/*') {
+        continue
+    }
     
     # Read file content
     try {

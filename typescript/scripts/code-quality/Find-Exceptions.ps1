@@ -5,7 +5,7 @@
 param(
     [string]$Path = ".",
     [switch]$Verbose,
-    [string[]]$ExcludePaths = @("node_modules", ".git", "dist", "build", "target", "obj", "bin"),
+    [string[]]$ExcludePaths = @("node_modules", ".git", "dist", "build", "target", "obj", "bin", "coverage"),
     [string[]]$Languages = @(),  # Empty = auto-detect, or specify: "csharp", "fsharp", "java", "javascript", "typescript", "python", "vbnet", "kotlin", "scala", "go", "rust"
     [switch]$ShowExamples
 )
@@ -565,7 +565,7 @@ foreach ($file in $allFiles) {
                     $constructorThrowCount++
                     $languageStats[$language].ThrowInConstructors++
                     $overallStats.ThrowInConstructors++
-                    Write-Host "  ✓ Line ${lineNumber}: $($match.Value.Trim()) [IN CONSTRUCTOR - OK]" -ForegroundColor Green
+                    Write-Host "  OK Line ${lineNumber}: $($match.Value.Trim()) [IN CONSTRUCTOR - OK]" -ForegroundColor Green
                     Write-Host "     -> Constructors can throw exceptions - no conversion needed" -ForegroundColor Gray
                 } else {
                     $throwCount++

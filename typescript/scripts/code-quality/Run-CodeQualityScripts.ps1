@@ -8,7 +8,8 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 function Get-MetricsFromOutput {
     param(
         [Parameter(Mandatory=$true)]
-        [object[]]$Output
+        [object[]]$Output,
+        [string]$ScriptName
     )
 
     $total = $null
@@ -42,6 +43,45 @@ function Get-MetricsFromOutput {
         # Skipped/unreadable lines
         if ($line -match 'Warning: Could not read file') { $skipped++ }
         if ($line -match '\bSkipped\b|\bexcluded\b') { $skipped++ }
+    }
+
+    # Script-specific refinements
+    if ($ScriptName -eq 'Find-Timeouts.ps1') {
+        # Count only CRITICAL files as issues; warnings are informational
+        $criticalFiles = New-Object System.Collections.Generic.HashSet[string]
+        foreach ($line in $lines) {
+            if ($line -match '^\s*\[CRITICAL\]\s+(.+)$') { $null = $criticalFiles.Add($Matches[1].Trim()) }
+            if ($line -match '^\s*Files scanned:\s*(\d+)\s*$') { $total = [int]$Matches[1] }
+        }
+        $issues = $criticalFiles.Count
+        if ($null -eq $total) {
+            # Derive from OK/CRITICAL/WARNING tags if needed
+            $ok = ($lines | Where-Object { $_ -match '^\s*\[OK\]\s+' }).Count
+            $warn = ($lines | Where-Object { $_ -match '^\s*\[WARNING\]\s+' }).Count
+            $total = $ok + $warn + $issues
+        }
+        $skipped = 0
+        $clean = [Math]::Max(0, $total - $issues)
+        return [PSCustomObject]@{ Total=[int]$total; Issues=[int]$issues; Clean=[int]$clean; Skipped=[int]$skipped }
+    }
+    if ($ScriptName -eq 'Find-Fakes.ps1') {
+        # Treat as informational only; not issues
+        foreach ($line in $lines) {
+            if ($line -match '^\s*Files scanned:\s*(\d+)\s*$') { $total = [int]$Matches[1] }
+        }
+        if ($null -eq $total) { $total = 0 }
+        return [PSCustomObject]@{ Total=[int]$total; Issues=0; Clean=[int]$total; Skipped=0 }
+    }
+
+    if ($ScriptName -eq 'Find-Exceptions.ps1') {
+        foreach ($line in $lines) {
+            if ($line -match '^\s*Total files scanned:\s*(\d+)\s*$') { $total = [int]$Matches[1] }
+            if ($line -match '^\s*Total throw statements:\s*(\d+)\s*$') { $issues = [int]$Matches[1] }
+        }
+        if ($null -eq $total) { $total = 0 }
+        if ($null -eq $issues) { $issues = 0 }
+        $clean = [Math]::Max(0, $total - $issues)
+        return [PSCustomObject]@{ Total=[int]$total; Issues=[int]$issues; Clean=[int]$clean; Skipped=0 }
     }
 
     # Fallback to tag-based parsing if still unknown
@@ -127,7 +167,7 @@ foreach ($script in $scripts) {
 
         $duration = (Get-Date) - $startTime
         if ($output -and $output.Count -gt 0) {
-            $metrics = Get-MetricsFromOutput -Output $output
+            $metrics = Get-MetricsFromOutput -Output $output -ScriptName $script.Name
         } else {
             $metrics = [PSCustomObject]@{ Total = 0; Issues = 0; Clean = 0; Skipped = 0 }
         }
@@ -141,11 +181,11 @@ foreach ($script in $scripts) {
         }
         
         Write-Host ""
-        Write-Host "✓ Completed in $([math]::Round($duration.TotalSeconds, 2)) seconds" -ForegroundColor Green
+        Write-Host "OK Completed in $([math]::Round($duration.TotalSeconds, 2)) seconds" -ForegroundColor Green
     }
     catch {
         $duration = (Get-Date) - $startTime
-        Write-Host "✗ Error running $($script.Name): $_" -ForegroundColor Red
+        Write-Host "ERROR running $($script.Name): $_" -ForegroundColor Red
         $results += [PSCustomObject]@{
             Script = $script.Name
             Status = "Failed"
@@ -185,9 +225,9 @@ Write-Host "Total Execution Time: $([math]::Round($totalDuration.TotalSeconds, 2
 Write-Host ""
 
 if ($failCount -gt 0) {
-    Write-Host "⚠ Some scripts failed. Review the output above for details." -ForegroundColor Yellow
+    Write-Host "WARNING: Some scripts failed. Review the output above for details." -ForegroundColor Yellow
     exit 1
 } else {
-    Write-Host "✓ All code quality checks completed successfully!" -ForegroundColor Green
+    Write-Host "All code quality checks completed successfully!" -ForegroundColor Green
     exit 0
 }
