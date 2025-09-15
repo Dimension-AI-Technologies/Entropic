@@ -84,6 +84,17 @@ function Get-MetricsFromOutput {
         return [PSCustomObject]@{ Total=[int]$total; Issues=[int]$issues; Clean=[int]$clean; Skipped=0 }
     }
 
+    if ($ScriptName -eq 'Find-PSEmojisAndUnicode.ps1') {
+        foreach ($line in $lines) {
+            if ($line -match '^\s*Total files scanned:\s*(\d+)\s*$') { $total = [int]$Matches[1] }
+            if ($line -match '^\s*Files with Unicode:\s*(\d+)\s*$') { $issues = [int]$Matches[1] }
+        }
+        if ($null -eq $total) { $total = 0 }
+        if ($null -eq $issues) { $issues = 0 }
+        $clean = [Math]::Max(0, $total - $issues)
+        return [PSCustomObject]@{ Total=[int]$total; Issues=[int]$issues; Clean=[int]$clean; Skipped=0 }
+    }
+
     # Fallback to tag-based parsing if still unknown
     if ($null -eq $issues -or $null -eq $total) {
         $issuePaths = New-Object System.Collections.Generic.HashSet[string]

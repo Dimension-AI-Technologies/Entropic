@@ -121,6 +121,15 @@ Write-Host ""
 if ($filesWithUnicode.Count -eq 0) {
     Write-Host "No Unicode/emoji characters found in PowerShell scripts!" -ForegroundColor Green
     Write-Host "All files use standard ASCII encoding." -ForegroundColor Green
+
+    Write-Host "" 
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "SUMMARY" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "Total files scanned: $totalFiles" -ForegroundColor White
+    Write-Host "Files with Unicode: 0" -ForegroundColor Yellow
+    Write-Host "Total Unicode characters: 0" -ForegroundColor Yellow
+    Write-Host ""
 } else {
     Write-Host "Found Unicode/emoji in $($filesWithUnicode.Count) of $totalFiles PowerShell files:" -ForegroundColor Yellow
     Write-Host ""
