@@ -35,10 +35,10 @@ Entropic becomes a clean‑room, provider‑agnostic hub for coding‑agent acti
   🟢 5.3 Compute global stats and emit EventPort.dataChanged().
   🟢 5.4 Return Result<Project[]> to renderer via IPC boundary.
 
-🟡 6. File Watching (main process)
-  🟡 6.1 Watch ~/.claude/{projects,todos} (exists today) and debounce updates.
-  🔴 6.2 Watch ~/.codex/{projects,todos} and debounce updates.
-  🔴 6.3 Broadcast a single, provider‑agnostic “data‑changed” event to renderer.
+🟢 6. File Watching (main process)
+  🟢 6.1 Watch ~/.claude/{projects,todos} (exists today) and debounce updates.
+  🟢 6.2 Watch ~/.codex/{projects,todos} and debounce updates.
+  🟢 6.3 Broadcast a single, provider‑agnostic “data‑changed” event to renderer (keep legacy channel for compatibility).
 
 🔴 7. Renderer Integration
   🔴 7.1 Replace DI usage with a small IPC data service bound to the Aggregator port.

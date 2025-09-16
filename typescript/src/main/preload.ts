@@ -14,6 +14,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('screenshot-taken', callback);
     return () => ipcRenderer.removeListener('screenshot-taken', callback);
   },
+  onDataChanged: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('data-changed', handler);
+    return () => ipcRenderer.removeListener('data-changed', handler);
+  },
   // Add listener for file changes
   onTodoFilesChanged: (callback: (event: any, data: any) => void) => {
     ipcRenderer.on('todo-files-changed', callback);

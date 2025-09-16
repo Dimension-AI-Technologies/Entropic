@@ -190,13 +190,13 @@ app.whenReady().then(() => {
     fileWatchers = [];
     // Claude
     fileWatchers.push(
-      ...setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir })
+      ...setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir }, 300)
     );
     // Codex (if present)
     try {
       if (fsSync.existsSync(codexDir)) {
         fileWatchers.push(
-          ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir })
+          ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir }, 300)
         );
       }
     } catch {}
@@ -243,12 +243,12 @@ app.whenReady().then(() => {
       if (mainWindow) {
         fileWatchers = [];
         fileWatchers.push(
-          ...setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir })
+          ...setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir }, 300)
         );
         try {
           if (fsSync.existsSync(codexDir)) {
             fileWatchers.push(
-              ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir })
+              ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir }, 300)
             );
           }
         } catch {}

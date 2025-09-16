@@ -17,6 +17,7 @@ export class Aggregator {
         if (r.success) all.push(...r.value);
       }
       const merged = this.mergeProjects(all);
+      try { this.events?.dataChanged(); } catch {}
       return Ok(merged);
     } catch (e: any) {
       return Err(e?.message || 'Aggregator error');
@@ -68,4 +69,3 @@ function combineStats(a: Project, b: Project) {
   const ba = b.stats?.active || 0;
   return { todos: at + bt, active: aa + ba, completed: (at + bt) - (aa + ba) };
 }
-
