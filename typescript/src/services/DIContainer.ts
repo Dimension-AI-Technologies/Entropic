@@ -13,11 +13,41 @@ class SimpleProjectsViewModel {
   private projects: Project[] = [];
   private listeners = new Set<() => void>();
 
-  constructor() { this.refresh(); }
+  constructor() { 
+    this.refresh(); 
+    try {
+      // Prefer provider-agnostic data-changed; keep legacy listener as fallback
+      (window as any).electronAPI?.onDataChanged?.(() => this.refresh());
+      (window as any).electronAPI?.onTodoFilesChanged?.((_e: any,_d:any)=>this.refresh());
+    } catch {}
+  }
   getProjects(): Project[] { return this.projects; }
   setProjects(p: Project[]): void { this.projects = p || []; this.emit(); }
   async refresh(): Promise<void> {
-    try { const p = await (window as any).electronAPI?.getTodos?.(); this.projects = Array.isArray(p)?p:[]; } catch { this.projects = []; }
+    try {
+      const res = await (window as any).electronAPI?.getProjects?.();
+      if (res && typeof res === 'object' && 'success' in res) {
+        if (res.success && Array.isArray(res.value)) {
+          // Map domain -> legacy UI shape
+          this.projects = res.value.map((p: any) => ({
+            ...p,
+            path: p.projectPath,
+            mostRecentTodoDate: p.mostRecentTodoDate ? new Date(p.mostRecentTodoDate) : undefined,
+            sessions: (p.sessions||[]).map((s:any)=> ({
+              ...s,
+              id: s.sessionId,
+              lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(0),
+            })),
+          }));
+        } else {
+          this.projects = [];
+        }
+      } else {
+        // Fallback to legacy getTodos for older builds
+        const p = await (window as any).electronAPI?.getTodos?.(); 
+        this.projects = Array.isArray(p)?p:[];
+      }
+    } catch { this.projects = []; }
     this.emit();
   }
   onChange(cb: () => void): () => void { this.listeners.add(cb); return () => this.listeners.delete(cb); }
@@ -43,6 +73,7 @@ class SimpleTodosViewModel {
   constructor(){
     this.refresh();
     try {
+      (window as any).electronAPI?.onDataChanged?.(()=>this.refresh());
       (window as any).electronAPI?.onTodoFilesChanged?.((_e: any,_d:any)=>this.refresh());
     } catch {}
   }
@@ -54,11 +85,23 @@ class SimpleTodosViewModel {
   }
   async refresh(): Promise<void> {
     try {
-      const projects = await (window as any).electronAPI?.getTodos?.();
+      const maybeRes = await (window as any).electronAPI?.getProjects?.();
+      let projects: any[] = [];
+      if (maybeRes && typeof maybeRes === 'object' && 'success' in maybeRes) {
+        projects = maybeRes.success ? (maybeRes.value||[]) : [];
+      } else {
+        // Fallback to legacy
+        projects = await (window as any).electronAPI?.getTodos?.();
+      }
       const sess: Session[] = [];
-      (projects||[]).forEach((p: any) => (p.sessions||[]).forEach((s: any)=> sess.push({ ...s, projectPath: p.path })));
+      (projects||[]).forEach((p: any) => (p.sessions||[]).forEach((s: any)=> sess.push({ 
+        ...s, 
+        id: s.sessionId || s.id,
+        lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(s.lastModified||0),
+        projectPath: p.projectPath || p.path 
+      })));
       // normalize dates
-      this.sessions = sess.map(s=> ({...s, lastModified: new Date(s.lastModified)}));
+      this.sessions = sess.map(s=> ({...s, lastModified: s.lastModified instanceof Date ? s.lastModified : new Date(s.lastModified)}));
     } catch { this.sessions = []; }
     this.emit();
   }
