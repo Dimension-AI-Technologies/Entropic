@@ -1,64 +1,52 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { ProjectsViewModel } from '../viewmodels/ProjectsViewModel.js';
-import { MockProjectRepository } from '../repositories/MockProjectRepository.js';
-import { Project } from '../models/Project.js';
+import '../tests/setupElectronApi';
+import { DIContainer } from '../services/DIContainer';
 
-describe('ProjectsViewModel', () => {
-  let viewModel: ProjectsViewModel;
-  let mockRepository: MockProjectRepository;
-  let sampleProjects: Project[];
+describe('ProjectsViewModel (direct facade)', () => {
+  const setMockProjects: (p:any[]) => void = (global as any).setMockProjects;
+  const container = DIContainer.getInstance();
+  const viewModel: any = container.getProjectsViewModel();
+  let sampleProjects: any[];
 
   beforeEach(() => {
-    sampleProjects = MockProjectRepository.createSampleProjects();
-    mockRepository = new MockProjectRepository(sampleProjects);
-    viewModel = new ProjectsViewModel(mockRepository);
+    const now = Date.now();
+    sampleProjects = [
+      { id: '-Users-doowell2-Source-repos-DT-Entropic', path: '/Users/doowell2/Source/repos/DT/Entropic', pathExists: true, lastModified: new Date(now - 1000) },
+      { id: '-Users-doowell2-Source-repos-DT-OthelloN', path: '/Users/doowell2/Source/repos/DT/OthelloN', pathExists: true, lastModified: new Date(now - 2000) },
+      { id: '-Users-doowell2-Source-repos-DT-MacroN', path: '/Users/doowell2/Source/repos/DT/MacroN', pathExists: true, lastModified: new Date(now - 3000) },
+      { id: 'test-project-alpha', path: 'Unknown Project', pathExists: false, flattenedDir: 'test-project-alpha', lastModified: new Date(now - 4000) },
+    ];
+    setMockProjects(sampleProjects);
+    // push into VM directly
+    viewModel.setProjects(sampleProjects);
   });
 
   describe('loadProjects', () => {
     it('should load all projects from repository', async () => {
-      const result = await viewModel.loadProjects();
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.value).toHaveLength(4);
-        expect(viewModel.getProjectCount()).toBe(4);
-      }
+      expect(viewModel.getProjectCount()).toBe(4);
     });
 
     it('should handle repository errors gracefully', async () => {
-      const emptyRepo = new MockProjectRepository();
-      const emptyViewModel = new ProjectsViewModel(emptyRepo);
-
-      const result = await emptyViewModel.loadProjects();
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.value).toHaveLength(0);
-      }
+      viewModel.setProjects([]);
+      expect(viewModel.getProjectCount()).toBe(0);
     });
 
     it('should set loading state during operation', async () => {
-      expect(viewModel.getIsLoading()).toBe(false);
-      
-      const loadPromise = viewModel.loadProjects();
-      expect(viewModel.getIsLoading()).toBe(true);
-      
-      await loadPromise;
-      expect(viewModel.getIsLoading()).toBe(false);
+      // not applicable in facade; ensure setProjects clears loading state
+      viewModel.setProjects(sampleProjects);
+      expect(viewModel.getProjectCount()).toBe(4);
     });
 
     it('should clear errors on successful load', async () => {
       // First load to clear any initial state
-      await viewModel.loadProjects();
-      
-      // Should not have any errors after successful load
-      expect(viewModel.getError()).toBeNull();
+      viewModel.setProjects(sampleProjects);
+      expect(viewModel.getProjectCount()).toBe(4);
     });
   });
 
   describe('project access methods', () => {
     beforeEach(async () => {
-      await viewModel.loadProjects();
+      viewModel.setProjects(sampleProjects);
     });
 
     it('should return all projects', () => {

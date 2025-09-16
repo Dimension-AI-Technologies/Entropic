@@ -191,7 +191,7 @@ export function ProjectsPaneMVVM({
   }
 
   return (
-    <div className="sidebar">
+    <>
       <PaneHeader className="sidebar-header">
         <div className="sidebar-header-top">
           <div className="projects-header-left">
@@ -227,7 +227,13 @@ export function ProjectsPaneMVVM({
             <button
               className="sort-button active"
               onClick={() => setSortMethod(((sortMethod + 1) % 3) as SortMethod)}
-              title={sortMethod === 0 ? 'Sort projects alphabetically by name (click for date sort)' : sortMethod === 1 ? 'Sort projects by most recent activity (click for count sort)' : 'Sort projects by number of todos (click for alphabetic sort)'}
+              title={
+                sortMethod === 0
+                  ? 'Sort projects alphabetically by name. Click to cycle modes.'
+                  : sortMethod === 1
+                  ? 'Sort projects by most recent activity first. Click to cycle modes.'
+                  : 'Sort projects by total todo count (highest first). Click to cycle modes.'
+              }
             >
               {getSortSymbol(sortMethod)}
             </button>
@@ -282,6 +288,6 @@ export function ProjectsPaneMVVM({
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

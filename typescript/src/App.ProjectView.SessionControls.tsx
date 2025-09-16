@@ -197,23 +197,16 @@ export function SessionControls({
           )}
         </h1>
         
-        {/* View mode slider with external labels */}
-        <div className="view-mode-toggle" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ color: viewMode === 'todo' ? '#ffffff' : '#8e9297', fontSize: 12 }}>Todo</span>
-          <div
-            className="view-mode-slider"
-            role="button"
-            title="Toggle between Todo and History"
-            onClick={(e) => {
-              const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-              const isLeft = (e.clientX - rect.left) < rect.width / 2;
-              onViewModeChange(isLeft ? 'todo' : 'prompt');
-            }}
-            style={{ position: 'relative', width: 56, height: 22, borderRadius: 16, background: '#2f3136', cursor: 'pointer', userSelect: 'none' }}
+        {/* View mode single toggle */}
+        <div className="view-mode-toggle" style={{ display: 'flex', alignItems: 'center' }}>
+          <button
+            className={`filter-toggle pane-button active`}
+            style={{ minWidth: 96 }}
+            onClick={() => onViewModeChange(viewMode === 'todo' ? 'prompt' : 'todo')}
+            title={viewMode === 'todo' ? 'Switch to History view' : 'Switch to ToDo view'}
           >
-            <div style={{ position: 'absolute', top: 2, bottom: 2, width: 24, left: viewMode === 'todo' ? 2 : 'calc(100% - 26px)', background: '#5865f2', borderRadius: 14, transition: 'left 120ms ease' }} />
-          </div>
-          <span style={{ color: viewMode === 'prompt' ? '#ffffff' : '#8e9297', fontSize: 12 }}>History</span>
+            {viewMode === 'todo' ? 'TODO' : 'HISTORY'}
+          </button>
         </div>
       </PaneHeader>
       {viewMode === 'todo' && (

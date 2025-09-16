@@ -156,7 +156,7 @@ export class PathUtils {
       }
       const projectDirs = projectDirsResult.value;
       
-      // Look for a project directory containing this session
+      // Look for a project directory containing a JSONL for this session
       let matchedProjDir: string | null = null;
       for (const projDir of projectDirs) {
         const projPath = path.join(projectsDir, projDir);
@@ -165,9 +165,8 @@ export class PathUtils {
           continue; // Skip directories we can't read
         }
         const files = filesResult.value;
-        
-        // Check if this project contains our session
-        if (files.some((f: string) => f.startsWith(sessionId))) {
+        // Claude stores prompt history as JSONL: {sessionId}.jsonl
+        if (files.includes(`${sessionId}.jsonl`)) {
           matchedProjDir = projDir;
           break;
         }
@@ -182,6 +181,13 @@ export class PathUtils {
       }
       
       const projPath = path.join(projectsDir, matchedProjDir);
+      // Prefer reconstructing from the flattened directory; this is fast and reliable
+      const reconstructedFromDir = PathUtils.guessPathFromFlattenedName(matchedProjDir);
+      const reconstructedValid = PathUtils.validatePath(reconstructedFromDir);
+      if (reconstructedFromDir && reconstructedValid.success && reconstructedValid.value) {
+        return Ok({ path: reconstructedFromDir, flattenedDir: matchedProjDir });
+      }
+
       const filesResult = await ResultUtils.fromPromise(fs.readdir(projPath));
       if (!filesResult.success) {
         return Ok({
@@ -190,7 +196,7 @@ export class PathUtils {
         });
       }
       const files = filesResult.value;
-      
+
       // Look for a metadata file
       const metadataPath = path.join(projPath, 'metadata.json');
       const metadataResult = await ResultUtils.fromPromise(
@@ -206,24 +212,7 @@ export class PathUtils {
       }
       // No metadata file, continue
       
-      // Try to read the actual path from a session file
-      for (const file of files) {
-        if (file.startsWith(sessionId) && file.endsWith('.json')) {
-          const sessionPath = path.join(projPath, file);
-          const sessionContentResult = await ResultUtils.fromPromise(
-            fs.readFile(sessionPath, 'utf-8')
-          );
-          if (sessionContentResult.success) {
-            const sessionParseResult = await ResultUtils.fromPromise(
-              Promise.resolve(JSON.parse(sessionContentResult.value))
-            );
-            if (sessionParseResult.success && sessionParseResult.value.projectPath) {
-              return Ok({ path: sessionParseResult.value.projectPath, flattenedDir: matchedProjDir });
-            }
-          }
-          // Continue to next file
-        }
-      }
+      // JSONL content itself isn't needed here; filename match already pins the project.
       
       // Fallback: try to guess from the flattened directory name
       const reconstructedPath = PathUtils.guessPathFromFlattenedName(matchedProjDir);

@@ -11,6 +11,7 @@ interface GlobalViewProps {
 export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   const [projects, setProjects] = useState<MVVMProject[]>([]);
   const [version, setVersion] = useState(0);
+  const [unknownCount, setUnknownCount] = useState<number>(0);
   const [activeOnly, setActiveOnly] = useState<boolean>(() => {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.globalActiveOnly') : null;
     return saved === '1';
@@ -25,6 +26,8 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
     updateProjects();
     const unProjects = projectsViewModel.onChange(updateProjects);
     const unTodos = todosViewModel.onChange(() => setVersion(v => v + 1));
+    // Fetch diagnostics for banner
+    (async () => { try { const d = await (window as any).electronAPI?.collectDiagnostics?.(); if (d && typeof d.unknownCount === 'number') setUnknownCount(d.unknownCount); } catch {} })();
     return () => {
       const u = unProjects as any; if (typeof u === 'function') u();
       unTodos();
@@ -102,22 +105,32 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   const filteredTodos = rows.reduce((sum, r) => sum + ((r.s.todos || []).filter((t: any) => activeOnly ? t.status !== 'completed' : true).length), 0);
 
   return (
-    <div className="global-view" style={{ padding: 16, color: 'white' }}>
-      <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div className="global-view" style={{ padding: 16, color: 'white', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <span>{filteredProjects} Projects • {filteredSessions} Sessions • {filteredTodos} ToDos</span>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }} title="Hide sessions with only completed items">
           <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
           <span>Active only</span>
         </label>
       </div>
-      <div className={`global-table ${spacingMode}`}>
-        <div className="global-header">
+      {unknownCount > 0 && (
+        <div style={{ background: '#3a2f10', border: '1px solid #806200', color: '#ffd666', padding: 8, borderRadius: 6, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>Warning: {unknownCount} unanchored todo session{unknownCount!==1?'s':''} detected.</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="filter-toggle" onClick={async ()=>{ try { await (window as any).electronAPI?.repairMetadata?.(true); const d=await (window as any).electronAPI?.collectDiagnostics?.(); setUnknownCount(d?.unknownCount||0); (window as any).__addToast?.('Dry Run complete'); } catch {} }}>Dry Run</button>
+            <button className="filter-toggle" onClick={async ()=>{ try { await (window as any).electronAPI?.repairMetadata?.(false); const d=await (window as any).electronAPI?.collectDiagnostics?.(); setUnknownCount(d?.unknownCount||0); (window as any).__addToast?.('Repair complete'); } catch {} }}>Repair Live</button>
+          </div>
+        </div>
+      )}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <div className={`global-table ${spacingMode}`} style={{ height: '100%' }}>
+          <div className="global-header">
           <div>Project</div>
           <div className="global-cell date" style={{ textAlign: 'left' }}>Date</div>
           <div>Current</div>
           <div>Next</div>
         </div>
-        <div className="global-rows">
+          <div className="global-rows" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
           {rows.map(({ p, s }) => {
             const curr = pickCurrent(s.todos || []);
             const next = pickNext(s.todos || [], curr);
@@ -170,6 +183,7 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
           {rows.length === 0 && (
             <div style={{ padding: 16, color: '#a2a7ad' }}>No sessions found</div>
           )}
+          </div>
         </div>
       </div>
       {projMenu.visible && projMenu.row && (

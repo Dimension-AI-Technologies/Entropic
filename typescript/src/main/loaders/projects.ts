@@ -124,6 +124,16 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
       startDate: dirBirth.getTime() > 0 ? dirBirth : undefined,
     });
 
+    // Backfill metadata.json with the real path for future lookups
+    try {
+      if (pathExists) {
+        const metadataPath = path.join(projectDirPath, 'metadata.json');
+        if (!fsSync.existsSync(metadataPath)) {
+          await fs.writeFile(metadataPath, JSON.stringify({ path: reconstructedPath }, null, 2), 'utf-8');
+        }
+      }
+    } catch {}
+
     if (sessionFiles.length > 0) {
       for (const dataFile of sessionFiles) {
         const dataFilePath = path.join(projectDirPath, dataFile);
@@ -239,16 +249,30 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
           continue;
         }
         let todos: Todo[] = [];
+        let explicitProjectPath: string | null = null;
         try {
-          const arr = JSON.parse(contentResult.value);
-          if (Array.isArray(arr)) {
-            todos = arr.map((t: any) => ({
+          const parsed = JSON.parse(contentResult.value);
+          if (Array.isArray(parsed)) {
+            todos = parsed.map((t: any) => ({
               content: String(t.content || ''),
               status: ['pending','in_progress','completed'].includes(t.status) ? t.status : 'pending',
               activeForm: t.activeForm,
               id: t.id,
               created: t.created ? new Date(t.created) : undefined,
             }));
+          } else if (parsed && typeof parsed === 'object') {
+            if (Array.isArray(parsed.todos)) {
+              todos = parsed.todos.map((t: any) => ({
+                content: String(t.content || ''),
+                status: ['pending','in_progress','completed'].includes(t.status) ? t.status : 'pending',
+                activeForm: t.activeForm,
+                id: t.id,
+                created: t.created ? new Date(t.created) : undefined,
+              }));
+            }
+            if (parsed.projectPath && typeof parsed.projectPath === 'string') {
+              explicitProjectPath = parsed.projectPath;
+            }
           }
         } catch (e) {
           logEntries.push(`  ✗ parse failed for ${filename}`);
@@ -256,10 +280,28 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
         }
 
         // Resolve project real path from session
+        // Try sidecar metadata first
+        try {
+          const metaFile = path.join(todosDir!, `${sessionId}-agent.meta.json`);
+          if (fsSync.existsSync(metaFile)) {
+            const metaRaw = await fs.readFile(metaFile, 'utf-8');
+            const meta = JSON.parse(metaRaw);
+            if (meta && typeof meta.projectPath === 'string') {
+              explicitProjectPath = explicitProjectPath || meta.projectPath;
+            }
+          }
+        } catch {}
+
+        // Resolve via PathUtils if not explicitly provided
         const projPathResult = await PathUtils.getRealProjectPath(sessionId);
         const realPath = (projPathResult.success && projPathResult.value.path) ? projPathResult.value.path : null;
         const flattenedDir = projPathResult.success ? projPathResult.value.flattenedDir : undefined;
-        const targetPath = realPath || (flattenedDir ? guessPathFromFlattenedName(flattenedDir) : 'Unknown Project');
+        let targetPath = explicitProjectPath || realPath || (flattenedDir ? guessPathFromFlattenedName(flattenedDir) : 'Unknown Project');
+
+        // Validate explicit project path if provided
+        if (explicitProjectPath && !validatePath(explicitProjectPath)) {
+          targetPath = realPath || (flattenedDir ? guessPathFromFlattenedName(flattenedDir) : 'Unknown Project');
+        }
         const pathExists = realPath ? validatePath(realPath) : validatePath(targetPath);
 
         if (!projects.has(targetPath)) {
@@ -276,6 +318,18 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
             p.mostRecentTodoDate = statsResult.value.mtime;
           }
         }
+
+        // Backfill metadata.json for this project if we know the flattenedDir/realPath
+        try {
+          if (flattenedDir && (realPath || explicitProjectPath)) {
+            const projDir = path.join(projectsDir, flattenedDir);
+            const metadataPath = path.join(projDir, 'metadata.json');
+            const toWrite = realPath || explicitProjectPath!;
+            if (!fsSync.existsSync(metadataPath)) {
+              await fs.writeFile(metadataPath, JSON.stringify({ path: toWrite }, null, 2), 'utf-8');
+            }
+          }
+        } catch {}
 
         const project = projects.get(targetPath)!;
         const existingIndex = project.sessions.findIndex(s => s.id === sessionId);
