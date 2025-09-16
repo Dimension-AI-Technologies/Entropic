@@ -32,7 +32,7 @@ Entropic becomes a clean‑room, provider‑agnostic hub for coding‑agent acti
 🟢 5. Core Aggregator (inside hexagon)
   🟢 5.1 Fan‑out to all enabled adapters via ProviderPort.fetchProjects().
   🟢 5.2 Merge by (provider, projectPath); concat sessions; dedupe by (provider, sessionId).
-  🟡 5.3 Compute global stats and emit EventPort.dataChanged().
+  🟢 5.3 Compute global stats and emit EventPort.dataChanged().
   🟢 5.4 Return Result<Project[]> to renderer via IPC boundary.
 
 🟡 6. File Watching (main process)
