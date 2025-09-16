@@ -34,6 +34,18 @@ export async function repairProjectMetadata(projectsDir: string, todosDir?: stri
     dryRun,
   };
 
+  async function writeSidecarMeta(sessionId: string, projectPath: string) {
+    if (!todosDir) return;
+    try {
+      const sidecar = path.join(todosDir, `${sessionId}-agent.meta.json`);
+      if (!fsSync.existsSync(sidecar)) {
+        if (!dryRun) {
+          try { await fs.writeFile(sidecar, JSON.stringify({ projectPath }, null, 2), 'utf-8'); } catch {}
+        }
+      }
+    } catch {}
+  }
+
   // 1) Ensure every valid flattened project dir has metadata.json
   let projectDirs: string[] = [];
   try {
@@ -86,6 +98,8 @@ export async function repairProjectMetadata(projectsDir: string, todosDir?: stri
               }
               summary.matchedBySidecar++;
               resolved = { flattened: flat, real: meta.projectPath };
+              // Ensure sidecar exists for downstream tools
+              await writeSidecarMeta(sessionId, meta.projectPath);
             }
           }
         }
@@ -108,6 +122,7 @@ export async function repairProjectMetadata(projectsDir: string, todosDir?: stri
                 }
                 summary.matchedByJsonl++;
                 resolved = { flattened: flat, real };
+                await writeSidecarMeta(sessionId, real);
               }
               break;
             }
@@ -147,6 +162,7 @@ export async function repairProjectMetadata(projectsDir: string, todosDir?: stri
                           }
                           summary.matchedByContent++;
                           resolved = { flattened: flat, real: inferredPath };
+                          await writeSidecarMeta(sessionId, inferredPath);
                           break;
                         }
                       }
@@ -199,6 +215,7 @@ export async function repairProjectMetadata(projectsDir: string, todosDir?: stri
                           }
                           summary.matchedByEnvironment++;
                           resolved = { flattened: flat, real: inferredPath };
+                          await writeSidecarMeta(sessionId, inferredPath);
                           break;
                         }
                       }
@@ -252,6 +269,7 @@ export async function repairProjectMetadata(projectsDir: string, todosDir?: stri
                         }
                         summary.matchedByLogFile++;
                         resolved = { flattened: flat, real: inferredPath };
+                        await writeSidecarMeta(sessionId, inferredPath);
                         break;
                       }
                     }
