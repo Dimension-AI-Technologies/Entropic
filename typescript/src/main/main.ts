@@ -97,6 +97,10 @@ async function createWindow() {
     mainWindow = null;
   });
 
+  // Ensure window is visible
+  mainWindow!.show();
+  mainWindow!.focus();
+
   // Verbose load tracing
   mainWindow!.webContents.on('did-start-loading', () => console.log('[MAIN] Renderer did-start-loading'));
   mainWindow!.webContents.on('did-finish-load', () => console.log('[MAIN] Renderer did-finish-load URL=', mainWindow?.webContents.getURL()));
