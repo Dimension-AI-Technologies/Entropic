@@ -15,12 +15,12 @@ Entropic becomes a clean‑room, provider‑agnostic hub for coding‑agent acti
   🟢 2.3 collectDiagnostics(): Promise<Result<{ unknownCount; details: string }>>.
   🟢 2.4 repairMetadata(dryRun: boolean): Promise<Result<{ planned; written; unknownCount }>>.
 
-🟡 3. Provider Adapter (outside hexagon)
+🟢 3. Provider Adapter (outside hexagon)
   🟢 3.1 Read ~/.claude/projects (*.jsonl) + ~/.claude/todos (*.json) + sidecar meta via existing loader.
   🟢 3.2 Map sessions via {sessionId}.jsonl in project dir (extension fixed to .jsonl).
   🟢 3.3 Backfill metadata.json { path } when live repair runs (wired through repair module).
   🟢 3.4 Normalize timestamps, stamp provider.
-  🟡 3.5 Expose per‑provider diagnostics + repair through ProviderPort (wired; can refine output details later).
+  🟢 3.5 Expose per‑provider diagnostics + repair through ProviderPort (wired and returning counts/details).
 
 🔴 4. AdapterCodex (outside hexagon)
   🔴 4.1 Read ~/.codex/projects + ~/.codex/todos.
