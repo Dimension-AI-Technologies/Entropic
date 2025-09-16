@@ -24,6 +24,10 @@ import { registerChatIpc } from './ipc/chat.js';
 import { registerMaintenanceIpc } from './ipc/maintenance.js';
 import { setupSingleInstance } from './lifecycle/singleInstance.js';
 import { wireAppEvents } from './lifecycle/appEvents.js';
+import { Aggregator } from './core/aggregator.js';
+import { ClaudeAdapter } from './adapters/claudeAdapter.js';
+import { CodexAdapter } from './adapters/codexAdapter.js';
+import type { EventPort, ProviderPort } from './core/ports.js';
 
 let mainWindow: BrowserWindowType | null = null;
 
@@ -145,8 +149,23 @@ if (!haveLock) {
 }
 
 app.whenReady().then(() => {
+  const eventPort: EventPort = {
+    dataChanged() {
+      try { mainWindow?.webContents.send('data-changed'); } catch {}
+    }
+  };
+  // Instantiate providers and aggregator
+  const providers: ProviderPort[] = [
+    new ClaudeAdapter({ projectsDir, logsDir, todosDir }),
+  ];
+  try {
+    if (fsSync.existsSync(codexDir)) {
+      providers.push(new CodexAdapter({ projectsDir: codexProjectsDir, logsDir: codexLogsDir, todosDir: codexTodosDir }));
+    }
+  } catch {}
+  const aggregator = new Aggregator(providers, eventPort);
   // Register IPC handlers via modules
-  registerProjectsIpc(ipcMain, { projectsDir, logsDir, todosDir });
+  registerProjectsIpc(ipcMain, { projectsDir, logsDir, todosDir, aggregator });
   registerTodoIpc(ipcMain);
   registerFileIpc(ipcMain);
   registerChatIpc(ipcMain);
