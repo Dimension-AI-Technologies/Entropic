@@ -116,6 +116,7 @@ export async function repairProjectMetadata(projectsDir: string, todosDir?: stri
       }
 
       // Method 3: Scan JSONL content for "Working directory:" pattern
+      // Method 3: Scan JSONL content for "Working directory:" pattern
       if (!resolved) {
         try {
           for (const flat of projectDirs) {
