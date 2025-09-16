@@ -352,7 +352,10 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
             >
               <div className="project-name" title={projectPath}>
                 {projectPath ? projectPath.split(/[\\/]/).pop() : 'Unknown Project'}
-                <span style={{ opacity: 0.8, fontSize: 12, fontWeight: 400 }}> ({sessionCount} • {todoCount} • {activeCount})</span>
+                <span style={{ marginLeft: 6, fontSize: 10, color: '#bfc3c8', border: '1px solid #3b3f45', padding: '1px 4px', borderRadius: 4 }}>
+                  Claude
+                </span>
+                <span style={{ opacity: 0.8, fontSize: 12, fontWeight: 400, marginLeft: 4 }}> ({sessionCount} • {todoCount} • {activeCount})</span>
               </div>
               <div className="project-stats">
                 {startDate && (<>{formatUKDate(startDate)}</>)}

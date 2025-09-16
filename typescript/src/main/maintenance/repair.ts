@@ -10,6 +10,9 @@ type RepairSummary = {
   metadataPlanned: number;
   matchedByJsonl: number;
   matchedBySidecar: number;
+  matchedByContent: number;
+  matchedByEnvironment: number;
+  matchedByLogFile: number;
   unknownSessions: Array<{ sessionId: string; todoFile: string; reason: string }>; 
   dryRun: boolean;
 };
@@ -24,6 +27,9 @@ export async function repairProjectMetadata(projectsDir: string, todosDir?: stri
     metadataPlanned: 0,
     matchedByJsonl: 0,
     matchedBySidecar: 0,
+    matchedByContent: 0,
+    matchedByEnvironment: 0,
+    matchedByLogFile: 0,
     unknownSessions: [],
     dryRun,
   };
@@ -109,8 +115,155 @@ export async function repairProjectMetadata(projectsDir: string, todosDir?: stri
         }
       }
 
+      // Method 3: Scan JSONL content for "Working directory:" pattern
       if (!resolved) {
-        summary.unknownSessions.push({ sessionId, todoFile: file, reason: 'No matching JSONL in projects and no sidecar metadata' });
+        try {
+          for (const flat of projectDirs) {
+            const dir = path.join(projectsDir, flat);
+            const jsonlPath = path.join(dir, `${sessionId}.jsonl`);
+            if (fsSync.existsSync(jsonlPath)) {
+              try {
+                const content = await fs.readFile(jsonlPath, 'utf-8');
+                const lines = content.split('\n').filter(l => l.trim());
+                for (const line of lines.slice(0, 50)) { // Check first 50 lines
+                  try {
+                    const parsed = JSON.parse(line);
+                    const text = JSON.stringify(parsed).toLowerCase();
+                    if (text.includes('working directory:')) {
+                      const match = text.match(/working directory:\s*([^"\\]+)/);
+                      if (match && match[1]) {
+                        const inferredPath = match[1].replace(/\\\\/g, '/').trim();
+                        if (inferredPath && inferredPath.length > 3) {
+                          const metaPath = path.join(dir, 'metadata.json');
+                          if (!fsSync.existsSync(metaPath)) {
+                            summary.metadataPlanned++;
+                            if (!dryRun) { 
+                              try { 
+                                await fs.writeFile(metaPath, JSON.stringify({ path: inferredPath }, null, 2), 'utf-8'); 
+                                summary.metadataWritten++; 
+                              } catch {} 
+                            }
+                          }
+                          summary.matchedByContent++;
+                          resolved = { flattened: flat, real: inferredPath };
+                          break;
+                        }
+                      }
+                    }
+                  } catch {}
+                  if (resolved) break;
+                }
+              } catch {}
+              if (resolved) break;
+            }
+          }
+        } catch {}
+      }
+
+      // Method 4: Check environment variables in JSONL for cwd/pwd
+      if (!resolved) {
+        try {
+          for (const flat of projectDirs) {
+            const dir = path.join(projectsDir, flat);
+            const jsonlPath = path.join(dir, `${sessionId}.jsonl`);
+            if (fsSync.existsSync(jsonlPath)) {
+              try {
+                const content = await fs.readFile(jsonlPath, 'utf-8');
+                const lines = content.split('\n').filter(l => l.trim());
+                for (const line of lines.slice(0, 100)) {
+                  try {
+                    const parsed = JSON.parse(line);
+                    // Look for environment messages or cwd/pwd references
+                    const text = JSON.stringify(parsed);
+                    const patterns = [
+                      /"cwd":\s*"([^"]+)"/,
+                      /"pwd":\s*"([^"]+)"/,
+                      /current working directory[^:]*:\s*([^"\\,}]+)/i,
+                      /workspace[^:]*:\s*([^"\\,}]+)/i
+                    ];
+                    for (const pattern of patterns) {
+                      const match = text.match(pattern);
+                      if (match && match[1]) {
+                        const inferredPath = match[1].replace(/\\\\/g, '/').trim();
+                        if (inferredPath && inferredPath.length > 3 && !inferredPath.includes('undefined')) {
+                          const metaPath = path.join(dir, 'metadata.json');
+                          if (!fsSync.existsSync(metaPath)) {
+                            summary.metadataPlanned++;
+                            if (!dryRun) { 
+                              try { 
+                                await fs.writeFile(metaPath, JSON.stringify({ path: inferredPath }, null, 2), 'utf-8'); 
+                                summary.metadataWritten++; 
+                              } catch {} 
+                            }
+                          }
+                          summary.matchedByEnvironment++;
+                          resolved = { flattened: flat, real: inferredPath };
+                          break;
+                        }
+                      }
+                    }
+                  } catch {}
+                  if (resolved) break;
+                }
+              } catch {}
+              if (resolved) break;
+            }
+          }
+        } catch {}
+      }
+
+      // Method 5: Check logs/current_todos.json for project paths
+      if (!resolved && todosDir) {
+        try {
+          const logsDir = path.join(path.dirname(todosDir), 'logs');
+          const currentTodosPath = path.join(logsDir, 'current_todos.json');
+          if (fsSync.existsSync(currentTodosPath)) {
+            try {
+              const content = await fs.readFile(currentTodosPath, 'utf-8');
+              const data = JSON.parse(content);
+              // Look for matching session ID in logs
+              const text = JSON.stringify(data);
+              if (text.includes(sessionId)) {
+                // Try to extract project path from context around session ID
+                const patterns = [
+                  new RegExp(`${sessionId}[^}]*"projectPath":\s*"([^"]+)"`, 'i'),
+                  new RegExp(`${sessionId}[^}]*"path":\s*"([^"]+)"`, 'i'),
+                  new RegExp(`"([^"]+)"[^}]*${sessionId}`, 'i')
+                ];
+                for (const pattern of patterns) {
+                  const match = text.match(pattern);
+                  if (match && match[1]) {
+                    const inferredPath = match[1].replace(/\\\\/g, '/').trim();
+                    if (inferredPath && inferredPath.length > 3 && !inferredPath.includes(sessionId)) {
+                      // Try to find or create the project directory
+                      const flat = PathUtils.createFlattenedPath(inferredPath);
+                      const projDir = path.join(projectsDir, flat);
+                      if (fsSync.existsSync(projDir)) {
+                        const metaPath = path.join(projDir, 'metadata.json');
+                        if (!fsSync.existsSync(metaPath)) {
+                          summary.metadataPlanned++;
+                          if (!dryRun) { 
+                            try { 
+                              await fs.writeFile(metaPath, JSON.stringify({ path: inferredPath }, null, 2), 'utf-8'); 
+                              summary.metadataWritten++; 
+                            } catch {} 
+                          }
+                        }
+                        summary.matchedByLogFile++;
+                        resolved = { flattened: flat, real: inferredPath };
+                        break;
+                      }
+                    }
+                  }
+                }
+              }
+            } catch {}
+          }
+        } catch {}
+      }
+
+      if (!resolved) {
+        summary.unknownSessions.push({ sessionId, todoFile: file, reason: 'No matching found via JSONL, sidecar, content analysis, environment vars, or log files' });
       }
     }
   }
@@ -128,6 +281,9 @@ export async function collectDiagnostics(projectsDir: string, todosDir?: string)
   lines.push(`Metadata files written: ${summary.metadataWritten}`);
   lines.push(`Matched via sidecar meta: ${summary.matchedBySidecar}`);
   lines.push(`Matched via JSONL filename: ${summary.matchedByJsonl}`);
+  lines.push(`Matched via content analysis: ${summary.matchedByContent}`);
+  lines.push(`Matched via environment vars: ${summary.matchedByEnvironment}`);
+  lines.push(`Matched via log files: ${summary.matchedByLogFile}`);
   lines.push('');
   if (summary.unknownSessions.length === 0) {
     lines.push('All todo sessions are anchored to projects.');

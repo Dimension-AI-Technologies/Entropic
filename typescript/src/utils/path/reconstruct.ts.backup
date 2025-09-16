@@ -93,8 +93,8 @@ export function guessPathFromFlattenedName(flatPath: string, projectsDir: string
   // Unix-style flattened path (starts with dash for absolute /)
   if (flatPath.startsWith('-')) {
     const rawParts = flatPath.split('-').filter((p) => p.length > 0);
-    // Don't include '/' as a separate part - buildAndValidatePath already starts with '/'
-    const validatedPath = buildAndValidatePath(rawParts, false);
+    const unixParts = ['/', ...rawParts];
+    const validatedPath = buildAndValidatePath(unixParts, false);
     if (validatedPath) return validatedPath;
     return '/' + rawParts.join('/');
   }
@@ -102,3 +102,4 @@ export function guessPathFromFlattenedName(flatPath: string, projectsDir: string
   // Fallback: return as-is, caller may validate
   return flatPath;
 }
+
