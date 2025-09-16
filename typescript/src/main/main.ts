@@ -32,6 +32,11 @@ const claudeDir = path.join(os.homedir(), '.claude');
 const todosDir = path.join(claudeDir, 'todos');
 const projectsDir = path.join(claudeDir, 'projects');
 const logsDir = path.join(claudeDir, 'logs');
+// Codex provider dirs (for future multi‑provider support)
+const codexDir = path.join(os.homedir(), '.codex');
+const codexTodosDir = path.join(codexDir, 'todos');
+const codexProjectsDir = path.join(codexDir, 'projects');
+const codexLogsDir = path.join(codexDir, 'logs');
 
 // Project loading handled by src/main/loaders/projects.ts and IPC module
 
@@ -161,13 +166,21 @@ app.whenReady().then(() => {
   
   createWindow();
   
-  // Set up file watching after window is created
+  // Set up file watching after window is created (Claude + Codex)
   if (mainWindow) {
-    fileWatchers = setupFileWatchingExt(mainWindow, {
-      projectsDir,
-      todosDir,
-      logsDir,
-    });
+    fileWatchers = [];
+    // Claude
+    fileWatchers.push(
+      ...setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir })
+    );
+    // Codex (if present)
+    try {
+      if (fsSync.existsSync(codexDir)) {
+        fileWatchers.push(
+          ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir })
+        );
+      }
+    } catch {}
   }
 
   // One-time repair prompt on startup if unknown sessions exceed threshold
@@ -209,7 +222,17 @@ app.whenReady().then(() => {
     () => createWindow(),
     () => {
       if (mainWindow) {
-        fileWatchers = setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir });
+        fileWatchers = [];
+        fileWatchers.push(
+          ...setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir })
+        );
+        try {
+          if (fsSync.existsSync(codexDir)) {
+            fileWatchers.push(
+              ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir })
+            );
+          }
+        } catch {}
       }
     },
     () => cleanupFileWatchersExt(fileWatchers)
