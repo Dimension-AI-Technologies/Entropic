@@ -4,23 +4,23 @@
 
 Entropic becomes a clean‑room, provider‑agnostic hub for coding‑agent activity (todos + history) with Claude Code and OpenAI Codex as first‑class providers. The core (hexagon) depends only on stable ports; provider adapters live outside and translate each provider’s model/interface into Entropic’s domain.
 
-🔴 1. Clean‑Room Architecture (Hexagon)
-  🔴 1.1 Define Entropic domain types: Project, Session, Todo (provider‑agnostic).
-  🔴 1.2 Define Ports (TypeScript interfaces): ProviderPort, PersistencePort, EventPort.
-  🔴 1.3 Document identity rules: Project = (provider, projectPath); Session = (provider, sessionId).
+🟢 1. Clean‑Room Architecture (Hexagon)
+  🟢 1.1 Define Entropic domain types: Project, Session, Todo (provider‑agnostic).
+  🟢 1.2 Define Ports (TypeScript interfaces): ProviderPort, PersistencePort, EventPort.
+  🟢 1.3 Document identity rules: Project = (provider, projectPath); Session = (provider, sessionId).
 
-🔴 2. Ports — ProviderPort (Interface)
-  🔴 2.1 fetchProjects(): Promise<Result<Project[]>>.
-  🔴 2.2 watchChanges(cb): Unsubscribe.
-  🔴 2.3 collectDiagnostics(): Promise<Result<{ unknownCount; details: string }>>.
-  🔴 2.4 repairMetadata(dryRun: boolean): Promise<Result<{ planned; written; unknownCount }>>.
+🟢 2. Ports — ProviderPort (Interface)
+  🟢 2.1 fetchProjects(): Promise<Result<Project[]>>.
+  🟢 2.2 watchChanges(cb): Unsubscribe.
+  🟢 2.3 collectDiagnostics(): Promise<Result<{ unknownCount; details: string }>>.
+  🟢 2.4 repairMetadata(dryRun: boolean): Promise<Result<{ planned; written; unknownCount }>>.
 
-🔴 3. AdapterClaude (outside hexagon)
-  🔴 3.1 Read ~/.claude/projects (*.jsonl) + ~/.claude/todos (*.json) + sidecar meta.
+🟡 3. Provider Adapter (outside hexagon)
+  🟢 3.1 Read ~/.claude/projects (*.jsonl) + ~/.claude/todos (*.json) + sidecar meta via existing loader.
   🟢 3.2 Map sessions via {sessionId}.jsonl in project dir (extension fixed to .jsonl).
-  🟢 3.3 Backfill metadata.json { path } when live repair runs.
-  🟢 3.4 Normalize timestamps, stamp provider: 'claude'.
-  🟡 3.5 Expose per‑provider diagnostics + repair through ProviderPort.
+  🟢 3.3 Backfill metadata.json { path } when live repair runs (wired through repair module).
+  🟢 3.4 Normalize timestamps, stamp provider.
+  🟡 3.5 Expose per‑provider diagnostics + repair through ProviderPort (wired; can refine output details later).
 
 🔴 4. AdapterCodex (outside hexagon)
   🔴 4.1 Read ~/.codex/projects + ~/.codex/todos.
@@ -83,4 +83,3 @@ Entropic becomes a clean‑room, provider‑agnostic hub for coding‑agent acti
   🔴 15.2 Aggregator merges Claude + synthetic Codex fixtures; UI shows provider badges.
   🔴 15.3 CodexAdapter reads real ~/.codex; watchers emit updates; diagnostics report per‑provider.
   🔴 15.4 Docs + hooks for Codex published; feature flag to enable Codex by default.
-
