@@ -22,12 +22,12 @@ Entropic becomes a clean‑room, provider‑agnostic hub for coding‑agent acti
   🟢 3.4 Normalize timestamps, stamp provider.
   🟢 3.5 Expose per‑provider diagnostics + repair through ProviderPort (wired and returning counts/details).
 
-🔴 4. AdapterCodex (outside hexagon)
-  🔴 4.1 Read ~/.codex/projects + ~/.codex/todos.
+🟡 4. AdapterCodex (outside hexagon)
+  🟢 4.1 Read ~/.codex/projects + ~/.codex/todos.
   🔴 4.2 Add optional sidecar meta ~/.codex/todos/{sessionId}-agent.meta.json.
-  🔴 4.3 Implement same mapping policy (projectPath → JSONL → flattened+validate).
-  🔴 4.4 Normalize timestamps, stamp provider: 'codex'.
-  🔴 4.5 Provide diagnostics + repair.
+  🟢 4.3 Implement same mapping policy (projectPath → JSONL → flattened+validate).
+  🟢 4.4 Normalize timestamps, stamp provider.
+  🟢 4.5 Provide diagnostics + repair.
 
 🔴 5. Core Aggregator (inside hexagon)
   🔴 5.1 Fan‑out to all enabled adapters via ProviderPort.fetchProjects().
