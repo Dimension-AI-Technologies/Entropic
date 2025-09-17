@@ -161,19 +161,43 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
 
   // Track if initial auto-selection has happened
   const [hasAutoSelected, setHasAutoSelected] = useState(false);
-  
-  // Auto-select most recent project and session on initial load (run once)
+  // Remember last selected project across refreshes
+  const lastProjectPathRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!hasAutoSelected && !selectedMVVMProject && projects.length > 0) {
-      // Select the most recently modified project
-      const sortedProjects = projectsViewModel.getProjectsSortedByDate();
-      if (sortedProjects.length > 0) {
-        setSelectedMVVMProject(sortedProjects[0]);
-        setHasAutoSelected(true);
-      }
+    try { lastProjectPathRef.current = localStorage.getItem('ui.lastProjectPath'); } catch {}
+  }, []);
+  
+  // Auto-select on first data load: prefer saved project; else most recent. Run once.
+  useEffect(() => {
+    if (hasAutoSelected || selectedMVVMProject || projects.length === 0) return;
+    const saved = lastProjectPathRef.current;
+    const bySaved = saved ? projects.find(p => p.path === saved) : null;
+    if (bySaved) {
+      setSelectedMVVMProject(bySaved);
+      setHasAutoSelected(true);
+      return;
+    }
+    const sortedProjects = projectsViewModel.getProjectsSortedByDate();
+    if (sortedProjects.length > 0) {
+      setSelectedMVVMProject(sortedProjects[0]);
+      setHasAutoSelected(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projects.length, projectsViewModel]); // Only depend on length change, not objects
+
+  // Authoritatively preserve user selection based on saved path across refreshes
+  useEffect(() => {
+    if (!projects || projects.length === 0) return;
+    let saved: string | null = null;
+    try { saved = localStorage.getItem('ui.lastProjectPath'); } catch {}
+    if (!saved) return;
+    if (!selectedMVVMProject || selectedMVVMProject.path !== saved) {
+      const match = projects.find(p => p.path === saved);
+      if (match) {
+        setSelectedMVVMProject(match);
+      }
+    }
+  }, [projects]);
   
   useEffect(() => {
     if (!selectedSession && sessions.length > 0) {
@@ -186,26 +210,11 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessions.length, todosViewModel]); // Only depend on length change, not objects
 
-  // Update selected items when their data changes (without causing loops)
-  useEffect(() => {
-    if (selectedMVVMProject) {
-      const updated = projects.find(p => p.id === selectedMVVMProject.id);
-      if (updated && updated !== selectedMVVMProject) {
-        // Only update if the object actually changed
-        setSelectedMVVMProject(updated);
-      }
-    }
-  }, [projects]); // Remove selectedMVVMProject from deps
-  
-  useEffect(() => {
-    if (selectedSession) {
-      const updated = sessions.find(s => s.id === selectedSession.id);
-      if (updated && updated !== selectedSession) {
-        // Only update if the object actually changed
-        setSelectedSession(updated);
-      }
-    }
-  }, [sessions]); // Remove selectedSession from deps
+  // REMOVED: These useEffects were causing the auto-selection bug
+  // They would reset selection whenever projects/sessions arrays changed
+  // even if the selected item hadn't actually changed
+  // The object reference comparison (updated !== selected) was always true
+  // for new object instances, causing unwanted selection changes
 
 
   // Handle MVVM project selection
@@ -220,6 +229,8 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
     }
     
     setSelectedMVVMProject(mvvmProject);
+    setHasAutoSelected(true);
+    try { localStorage.setItem('ui.lastProjectPath', mvvmProject.path); } catch {}
     
     // Check if we have a previously selected session for this project
     const rememberedSessionId = projectSessionMap.get(mvvmProject.path);

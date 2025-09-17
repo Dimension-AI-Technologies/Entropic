@@ -34,16 +34,24 @@ class SimpleProjectsViewModel {
       const res = await (window as any).electronAPI?.getProjects?.();
       if (res && typeof res === 'object' && 'success' in res) {
         if (res.success && Array.isArray(res.value)) {
-          // Map domain -> legacy UI shape
+          // Map domain -> legacy UI shape expected by MVVM/Views
           this.projects = res.value.map((p: any) => ({
-            ...p,
+            id: p.flattenedDir || (p.projectPath || '').replace(/[\\/:]/g, '-'),
             path: p.projectPath,
-            mostRecentTodoDate: p.mostRecentTodoDate ? new Date(p.mostRecentTodoDate) : undefined,
+            flattenedDir: p.flattenedDir || (p.projectPath || '').replace(/[\\/:]/g, '-'),
+            pathExists: !!p.pathExists,
+            lastModified: p.mostRecentTodoDate ? new Date(p.mostRecentTodoDate) : new Date(0),
+            provider: p.provider,
+            // Keep sessions light and MVVM-compatible
             sessions: (p.sessions||[]).map((s:any)=> ({
-              ...s,
               id: s.sessionId,
+              todos: Array.isArray(s.todos) ? s.todos : [],
               lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(0),
+              filePath: s.filePath,
+              projectPath: s.projectPath || p.projectPath,
+              provider: s.provider || p.provider,
             })),
+            mostRecentTodoDate: p.mostRecentTodoDate ? new Date(p.mostRecentTodoDate) : undefined,
           }));
         } else {
           (window as any).__addToast?.(`Failed to load projects${res?.error ? ': '+res.error : ''}`);
