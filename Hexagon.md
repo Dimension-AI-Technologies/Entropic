@@ -40,10 +40,10 @@ Entropic becomes a clean‑room, provider‑agnostic hub for coding‑agent acti
   🟢 6.2 Watch ~/.codex/{projects,todos} and debounce updates.
   🟢 6.3 Broadcast a single, provider‑agnostic “data‑changed” event to renderer (keep legacy channel for compatibility).
 
-🟡 7. Renderer Integration
+🟢 7. Renderer Integration
   🟢 7.1 Replace DI usage with a small IPC data service bound to the Aggregator port.
   🟢 7.2 Keep React components provider‑agnostic; display provider badges only.
-  🔴 7.3 Provide a fallback empty‑state and resilient error toasts on Result<T> failure.
+  🟢 7.3 Provide a fallback empty‑state and resilient error toasts on Result<T> failure.
 
 🔴 8. UI Enhancements
   🔴 8.1 Provider badges (Claude/Codex) on Projects and Global rows.

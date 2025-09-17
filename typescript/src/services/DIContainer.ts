@@ -40,6 +40,7 @@ class SimpleProjectsViewModel {
             })),
           }));
         } else {
+          (window as any).__addToast?.(`Failed to load projects${res?.error ? ': '+res.error : ''}`);
           this.projects = [];
         }
       } else {
@@ -89,6 +90,9 @@ class SimpleTodosViewModel {
       let projects: any[] = [];
       if (maybeRes && typeof maybeRes === 'object' && 'success' in maybeRes) {
         projects = maybeRes.success ? (maybeRes.value||[]) : [];
+        if (!maybeRes.success) {
+          (window as any).__addToast?.(`Failed to load sessions${maybeRes?.error ? ': '+maybeRes.error : ''}`);
+        }
       } else {
         // Fallback to legacy
         projects = await (window as any).electronAPI?.getTodos?.();
