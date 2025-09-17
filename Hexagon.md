@@ -45,8 +45,8 @@ Entropic becomes a clean‑room, provider‑agnostic hub for coding‑agent acti
   🟢 7.2 Keep React components provider‑agnostic; display provider badges only.
   🟢 7.3 Provide a fallback empty‑state and resilient error toasts on Result<T> failure.
 
-🔴 8. UI Enhancements
-  🔴 8.1 Provider badges (Claude/Codex) on Projects and Global rows.
+🟡 8. UI Enhancements
+  🟢 8.1 Provider badges (Claude/Codex) on Projects and Global rows.
   🔴 8.2 Provider filters (toggle buttons) with persisted state.
   🟡 8.3 Diagnostics banner shows combined unknowns and per‑provider breakdown with Dry‑Run / Repair buttons (partially done for Claude).
 

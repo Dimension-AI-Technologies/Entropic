@@ -170,19 +170,11 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
                   <div className="name">
                     {projName}
                     <span className="sid">({shortId})</span>
-                    <span
-                      style={{
-                        marginLeft: 6,
-                        fontSize: 10,
-                        color: '#bfc3c8',
-                        border: '1px solid #3b3f45',
-                        padding: '1px 4px',
-                        borderRadius: 4,
-                      }}
-                      title={(s as any)?.provider ? `Provider: ${(s as any).provider}` : 'Provider'}
-                    >
-                      {(((s as any)?.provider) || '').toString().toLowerCase() === 'codex' ? 'Codex' : (((s as any)?.provider) || 'Claude')}
-                    </span>
+                    {(() => { const pl = String(((s as any)?.provider) || 'Claude').toLowerCase(); return (
+                      <span className={`provider-badge provider-${pl}`} title={`Provider: ${((s as any)?.provider) || 'Claude'}`}>
+                        {pl === 'codex' ? 'Codex' : 'Claude'}
+                      </span>
+                    ); })()}
                   </div>
                 </div>
                 <div className="global-cell date">{formatDate(s.lastModified)}</div>

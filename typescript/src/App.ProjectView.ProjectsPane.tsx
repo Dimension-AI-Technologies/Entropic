@@ -345,6 +345,10 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
             return earliest;
           })();
           
+          // Infer provider from project or first session; default to Claude
+          const provider = (project as any).provider || (project.sessions && project.sessions[0] && (project.sessions[0] as any).provider) || 'Claude';
+          const providerLower = String(provider).toLowerCase();
+
           return (
             <div
               key={projectKey}
@@ -354,18 +358,8 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
             >
               <div className="project-name" title={projectPath}>
                 {projectPath ? projectPath.split(/[\\/]/).pop() : 'Unknown Project'}
-                <span
-                  style={{
-                    marginLeft: 6,
-                    fontSize: 10,
-                    color: '#bfc3c8',
-                    border: '1px solid #3b3f45',
-                    padding: '1px 4px',
-                    borderRadius: 4,
-                  }}
-                  title={project.provider ? `Provider: ${project.provider}` : 'Provider'}
-                >
-                  {(project.provider || '').toString().toLowerCase() === 'codex' ? 'Codex' : (project.provider || 'Claude')}
+                <span className={`provider-badge provider-${providerLower}`} title={`Provider: ${provider}`}>
+                  {providerLower === 'codex' ? 'Codex' : 'Claude'}
                 </span>
                 <span style={{ opacity: 0.8, fontSize: 12, fontWeight: 400, marginLeft: 4 }}> ({sessionCount} • {todoCount} • {activeCount})</span>
               </div>

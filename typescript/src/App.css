@@ -378,6 +378,19 @@ body {
   font-style: italic;
 }
 
+/* Provider badge (Claude / Codex) */
+.provider-badge {
+  margin-left: 6px;
+  font-size: 10px;
+  color: #bfc3c8;
+  border: 1px solid #3b3f45;
+  padding: 1px 4px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.provider-badge.provider-claude { border-color: #46494f; }
+.provider-badge.provider-codex { border-color: #3a5a8a; color: #c7d7ff; }
+
 .project-name {
   font-size: 14px;
   font-weight: 500;
