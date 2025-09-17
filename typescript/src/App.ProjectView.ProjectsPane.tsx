@@ -17,12 +17,14 @@ interface Session {
   lastModified: Date;
   created?: Date;
   filePath?: string;
+  provider?: string;
 }
 
 interface Project {
   path: string;
   sessions: Session[];
   mostRecentTodoDate?: Date;
+  provider?: string;
 }
 
 type SortMethod = 0 | 1 | 2; // 0=alphabetic, 1=recent, 2=todos
@@ -352,8 +354,18 @@ export function ProjectsPane({ projects, selectedProject, onSelectProject, onPro
             >
               <div className="project-name" title={projectPath}>
                 {projectPath ? projectPath.split(/[\\/]/).pop() : 'Unknown Project'}
-                <span style={{ marginLeft: 6, fontSize: 10, color: '#bfc3c8', border: '1px solid #3b3f45', padding: '1px 4px', borderRadius: 4 }}>
-                  Claude
+                <span
+                  style={{
+                    marginLeft: 6,
+                    fontSize: 10,
+                    color: '#bfc3c8',
+                    border: '1px solid #3b3f45',
+                    padding: '1px 4px',
+                    borderRadius: 4,
+                  }}
+                  title={project.provider ? `Provider: ${project.provider}` : 'Provider'}
+                >
+                  {(project.provider || '').toString().toLowerCase() === 'codex' ? 'Codex' : (project.provider || 'Claude')}
                 </span>
                 <span style={{ opacity: 0.8, fontSize: 12, fontWeight: 400, marginLeft: 4 }}> ({sessionCount} • {todoCount} • {activeCount})</span>
               </div>

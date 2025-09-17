@@ -8,8 +8,9 @@ interface GlobalViewProps {
   spacingMode?: 'wide' | 'normal' | 'compact';
 }
 
+type ProviderAwareProject = MVVMProject & { provider?: string };
 export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
-  const [projects, setProjects] = useState<MVVMProject[]>([]);
+  const [projects, setProjects] = useState<ProviderAwareProject[]>([]);
   const [version, setVersion] = useState(0);
   const [unknownCount, setUnknownCount] = useState<number>(0);
   const [activeOnly, setActiveOnly] = useState<boolean>(() => {
@@ -39,7 +40,7 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   }, [activeOnly]);
 
   // Build rows per session across all projects for better coverage
-  const allRows = todosViewModel.getSessions().map(s => {
+  const allRows = todosViewModel.getSessions().map((s: any) => {
     const proj = projects.find(p => p.path === (s as any).projectPath);
     const p = proj || ({ id: ((s as any).projectPath || '').replace(/[\\/:]/g, '-'), path: (s as any).projectPath || '', flattenedDir: '', pathExists: true, lastModified: s.lastModified } as any);
     return { p, s };
@@ -166,7 +167,23 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
                   title="Right-click for options"
                 >
                   <div className="accent" style={{ background: accent }} />
-                  <div className="name">{projName}<span className="sid">({shortId})</span></div>
+                  <div className="name">
+                    {projName}
+                    <span className="sid">({shortId})</span>
+                    <span
+                      style={{
+                        marginLeft: 6,
+                        fontSize: 10,
+                        color: '#bfc3c8',
+                        border: '1px solid #3b3f45',
+                        padding: '1px 4px',
+                        borderRadius: 4,
+                      }}
+                      title={(s as any)?.provider ? `Provider: ${(s as any).provider}` : 'Provider'}
+                    >
+                      {(((s as any)?.provider) || '').toString().toLowerCase() === 'codex' ? 'Codex' : (((s as any)?.provider) || 'Claude')}
+                    </span>
+                  </div>
                 </div>
                 <div className="global-cell date">{formatDate(s.lastModified)}</div>
                 <div className={`global-cell ${curr ? 'clickable' : ''}`} onClick={() => curr && goto(curr)} title={curr ? 'Go to this task' : ''}>

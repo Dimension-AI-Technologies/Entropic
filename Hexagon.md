@@ -42,7 +42,7 @@ Entropic becomes a clean‑room, provider‑agnostic hub for coding‑agent acti
 
 🟡 7. Renderer Integration
   🟢 7.1 Replace DI usage with a small IPC data service bound to the Aggregator port.
-  🔴 7.2 Keep React components provider‑agnostic; display provider badges only.
+  🟢 7.2 Keep React components provider‑agnostic; display provider badges only.
   🔴 7.3 Provide a fallback empty‑state and resilient error toasts on Result<T> failure.
 
 🔴 8. UI Enhancements

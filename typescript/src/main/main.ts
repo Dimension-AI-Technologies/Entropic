@@ -149,6 +149,12 @@ if (!haveLock) {
 }
 
 app.whenReady().then(() => {
+  // DEBUG: Verify correct paths
+  console.log('[MAIN] Using paths:');
+  console.log('[MAIN]   projectsDir:', projectsDir);
+  console.log('[MAIN]   todosDir:', todosDir);
+  console.log('[MAIN]   logsDir:', logsDir);
+  
   const eventPort: EventPort = {
     dataChanged() {
       try { mainWindow?.webContents.send('data-changed'); } catch {}
