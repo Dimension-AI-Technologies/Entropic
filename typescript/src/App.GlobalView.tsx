@@ -12,10 +12,20 @@ type ProviderAwareProject = MVVMProject & { provider?: string };
 export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   const [projects, setProjects] = useState<ProviderAwareProject[]>([]);
   const [version, setVersion] = useState(0);
-  const [unknownCount, setUnknownCount] = useState<number>(0);
+  const [diag, setDiag] = useState<{ total: number; per: Record<string, number> }>({ total: 0, per: {} });
   const [activeOnly, setActiveOnly] = useState<boolean>(() => {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.globalActiveOnly') : null;
     return saved === '1';
+  });
+  const [providerFilter, setProviderFilter] = useState<{ claude: boolean; codex: boolean }>(() => {
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.providerFilter') : null;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return { claude: parsed.claude !== false, codex: parsed.codex !== false };
+      }
+    } catch {}
+    return { claude: true, codex: true };
   });
 
   const container = DIContainer.getInstance();
@@ -27,8 +37,17 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
     updateProjects();
     const unProjects = projectsViewModel.onChange(updateProjects);
     const unTodos = todosViewModel.onChange(() => setVersion(v => v + 1));
-    // Fetch diagnostics for banner
-    (async () => { try { const d = await (window as any).electronAPI?.collectDiagnostics?.(); if (d && typeof d.unknownCount === 'number') setUnknownCount(d.unknownCount); } catch {} })();
+    // Fetch diagnostics for banner (hex, per provider)
+    (async () => {
+      try {
+        const d = await (window as any).electronAPI?.collectDiagnosticsHex?.();
+        if (d && typeof d.totalUnknown === 'number') {
+          const per: Record<string, number> = {};
+          for (const r of (d.providers || [])) per[String(r.id).toLowerCase()] = Number(r.unknownCount) || 0;
+          setDiag({ total: d.totalUnknown, per });
+        }
+      } catch {}
+    })();
     return () => {
       const u = unProjects as any; if (typeof u === 'function') u();
       unTodos();
@@ -38,6 +57,9 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   useEffect(() => {
     try { localStorage.setItem('ui.globalActiveOnly', activeOnly ? '1' : '0'); } catch {}
   }, [activeOnly]);
+  useEffect(() => {
+    try { localStorage.setItem('ui.providerFilter', JSON.stringify(providerFilter)); } catch {}
+  }, [providerFilter]);
 
   // Build rows per session across all projects for better coverage
   const allRows = todosViewModel.getSessions().map((s: any) => {
@@ -46,6 +68,9 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
     return { p, s };
   }).sort((a, b) => b.s.lastModified.getTime() - a.s.lastModified.getTime());
   const rows = allRows.filter(({ s }) => {
+    const prov = String(((s as any)?.provider) || 'claude').toLowerCase();
+    const allow = prov === 'codex' ? providerFilter.codex : providerFilter.claude;
+    if (!allow) return false;
     if (!activeOnly) return true;
     const hasActive = (s.todos || []).some((t: any) => t.status !== 'completed');
     return hasActive;
@@ -109,17 +134,50 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
     <div className="global-view" style={{ padding: 16, color: 'white', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <span>{filteredProjects} Projects • {filteredSessions} Sessions • {filteredTodos} ToDos</span>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }} title="Hide sessions with only completed items">
-          <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
-          <span>Active only</span>
-        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="filter-toggles" title="Filter by provider">
+            <button
+              className={`filter-toggle ${providerFilter.claude ? 'active' : ''}`}
+              onClick={() => setProviderFilter(f => ({ ...f, claude: !f.claude }))}
+            >Claude</button>
+            <button
+              className={`filter-toggle ${providerFilter.codex ? 'active' : ''}`}
+              onClick={() => setProviderFilter(f => ({ ...f, codex: !f.codex }))}
+            >Codex</button>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }} title="Hide sessions with only completed items">
+            <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
+            <span>Active only</span>
+          </label>
+        </div>
       </div>
-      {unknownCount > 0 && (
-        <div style={{ background: '#3a2f10', border: '1px solid #806200', color: '#ffd666', padding: 8, borderRadius: 6, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>Warning: {unknownCount} unanchored todo session{unknownCount!==1?'s':''} detected.</span>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="filter-toggle" onClick={async ()=>{ try { await (window as any).electronAPI?.repairMetadata?.(true); const d=await (window as any).electronAPI?.collectDiagnostics?.(); setUnknownCount(d?.unknownCount||0); (window as any).__addToast?.('Dry Run complete'); } catch {} }}>Dry Run</button>
-            <button className="filter-toggle" onClick={async ()=>{ try { await (window as any).electronAPI?.repairMetadata?.(false); const d=await (window as any).electronAPI?.collectDiagnostics?.(); setUnknownCount(d?.unknownCount||0); (window as any).__addToast?.('Repair complete'); } catch {} }}>Repair Live</button>
+      {diag.total > 0 && (
+        <div style={{ background: '#3a2f10', border: '1px solid #806200', color: '#ffd666', padding: 8, borderRadius: 6, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+          <span>
+            Warning: {diag.total} unanchored todo session{diag.total!==1?'s':''} detected
+            {(() => {
+              const parts: string[] = [];
+              if (typeof diag.per.claude === 'number') parts.push(`Claude: ${diag.per.claude}`);
+              if (typeof diag.per.codex === 'number') parts.push(`Codex: ${diag.per.codex}`);
+              return parts.length ? ` (${parts.join(' • ')})` : '';
+            })()}
+            .
+          </span>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button className="filter-toggle" onClick={async ()=>{ try { await (window as any).electronAPI?.repairMetadataHex?.(undefined, true); const d=await (window as any).electronAPI?.collectDiagnosticsHex?.(); if (d) { const per: any = {}; for (const r of (d.providers||[])) per[String(r.id).toLowerCase()] = Number(r.unknownCount)||0; setDiag({ total: d.totalUnknown||0, per }); } (window as any).__addToast?.('Dry Run (All) complete'); } catch {} }}>Dry Run (All)</button>
+            <button className="filter-toggle" onClick={async ()=>{ try { await (window as any).electronAPI?.repairMetadataHex?.(undefined, false); const d=await (window as any).electronAPI?.collectDiagnosticsHex?.(); if (d) { const per: any = {}; for (const r of (d.providers||[])) per[String(r.id).toLowerCase()] = Number(r.unknownCount)||0; setDiag({ total: d.totalUnknown||0, per }); } (window as any).__addToast?.('Repair (All) complete'); } catch {} }}>Repair Live (All)</button>
+            {typeof diag.per.claude === 'number' && (
+              <>
+                <button className="filter-toggle" onClick={async ()=>{ try { await (window as any).electronAPI?.repairMetadataHex?.('claude', true); const d=await (window as any).electronAPI?.collectDiagnosticsHex?.(); if (d) { const per: any = {}; for (const r of (d.providers||[])) per[String(r.id).toLowerCase()] = Number(r.unknownCount)||0; setDiag({ total: d.totalUnknown||0, per }); } (window as any).__addToast?.('Dry Run (Claude) complete'); } catch {} }}>Dry Run (Claude)</button>
+                <button className="filter-toggle" onClick={async ()=>{ try { await (window as any).electronAPI?.repairMetadataHex?.('claude', false); const d=await (window as any).electronAPI?.collectDiagnosticsHex?.(); if (d) { const per: any = {}; for (const r of (d.providers||[])) per[String(r.id).toLowerCase()] = Number(r.unknownCount)||0; setDiag({ total: d.totalUnknown||0, per }); } (window as any).__addToast?.('Repair (Claude) complete'); } catch {} }}>Repair (Claude)</button>
+              </>
+            )}
+            {typeof diag.per.codex === 'number' && (
+              <>
+                <button className="filter-toggle" onClick={async ()=>{ try { await (window as any).electronAPI?.repairMetadataHex?.('codex', true); const d=await (window as any).electronAPI?.collectDiagnosticsHex?.(); if (d) { const per: any = {}; for (const r of (d.providers||[])) per[String(r.id).toLowerCase()] = Number(r.unknownCount)||0; setDiag({ total: d.totalUnknown||0, per }); } (window as any).__addToast?.('Dry Run (Codex) complete'); } catch {} }}>Dry Run (Codex)</button>
+                <button className="filter-toggle" onClick={async ()=>{ try { await (window as any).electronAPI?.repairMetadataHex?.('codex', false); const d=await (window as any).electronAPI?.collectDiagnosticsHex?.(); if (d) { const per: any = {}; for (const r of (d.providers||[])) per[String(r.id).toLowerCase()] = Number(r.unknownCount)||0; setDiag({ total: d.totalUnknown||0, per }); } (window as any).__addToast?.('Repair (Codex) complete'); } catch {} }}>Repair (Codex)</button>
+              </>
+            )}
           </div>
         </div>
       )}

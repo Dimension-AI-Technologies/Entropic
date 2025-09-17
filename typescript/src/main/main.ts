@@ -22,6 +22,7 @@ import { registerTodoIpc } from './ipc/todos.js';
 import { registerFileIpc } from './ipc/files.js';
 import { registerChatIpc } from './ipc/chat.js';
 import { registerMaintenanceIpc } from './ipc/maintenance.js';
+import { registerDiagnosticsIpc } from './ipc/diagnostics.js';
 import { setupSingleInstance } from './lifecycle/singleInstance.js';
 import { wireAppEvents } from './lifecycle/appEvents.js';
 import { Aggregator } from './core/aggregator.js';
@@ -176,6 +177,7 @@ app.whenReady().then(() => {
   registerFileIpc(ipcMain);
   registerChatIpc(ipcMain);
   registerMaintenanceIpc(ipcMain, { projectsDir, todosDir });
+  registerDiagnosticsIpc(ipcMain, providers);
 
   // Screenshot handler (used by renderer via preload)
   ipcMain.handle('take-screenshot', async () => {
@@ -215,10 +217,14 @@ app.whenReady().then(() => {
       let prefs: any = {};
       try { prefs = JSON.parse(fsSync.readFileSync(prefsPath, 'utf-8')); } catch {}
       if (prefs?.repairPromptedOnce) return;
-      // Ask diagnostics
+      // Ask diagnostics per provider
       const { collectDiagnostics } = await import('./maintenance/repair.js');
-      const d = await collectDiagnostics(projectsDir, todosDir);
-      const unknown = d.unknownCount ?? 0;
+      const claudeDiag = await collectDiagnostics(projectsDir, todosDir);
+      let codexDiag: any = null;
+      try { if (fsSync.existsSync(codexDir)) { codexDiag = await collectDiagnostics(codexProjectsDir, codexTodosDir); } } catch {}
+      const claudeUnknown = claudeDiag.unknownCount ?? 0;
+      const codexUnknown = codexDiag ? (codexDiag.unknownCount ?? 0) : 0;
+      const unknown = claudeUnknown + codexUnknown;
       const threshold = 5;
       if (unknown > threshold && mainWindow) {
         const choice = await dialog.showMessageBox(mainWindow, {
@@ -227,15 +233,17 @@ app.whenReady().then(() => {
           cancelId: 2,
           title: 'Project Repair Suggested',
           message: `Detected ${unknown} unanchored todo sessions`,
-          detail: 'You can run a dry run to see planned changes, or repair live to write metadata now.'
+          detail: `Per-provider counts:\n• Claude: ${claudeUnknown}` + (codexDiag ? `\n• Codex: ${codexUnknown}` : '') + `\n\nYou can run a dry run to see planned changes, or repair live to write metadata now (applies to all providers).`
         });
         try { fsSync.writeFileSync(prefsPath, JSON.stringify({ ...(prefs||{}), repairPromptedOnce: true }, null, 2)); } catch {}
         if (choice.response === 0) {
           const { repairProjectMetadata } = await import('./maintenance/repair.js');
           await repairProjectMetadata(projectsDir, todosDir, false);
+          try { if (fsSync.existsSync(codexDir)) { await repairProjectMetadata(codexProjectsDir, codexTodosDir, false); } } catch {}
         } else if (choice.response === 1) {
           const { repairProjectMetadata } = await import('./maintenance/repair.js');
           await repairProjectMetadata(projectsDir, todosDir, true);
+          try { if (fsSync.existsSync(codexDir)) { await repairProjectMetadata(codexProjectsDir, codexTodosDir, true); } } catch {}
         }
       }
     } catch {}

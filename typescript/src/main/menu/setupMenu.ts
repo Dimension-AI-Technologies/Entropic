@@ -210,14 +210,52 @@ export function setupMenu(options: {
             }
           }
         },
+        { type: 'separator' as const },
+        {
+          label: 'Codex: Repair Metadata (Dry Run)…',
+          click: async () => {
+            try {
+              const { repairProjectMetadata } = await import('../maintenance/repair.js');
+              const win = getMainWindow ? getMainWindow() : null;
+              const codexDir = path.join(os.homedir(), '.codex');
+              const res = await repairProjectMetadata?.(path.join(codexDir, 'projects'), path.join(codexDir, 'todos'), true);
+              const msg = res ? `DRY RUN\nProjects scanned: ${res.projectsScanned}\nTodo sessions scanned: ${res.todosScanned}\nWould write metadata: ${res.metadataPlanned}\nMatched via sidecar meta: ${res.matchedBySidecar}\nMatched via JSONL filename: ${res.matchedByJsonl}\nUnanchored sessions: ${res.unknownSessions.length}` : 'No result';
+              try { (await import('electron')).dialog.showMessageBox(win!, { type: 'info', title: 'Codex Repair (Dry Run)', message: 'Repair Codex Metadata', detail: msg }); } catch {}
+            } catch (e) {
+              try { (await import('electron')).dialog.showMessageBox(getMainWindow?.()!, { type: 'error', title: 'Repair Failed', message: String(e) }); } catch {}
+            }
+          }
+        },
+        {
+          label: 'Codex: Repair Metadata (Live)…',
+          click: async () => {
+            try {
+              const { repairProjectMetadata } = await import('../maintenance/repair.js');
+              const win = getMainWindow ? getMainWindow() : null;
+              const codexDir = path.join(os.homedir(), '.codex');
+              const res = await repairProjectMetadata?.(path.join(codexDir, 'projects'), path.join(codexDir, 'todos'), false);
+              const msg = res ? `LIVE RUN\nProjects scanned: ${res.projectsScanned}\nTodo sessions scanned: ${res.todosScanned}\nMetadata files written: ${res.metadataWritten} (planned ${res.metadataPlanned})\nMatched via sidecar meta: ${res.matchedBySidecar}\nMatched via JSONL filename: ${res.matchedByJsonl}\nUnanchored sessions: ${res.unknownSessions.length}` : 'No result';
+              try { (await import('electron')).dialog.showMessageBox(win!, { type: 'info', title: 'Codex Repair (Live)', message: 'Repair Codex Metadata', detail: msg }); } catch {}
+            } catch (e) {
+              try { (await import('electron')).dialog.showMessageBox(getMainWindow?.()!, { type: 'error', title: 'Repair Failed', message: String(e) }); } catch {}
+            }
+          }
+        },
         {
           label: 'Show Diagnostics…',
           click: async () => {
             try {
               const { collectDiagnostics } = await import('../maintenance/repair.js');
               const win = getMainWindow ? getMainWindow() : null;
-              const d = await collectDiagnostics(path.join(os.homedir(), '.claude', 'projects'), path.join(os.homedir(), '.claude', 'todos'));
-              try { (await import('electron')).dialog.showMessageBox(win!, { type: 'info', title: 'Diagnostics', message: 'Unanchored Sessions', detail: d.text }); } catch {}
+              const claude = await collectDiagnostics(path.join(os.homedir(), '.claude', 'projects'), path.join(os.homedir(), '.claude', 'todos'));
+              const codexDir = path.join(os.homedir(), '.codex');
+              let codex: any = null;
+              try { const fs = await import('node:fs'); if (fs.existsSync(codexDir)) { codex = await collectDiagnostics(path.join(codexDir, 'projects'), path.join(codexDir, 'todos')); } } catch {}
+              const detail = [
+                `Claude: ${claude.unknownCount} unknown` + (claude.text ? `\n${claude.text}` : ''),
+                codex ? (`\n\nCodex: ${codex.unknownCount} unknown` + (codex.text ? `\n${codex.text}` : '')) : ''
+              ].join('');
+              try { (await import('electron')).dialog.showMessageBox(win!, { type: 'info', title: 'Diagnostics (All Providers)', message: 'Unanchored Sessions by Provider', detail }); } catch {}
             } catch (e) {
               try { (await import('electron')).dialog.showMessageBox(getMainWindow?.()!, { type: 'error', title: 'Diagnostics Failed', message: String(e) }); } catch {}
             }

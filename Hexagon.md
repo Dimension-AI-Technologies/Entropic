@@ -47,13 +47,13 @@ Entropic becomes a clean‑room, provider‑agnostic hub for coding‑agent acti
 
 🟡 8. UI Enhancements
   🟢 8.1 Provider badges (Claude/Codex) on Projects and Global rows.
-  🔴 8.2 Provider filters (toggle buttons) with persisted state.
-  🟡 8.3 Diagnostics banner shows combined unknowns and per‑provider breakdown with Dry‑Run / Repair buttons (partially done for Claude).
+  🟢 8.2 Provider filters (toggle buttons) with persisted state.
+  🟢 8.3 Diagnostics banner shows combined unknowns and per‑provider breakdown with Dry‑Run / Repair buttons (partially done for Claude).
 
-🟡 9. Diagnostics & Repair (per provider)
-  🟡 9.1 Dry‑Run by default; Live override from menu (implemented for Claude).
-  🟡 9.2 Startup prompt if unknownCount exceeds threshold (implemented for Claude).
-  🔴 9.3 Extend both to Codex and include per‑provider counts in dialogs.
+🟢 9. Diagnostics & Repair (per provider)
+  🟢 9.1 Dry‑Run by default; Live override from menu (implemented for Claude).
+  🟢 9.2 Startup prompt if unknownCount exceeds threshold (implemented for Claude).
+  🟢 9.3 Extend both to Codex and include per‑provider counts in dialogs.
 
 🟢 10. Hook Scripts (capture sidecar projectPath)
   🟢 10.1 Claude: write ~/.claude/todos/{sessionId}-agent.meta.json { projectPath }.
