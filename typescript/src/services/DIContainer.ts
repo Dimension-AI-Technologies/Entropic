@@ -12,18 +12,24 @@ type Project = {
 class SimpleProjectsViewModel {
   private projects: Project[] = [];
   private listeners = new Set<() => void>();
+  private refreshing = false;
+  private lastRefresh = 0;
 
   constructor() { 
     this.refresh(); 
     try {
       // Prefer provider-agnostic data-changed; keep legacy listener as fallback
       (window as any).electronAPI?.onDataChanged?.(() => this.refresh());
-      (window as any).electronAPI?.onTodoFilesChanged?.((_e: any,_d:any)=>this.refresh());
+      // Removed onTodoFilesChanged to avoid high-frequency refresh loops
     } catch {}
   }
   getProjects(): Project[] { return this.projects; }
   setProjects(p: Project[]): void { this.projects = p || []; this.emit(); }
   async refresh(): Promise<void> {
+    const now = Date.now();
+    if (this.refreshing) return; // drop concurrent refreshes
+    if (now - this.lastRefresh < 250) return; // throttle bursts
+    this.refreshing = true;
     try {
       const res = await (window as any).electronAPI?.getProjects?.();
       if (res && typeof res === 'object' && 'success' in res) {
@@ -49,6 +55,8 @@ class SimpleProjectsViewModel {
         this.projects = Array.isArray(p)?p:[];
       }
     } catch { this.projects = []; }
+    this.refreshing = false;
+    this.lastRefresh = Date.now();
     this.emit();
   }
   onChange(cb: () => void): () => void { this.listeners.add(cb); return () => this.listeners.delete(cb); }
@@ -71,11 +79,12 @@ type Session = { id: string; todos: any[]; lastModified: Date; created?: Date; f
 class SimpleTodosViewModel {
   private sessions: Session[] = [];
   private listeners = new Set<() => void>();
+  private refreshing = false;
+  private lastRefresh = 0;
   constructor(){
     this.refresh();
     try {
       (window as any).electronAPI?.onDataChanged?.(()=>this.refresh());
-      (window as any).electronAPI?.onTodoFilesChanged?.((_e: any,_d:any)=>this.refresh());
     } catch {}
   }
   getSessions(): Session[] { return this.sessions; }
@@ -85,6 +94,10 @@ class SimpleTodosViewModel {
     return this.refresh();
   }
   async refresh(): Promise<void> {
+    const now = Date.now();
+    if (this.refreshing) return; // drop concurrent refreshes
+    if (now - this.lastRefresh < 250) return; // throttle bursts
+    this.refreshing = true;
     try {
       const maybeRes = await (window as any).electronAPI?.getProjects?.();
       let projects: any[] = [];
@@ -107,6 +120,8 @@ class SimpleTodosViewModel {
       // normalize dates
       this.sessions = sess.map(s=> ({...s, lastModified: s.lastModified instanceof Date ? s.lastModified : new Date(s.lastModified)}));
     } catch { this.sessions = []; }
+    this.refreshing = false;
+    this.lastRefresh = Date.now();
     this.emit();
   }
   onChange(cb: () => void): () => void { this.listeners.add(cb); return () => this.listeners.delete(cb); }

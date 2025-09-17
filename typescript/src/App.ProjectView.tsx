@@ -159,13 +159,17 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
 
   // Resizing logic moved to useResize hook
 
+  // Track if initial auto-selection has happened
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
+  
   // Auto-select most recent project and session on initial load (run once)
   useEffect(() => {
-    if (!selectedMVVMProject && projects.length > 0) {
+    if (!hasAutoSelected && !selectedMVVMProject && projects.length > 0) {
       // Select the most recently modified project
       const sortedProjects = projectsViewModel.getProjectsSortedByDate();
       if (sortedProjects.length > 0) {
         setSelectedMVVMProject(sortedProjects[0]);
+        setHasAutoSelected(true);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

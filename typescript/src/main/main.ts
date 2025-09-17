@@ -29,6 +29,8 @@ import { Aggregator } from './core/aggregator.js';
 import { ClaudeAdapter } from './adapters/claudeAdapter.js';
 import { CodexAdapter } from './adapters/codexAdapter.js';
 import type { EventPort, ProviderPort } from './core/ports.js';
+import { loadPrefs, getEnabledProviders, getRepairThreshold } from './utils/prefs.js';
+import { loadTodosData } from './loaders/projects.js';
 
 let mainWindow: BrowserWindowType | null = null;
 
@@ -162,11 +164,14 @@ app.whenReady().then(() => {
     }
   };
   // Instantiate providers and aggregator
-  const providers: ProviderPort[] = [
-    new ClaudeAdapter({ projectsDir, logsDir, todosDir }),
-  ];
+  const prefs = loadPrefs();
+  const enabled = getEnabledProviders(prefs);
+  const providers: ProviderPort[] = [];
+  if (enabled.claude) {
+    providers.push(new ClaudeAdapter({ projectsDir, logsDir, todosDir }));
+  }
   try {
-    if (fsSync.existsSync(codexDir)) {
+    if (enabled.codex && fsSync.existsSync(codexDir)) {
       providers.push(new CodexAdapter({ projectsDir: codexProjectsDir, logsDir: codexLogsDir, todosDir: codexTodosDir }));
     }
   } catch {}
@@ -192,6 +197,34 @@ app.whenReady().then(() => {
   });
   
   createWindow();
+
+  // Dev-only consistency check: ClaudeAdapter vs legacy loader
+  (async () => {
+    try {
+      const isDev = process.env.NODE_ENV === 'development';
+      if (!isDev) return;
+      const claude = providers.find(p => p.id === 'claude');
+      if (!claude) return;
+      const d = await claude.fetchProjects();
+      const legacy = await loadTodosData(projectsDir, logsDir, todosDir);
+      if (!d.success || !legacy.success) {
+        console.warn('[DEV CHECK] Skipping compare; adapter or legacy failed');
+        return;
+      }
+      const domain = d.value;
+      const old = legacy.value;
+      const dMap = new Map(domain.map(p => [p.projectPath, p.sessions.reduce((n,s)=> n + (s.todos?.length||0), 0)]));
+      const oMap = new Map(old.map((p:any) => [p.path, (p.sessions||[]).reduce((n:number,s:any)=> n + ((s.todos||[]).length||0), 0)]));
+      let mismatches = 0;
+      for (const [k, v] of oMap) {
+        const dv = dMap.get(k) ?? -1;
+        if (dv !== v) { console.warn('[DEV CHECK] Mismatch', k, 'todos legacy=', v, 'domain=', dv); mismatches++; }
+      }
+      if (mismatches === 0) console.log('[DEV CHECK] ClaudeAdapter matches legacy loader on todo counts across projects');
+    } catch (e) {
+      console.warn('[DEV CHECK] Exception during compare:', e);
+    }
+  })();
   
   // Set up file watching after window is created (Claude + Codex)
   if (mainWindow) {
@@ -225,7 +258,7 @@ app.whenReady().then(() => {
       const claudeUnknown = claudeDiag.unknownCount ?? 0;
       const codexUnknown = codexDiag ? (codexDiag.unknownCount ?? 0) : 0;
       const unknown = claudeUnknown + codexUnknown;
-      const threshold = 5;
+      const threshold = getRepairThreshold();
       if (unknown > threshold && mainWindow) {
         const choice = await dialog.showMessageBox(mainWindow, {
           type: 'warning',

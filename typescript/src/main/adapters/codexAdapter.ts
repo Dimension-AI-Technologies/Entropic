@@ -17,10 +17,15 @@ type LoaderProject = {
 
 export class CodexAdapter implements ProviderPort {
   readonly id = 'codex';
+  private _cache?: { sig: string; value: Project[] };
   constructor(private options: { projectsDir: string; logsDir: string; todosDir?: string }) {}
 
   async fetchProjects(): AsyncResult<Project[]> {
     const { projectsDir, logsDir, todosDir } = this.options;
+    const sig = await computeSignature(projectsDir, todosDir);
+    if (this._cache && this._cache.sig === sig) {
+      return Ok(this._cache.value);
+    }
     const res = await loadTodosData(projectsDir, logsDir, todosDir);
     if (!res.success) return Err(res.error || 'loadTodosData failed');
     const items = res.value as LoaderProject[];
@@ -53,6 +58,7 @@ export class CodexAdapter implements ProviderPort {
         completed: numberSafe(p.totalTodos) - numberSafe(p.activeTodos),
       },
     }));
+    this._cache = { sig, value: mapped };
     return Ok(mapped);
   }
 
@@ -86,3 +92,20 @@ function numberSafe(v?: number): number {
   return typeof v === 'number' && isFinite(v) ? v : 0;
 }
 
+async function computeSignature(projectsDir: string, todosDir?: string): Promise<string> {
+  try {
+    const parts: string[] = [];
+    try {
+      const list = await import('node:fs/promises').then(m => m.readdir(projectsDir));
+      parts.push('p:' + list.length);
+    } catch { parts.push('p:0'); }
+    if (todosDir) {
+      try {
+        const list = await import('node:fs/promises').then(m => m.readdir(todosDir));
+        const count = list.filter(f => /-agent(?:-[0-9a-f-]+)?\.json$/.test(f)).length;
+        parts.push('t:' + count);
+      } catch { parts.push('t:0'); }
+    }
+    return parts.join('|');
+  } catch { return 'sig:0'; }
+}

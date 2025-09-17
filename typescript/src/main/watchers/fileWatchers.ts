@@ -4,6 +4,8 @@ import type { BrowserWindow } from 'electron';
 
 export type Watcher = fsSync.FSWatcher;
 
+let globalDebounceTimer: NodeJS.Timeout | null = null;
+
 export function setupFileWatching(
   mainWindow: BrowserWindow,
   options: { projectsDir: string; todosDir: string; logsDir: string },
@@ -11,17 +13,10 @@ export function setupFileWatching(
 ): Watcher[] {
   const { projectsDir, todosDir, logsDir } = options;
   const watchers: Watcher[] = [];
-  let debounceTimer: NodeJS.Timeout | null = null;
-
   const scheduleChange = (payload: any) => {
-    try {
-      // Legacy channel for compatibility
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('todo-files-changed', payload);
-      }
-    } catch {}
-    if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
+    // Drop immediate legacy event to avoid high-frequency refresh loops in renderer
+    if (globalDebounceTimer) clearTimeout(globalDebounceTimer);
+    globalDebounceTimer = setTimeout(() => {
       try {
         if (mainWindow && !mainWindow.isDestroyed()) {
           // Provider-agnostic event per Hex plan

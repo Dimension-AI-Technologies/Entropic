@@ -178,8 +178,8 @@ export function setupMenu(options: {
       ],
     },
     {
-      role: 'help',
-      submenu: [
+  role: 'help',
+  submenu: [
         { label: 'Entropic Help', accelerator: 'F1', click: onShowHelp },
         { type: 'separator' as const },
         {
@@ -260,6 +260,66 @@ export function setupMenu(options: {
               try { (await import('electron')).dialog.showMessageBox(getMainWindow?.()!, { type: 'error', title: 'Diagnostics Failed', message: String(e) }); } catch {}
             }
           }
+        },
+        { type: 'separator' as const },
+        {
+          label: 'Providers',
+          submenu: [
+            {
+              label: 'Enable Claude', type: 'checkbox', checked: true,
+              click: async (item) => {
+                const { loadPrefs, savePrefs } = await import('../utils/prefs.js');
+                const p = loadPrefs();
+                const next = savePrefs(cur => ({ ...(cur||{}), enabledProviders: { ...(p.enabledProviders||{}), claude: !!item.checked } }));
+                const { dialog, app } = await import('electron');
+                const win = getMainWindow ? getMainWindow() : null;
+                const res = await dialog.showMessageBox(win!, { type: 'question', buttons: ['Relaunch Now','Later'], defaultId: 0, cancelId: 1, message: 'Apply Provider Change', detail: 'Relaunch to apply provider toggles.' });
+                if (res.response === 0) { try { app.relaunch(); app.exit(0); } catch {} }
+              }
+            },
+            {
+              label: 'Enable Codex', type: 'checkbox', checked: true,
+              click: async (item) => {
+                const { loadPrefs, savePrefs } = await import('../utils/prefs.js');
+                const p = loadPrefs();
+                const next = savePrefs(cur => ({ ...(cur||{}), enabledProviders: { ...(p.enabledProviders||{}), codex: !!item.checked } }));
+                const { dialog, app } = await import('electron');
+                const win = getMainWindow ? getMainWindow() : null;
+                const res = await dialog.showMessageBox(win!, { type: 'question', buttons: ['Relaunch Now','Later'], defaultId: 0, cancelId: 1, message: 'Apply Provider Change', detail: 'Relaunch to apply provider toggles.' });
+                if (res.response === 0) { try { app.relaunch(); app.exit(0); } catch {} }
+              }
+            },
+          ] as Electron.MenuItemConstructorOptions[],
+        },
+        {
+          label: 'Repair Settings',
+          submenu: [
+            {
+              label: 'Default Dry-Run', type: 'checkbox', checked: true,
+              click: async (item) => {
+                const { loadPrefs, savePrefs } = await import('../utils/prefs.js');
+                const p = loadPrefs();
+                savePrefs(cur => ({ ...(cur||{}), repair: { ...(p.repair||{}), defaultDryRun: !!item.checked } }));
+              }
+            },
+            { type: 'separator' as const },
+            {
+              label: 'Set Threshold = 5',
+              click: async () => {
+                const { loadPrefs, savePrefs } = await import('../utils/prefs.js');
+                const p = loadPrefs();
+                savePrefs(cur => ({ ...(cur||{}), repair: { ...(p.repair||{}), threshold: 5 } }));
+              }
+            },
+            {
+              label: 'Set Threshold = 10',
+              click: async () => {
+                const { loadPrefs, savePrefs } = await import('../utils/prefs.js');
+                const p = loadPrefs();
+                savePrefs(cur => ({ ...(cur||{}), repair: { ...(p.repair||{}), threshold: 10 } }));
+              }
+            },
+          ] as Electron.MenuItemConstructorOptions[],
         },
         {
           label: 'Logging Options',

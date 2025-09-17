@@ -114,6 +114,15 @@ All implementations use the same file structure:
 └── scripts/                    # (Optional) Script installation location
 ```
 
+## Codex Provider Hooks (optional but recommended)
+
+To help Entropic reliably associate Codex sessions with projects, write a sidecar metadata file next to each Codex todo file:
+
+- Path: `~/.codex/todos/{sessionId}-agent.meta.json`
+- Content: `{ "projectPath": "/absolute/path/to/your/project" }`
+
+Example scripts and details are in `HOOKS-codex.md`.
+
 ## License
 
 MIT License - Feel free to modify and distribute

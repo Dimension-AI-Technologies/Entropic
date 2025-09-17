@@ -1,5 +1,35 @@
 # Project History
 
+## 2025-09-17: Fixed File Watcher Feedback Loop and Memory Leak
+
+### Problem
+- Application experiencing Out of Memory (OOM) crashes after Electron 36 upgrade
+- Auto-selection bug: ".claude" project was being selected automatically without user interaction
+- Memory usage growing rapidly, causing renderer process crashes
+
+### Root Cause
+- File watchers were emitting high-frequency `todo-files-changed` events
+- Renderer subscribed to both immediate and debounced events
+- This created a feedback loop: file change → reload → file change → reload
+- Electron 36's file watcher behavior is more chatty than previous versions
+- Attempted fixes using React useEffect hooks made the problem worse by introducing infinite loops
+
+### Solution
+1. **Fixed File Watcher Events**
+   - Removed immediate legacy `todo-files-changed` emissions from fileWatchers.ts
+   - Removed `onTodoFilesChanged` subscriptions from renderer DI facade
+   - Kept only debounced `data-changed` events (300ms debounce)
+
+2. **Verified Stability**
+   - App now runs with stable memory usage (0.1-0.2% MEM)
+   - No OOM crashes after extended runtime
+   - Auto-selection behavior fixed - no unwanted project switching
+
+### Technical Details
+- File watcher feedback loops can amplify with more responsive file system monitoring
+- Debouncing is critical for file system events to prevent cascade effects
+- React useEffect dependency arrays must be carefully managed to avoid infinite loops
+
 ## 2025-09-17: Fixed Electron Preload Script and Updated Dependencies
 
 ### Problem

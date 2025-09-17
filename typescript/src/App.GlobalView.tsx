@@ -130,6 +130,33 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   const filteredSessions = rows.length;
   const filteredTodos = rows.reduce((sum, r) => sum + ((r.s.todos || []).filter((t: any) => activeOnly ? t.status !== 'completed' : true).length), 0);
 
+  // Simple virtualization for large datasets
+  const listRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportH, setViewportH] = useState(600);
+  useEffect(() => {
+    const el = listRef.current;
+    const onScroll = () => setScrollTop(el?.scrollTop || 0);
+    const onResize = () => setViewportH(el?.clientHeight || 600);
+    if (el) {
+      el.addEventListener('scroll', onScroll);
+      onResize();
+    }
+    window.addEventListener('resize', onResize);
+    return () => {
+      if (el) el.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
+  const rowHeight = spacingMode === 'wide' ? 64 : (spacingMode === 'normal' ? 56 : 48);
+  const total = rows.length;
+  const totalHeight = total * rowHeight;
+  const start = Math.max(0, Math.floor(scrollTop / rowHeight) - 5);
+  const visibleCount = Math.min(total, Math.ceil(viewportH / rowHeight) + 10);
+  const end = Math.min(total, start + visibleCount);
+  const padTop = start * rowHeight;
+  const padBottom = totalHeight - padTop - (end - start) * rowHeight;
+
   return (
     <div className="global-view" style={{ padding: 16, color: 'white', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
@@ -189,8 +216,9 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
           <div>Current</div>
           <div>Next</div>
         </div>
-          <div className="global-rows" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-          {rows.map(({ p, s }) => {
+          <div ref={listRef} className="global-rows" style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
+          <div style={{ height: padTop }} />
+          {rows.slice(start, end).map(({ p, s }) => {
             const curr = pickCurrent(s.todos || []);
             const next = pickNext(s.todos || [], curr);
             const hasActive = (s.todos || []).some((t: any) => t.status !== 'completed');
@@ -250,6 +278,7 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
           {rows.length === 0 && (
             <div style={{ padding: 16, color: '#a2a7ad' }}>No sessions found</div>
           )}
+          <div style={{ height: padBottom }} />
           </div>
         </div>
       </div>

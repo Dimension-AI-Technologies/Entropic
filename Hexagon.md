@@ -57,29 +57,29 @@ Entropic becomes a clean‑room, provider‑agnostic hub for coding‑agent acti
 
 🟢 10. Hook Scripts (capture sidecar projectPath)
   🟢 10.1 Claude: write ~/.claude/todos/{sessionId}-agent.meta.json { projectPath }.
-  🔴 10.2 Codex: provide equivalent hook examples and docs.
+  🟢 10.2 Codex: provide equivalent hook examples and docs.
 
-🔴 11. Settings (PersistencePort)
-  🔴 11.1 enabledProviders: { claude: true, codex: true }.
-  🔴 11.2 Repair thresholds; default dry‑run.
-  🔴 11.3 Menu toggles to update prefs and restart watchers.
+🟢 11. Settings (PersistencePort)
+  🟢 11.1 enabledProviders: { claude: true, codex: true }.
+  🟢 11.2 Repair thresholds; default dry‑run.
+  🟢 11.3 Menu toggles to update prefs and restart watchers.
 
-🔴 12. Security & Privacy
-  🔴 12.1 Restrict scanning to configured roots by default.
-  🔴 12.2 No upload of diagnostics; local‑only processing.
+🟢 12. Security & Privacy
+  🟢 12.1 Restrict scanning to configured roots by default.
+  🟢 12.2 No upload of diagnostics; local‑only processing.
 
-🔴 13. Performance
-  🔴 13.1 Adapter‑level caches and mtime checks; incremental reload.
-  🔴 13.2 Debounce watcher events; collapse to a single refresh.
-  🔴 13.3 Virtualize Global View rows if needed for large datasets.
+🟢 13. Performance
+  🟢 13.1 Adapter‑level caches and mtime checks; incremental reload.
+  🟢 13.2 Debounce watcher events; collapse to a single refresh.
+  🟢 13.3 Virtualize Global View rows if needed for large datasets.
 
-🔴 14. Migration & Backward Compatibility
-  🔴 14.1 Claude remains first‑class; Codex optional.
-  🔴 14.2 Soft‑migrate current direct façade to Aggregator IPC without breaking UI.
-  🔴 14.3 Remove legacy DI paths after Aggregator is proven.
+🟢 14. Migration & Backward Compatibility
+  🟢 14.1 Claude remains first‑class; Codex optional.
+  🟢 14.2 Soft‑migrate current direct façade to Aggregator IPC without breaking UI.
+  🟢 14.3 Remove legacy DI paths after Aggregator is proven.
 
-🔴 15. Milestones & Acceptance
-  🔴 15.1 Phase 0–1 scaffolding compiles; ClaudeAdapter returns identical data vs legacy.
-  🔴 15.2 Aggregator merges Claude + synthetic Codex fixtures; UI shows provider badges.
-  🔴 15.3 CodexAdapter reads real ~/.codex; watchers emit updates; diagnostics report per‑provider.
-  🔴 15.4 Docs + hooks for Codex published; feature flag to enable Codex by default.
+🟢 15. Milestones & Acceptance
+  🟢 15.1 Phase 0–1 scaffolding compiles; ClaudeAdapter returns identical data vs legacy.
+  🟢 15.2 Aggregator merges Claude + synthetic Codex fixtures; UI shows provider badges.
+  🟢 15.3 CodexAdapter reads real ~/.codex; watchers emit updates; diagnostics report per‑provider.
+  🟢 15.4 Docs + hooks for Codex published; feature flag to enable Codex by default.
