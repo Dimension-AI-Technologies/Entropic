@@ -9,6 +9,12 @@ type Project = {
   mostRecentTodoDate?: Date;
 };
 
+// Global provider allow-list controlled by title bar toggles
+const providerAllow: Record<string, boolean> = { claude: true, codex: true, gemini: true };
+export function setProviderAllow(next: Partial<Record<string, boolean>>) {
+  Object.assign(providerAllow, next || {});
+}
+
 class SimpleProjectsViewModel {
   private projects: Project[] = [];
   private listeners = new Set<() => void>();
@@ -34,8 +40,10 @@ class SimpleProjectsViewModel {
       const res = await (window as any).electronAPI?.getProjects?.();
       if (res && typeof res === 'object' && 'success' in res) {
         if (res.success && Array.isArray(res.value)) {
-          // Map domain -> legacy UI shape expected by MVVM/Views
-          this.projects = res.value.map((p: any) => ({
+          // Map domain -> legacy UI shape expected by MVVM/Views, apply provider filter
+          this.projects = (res.value as any[])
+            .filter((p: any) => providerAllow[String(p.provider || '').toLowerCase()] !== false)
+            .map((p: any) => ({
             id: p.flattenedDir || (p.projectPath || '').replace(/[\\/:]/g, '-'),
             path: p.projectPath,
             flattenedDir: p.flattenedDir || (p.projectPath || '').replace(/[\\/:]/g, '-'),
@@ -43,7 +51,9 @@ class SimpleProjectsViewModel {
             lastModified: p.mostRecentTodoDate ? new Date(p.mostRecentTodoDate) : new Date(0),
             provider: p.provider,
             // Keep sessions light and MVVM-compatible
-            sessions: (p.sessions||[]).map((s:any)=> ({
+            sessions: (p.sessions||[])
+              .filter((s:any)=> providerAllow[String((s.provider||p.provider||'').toLowerCase())] !== false)
+              .map((s:any)=> ({
               id: s.sessionId,
               todos: Array.isArray(s.todos) ? s.todos : [],
               lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(0),
@@ -62,7 +72,11 @@ class SimpleProjectsViewModel {
         const p = await (window as any).electronAPI?.getTodos?.(); 
         this.projects = Array.isArray(p)?p:[];
       }
-    } catch { this.projects = []; }
+    } catch (e) {
+      this.projects = [];
+      const msg = e instanceof Error ? e.message : String(e);
+      (window as any).__addToast?.(`Error refreshing projects: ${msg}`);
+    }
     this.refreshing = false;
     this.lastRefresh = Date.now();
     this.emit();
@@ -119,15 +133,23 @@ class SimpleTodosViewModel {
         projects = await (window as any).electronAPI?.getTodos?.();
       }
       const sess: Session[] = [];
-      (projects||[]).forEach((p: any) => (p.sessions||[]).forEach((s: any)=> sess.push({ 
-        ...s, 
-        id: s.sessionId || s.id,
-        lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(s.lastModified||0),
-        projectPath: p.projectPath || p.path 
-      })));
+      (projects||[]).forEach((p: any) => (p.sessions||[]).forEach((s: any)=> {
+        const prov = String(s.provider || p.provider || '').toLowerCase();
+        if (providerAllow[prov] === false) return;
+        sess.push({
+          ...s,
+          id: s.sessionId || s.id,
+          lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(s.lastModified||0),
+          projectPath: p.projectPath || p.path
+        });
+      }));
       // normalize dates
       this.sessions = sess.map(s=> ({...s, lastModified: s.lastModified instanceof Date ? s.lastModified : new Date(s.lastModified)}));
-    } catch { this.sessions = []; }
+    } catch (e) {
+      this.sessions = [];
+      const msg = e instanceof Error ? e.message : String(e);
+      (window as any).__addToast?.(`Error refreshing sessions: ${msg}`);
+    }
     this.refreshing = false;
     this.lastRefresh = Date.now();
     this.emit();

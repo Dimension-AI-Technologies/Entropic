@@ -2812,6 +2812,48 @@ body {
   min-width: 60px;
 }
 
+/* Provider icon buttons (Claude/OpenAI/Gemini) */
+.provider-icon-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.provider-icon-btn {
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  background: transparent;
+  border: 1px solid #35373b;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease-in-out;
+}
+
+.provider-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #484a4f;
+}
+
+.provider-icon-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.provider-icon-btn.active:hover {
+  background: #0e5490;
+  border-color: #0e5490;
+}
+
+.provider-icon-img {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+}
+
 .title-bar-left .refresh-btn {
   background: none;
   border: none;

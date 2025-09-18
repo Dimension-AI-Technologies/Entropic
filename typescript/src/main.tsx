@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 // import AppMinimal from './AppMinimal';
 // import TestApp from './TestApp';
 import './index.css';
@@ -13,7 +14,11 @@ if (rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   console.log('[MAIN] Created React root, rendering App...');
   try {
-    root.render(<App />);
+    root.render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    );
     console.log('[MAIN] Render invoked successfully');
   } catch (error) {
     console.error('[MAIN] ERROR during render:', error);

@@ -17,6 +17,18 @@ function App() {
   
   // Simple boolean loading state - no complex objects
   const [loading, setLoading] = useState(true);
+  const [providers, setProviders] = useState<{ claude: boolean; codex: boolean; gemini: boolean }>({ claude: false, codex: false, gemini: false });
+  const [bootSteps, setBootSteps] = useState<string[]>(['Initializing application...']);
+  const [providerFilter, setProviderFilter] = useState<{ claude: boolean; codex: boolean; gemini: boolean }>(() => {
+    try {
+      const raw = localStorage.getItem('ui.providerFilter');
+      if (raw) {
+        const p = JSON.parse(raw);
+        return { claude: p.claude !== false, codex: p.codex !== false, gemini: p.gemini !== false };
+      }
+    } catch {}
+    return { claude: true, codex: true, gemini: true };
+  });
   
   const [viewMode, setViewMode] = useState<'project' | 'global'>('project');
   const [spacingMode, setSpacingMode] = useState<'wide' | 'normal' | 'compact'>(() => {
@@ -55,22 +67,37 @@ function App() {
     return <div style={{ color: 'white', padding: '20px' }}>Error initializing app: {String(initError)}</div>;
   }
 
-  // Simple loading timer - no complex state management
+  // Boot: detect providers then continue to app load
   useEffect(() => {
-    dlog('[App] Setting up initialization timer...');
-    
-    const timer = setTimeout(() => {
-      dlog('[App] Timer fired - setting loading to false');
-      setLoading(false);
-      dlog('[App] Loading state updated to false');
-    }, 1500);
-    
-    // Cleanup timer on unmount
-    return () => {
-      console.error('[App] Cleaning up timer');
-      clearTimeout(timer);
-    };
-  }, []); // Only run once on mount
+    let cancelled = false;
+    (async () => {
+      try {
+        setBootSteps(['Scanning coding agents...']);
+        const pres = await (window as any).electronAPI?.getProviderPresence?.();
+        if (!cancelled && pres) {
+          setProviders({ claude: !!pres.claude, codex: !!pres.codex, gemini: !!pres.gemini });
+          const found: string[] = [];
+          if (pres.claude) found.push('Claude');
+          if (pres.codex) found.push('Codex');
+          if (pres.gemini) found.push('Gemini');
+          setBootSteps([
+            'Scanning coding agents...',
+            `Found: ${found.length ? found.join(', ') : 'None'}`,
+            'Loading projects...'
+          ]);
+        }
+      } catch {}
+      // small delay for splash; proceed
+      if (!cancelled) setTimeout(() => setLoading(false), 900);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Apply provider filter to DI and persist
+  useEffect(() => {
+    try { localStorage.setItem('ui.providerFilter', JSON.stringify(providerFilter)); } catch {}
+    try { const { setProviderAllow } = require('./services/DIContainer'); setProviderAllow(providerFilter); } catch {}
+  }, [providerFilter]);
   
   // Subscribe to VM changes for status bar counts
   useEffect(() => {
@@ -128,7 +155,7 @@ function App() {
     const off = api.onScreenshotTaken((_e: any, data: any) => {
       const p = data?.path;
       if (p) (window as any).__addToast?.(`Screenshot saved. Path copied: ${p}`);
-      else (window as any).__addToast?.('Screenshot failed');
+      else (window as any).__addToast?.(`Screenshot failed: ${data?.error || 'Unknown reason'}`);
     });
     return () => { try { off?.(); } catch {} };
   }, []);
@@ -152,15 +179,28 @@ function App() {
       (window as any).__addToast?.('Reloading...');
 
       if (projectsViewModel && typeof projectsViewModel.refresh === 'function') {
-        await projectsViewModel.refresh();
+        try {
+          await projectsViewModel.refresh();
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          (window as any).__addToast?.(`Project refresh failed: ${msg}`);
+          console.error('Project refresh failed:', e);
+        }
       }
       if (todosViewModel && typeof todosViewModel.refresh === 'function') {
-        await todosViewModel.refresh();
+        try {
+          await todosViewModel.refresh();
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          (window as any).__addToast?.(`Session refresh failed: ${msg}`);
+          console.error('Session refresh failed:', e);
+        }
       }
       (window as any).__addToast?.('Refresh complete');
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
       console.error('[App] Error during refresh:', error);
-      (window as any).__addToast?.('Refresh failed');
+      (window as any).__addToast?.(`Refresh failed: ${msg}`);
     } finally {
       setReloading(false);
     }
@@ -174,10 +214,7 @@ function App() {
   if (loading) {
     dlog('[App] Rendering SplashScreen, loading:', loading);
     return (
-      <SplashScreen 
-        loadingSteps={['Initializing application...']}
-        isComplete={false}
-      />
+      <SplashScreen loadingSteps={bootSteps} isComplete={false} providers={providers} />
     );
   }
   
@@ -209,6 +246,8 @@ function App() {
           selectedProjectName={viewMode === 'project' ? getSelectedProjectName() : undefined}
           todoCount={getTotalActiveTodos()}
           projectCount={0}
+          providerFilter={providerFilter}
+          onProviderFilterChange={setProviderFilter}
         />
         
         {/* Content area - either project view or global view */}

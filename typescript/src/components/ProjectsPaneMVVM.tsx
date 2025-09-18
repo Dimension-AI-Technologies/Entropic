@@ -180,9 +180,19 @@ export function ProjectsPaneMVVM({
         <PaneHeader className="sidebar-header">
           <h2>Projects (Error)</h2>
         </PaneHeader>
-        <div className="error-message" style={{ padding: '20px', color: 'red' }}>
-          Error loading projects: {error}
-          <button onClick={handleRefresh} style={{ display: 'block', marginTop: '10px' }}>
+        <div className="error-message" style={{ padding: '20px', color: '#ff6b6b', background: '#2a2d31', borderRadius: '4px', margin: '10px' }}>
+          <h3 style={{ marginTop: 0 }}>Error Loading Projects</h3>
+          <p>{error}</p>
+          <button onClick={handleRefresh} style={{ 
+            display: 'block', 
+            marginTop: '10px',
+            padding: '8px 12px',
+            background: '#4f545c',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}>
             Retry
           </button>
         </div>
@@ -283,8 +293,11 @@ export function ProjectsPaneMVVM({
           );
         })}
         {sortedProjects.length === 0 && !isLoading && (
-          <div style={{ padding: '20px', textAlign: 'center', color: 'gray' }}>
-            No projects found
+          <div style={{ padding: '20px', textAlign: 'center', color: 'gray', fontSize: '13px' }}>
+            <p>No projects found.</p>
+            <p style={{ marginTop: '8px', fontSize: '11px', color: '#888' }}>
+              This panel will automatically populate with projects when you use Claude Code.
+            </p>
           </div>
         )}
       </div>

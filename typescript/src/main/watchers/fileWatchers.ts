@@ -29,7 +29,7 @@ export function setupFileWatching(
   if (fsSync.existsSync(projectsDir)) {
     console.log('[FileWatch] Setting up file watching for:', projectsDir);
     const watcher = watch(projectsDir, { recursive: true }, (eventType, filename) => {
-      if (filename && filename.includes('.session_') && filename.endsWith('.json')) {
+      if (filename && (filename.endsWith('.jsonl') || (filename.includes('.session_') && filename.endsWith('.json')))) {
         console.log(`[FileWatch] Detected ${eventType} on ${filename}`);
         scheduleChange({
           eventType,
@@ -59,11 +59,11 @@ export function setupFileWatching(
   if (fsSync.existsSync(logsDir)) {
     console.log('[FileWatch] Setting up file watching for current_todos.json');
     const watcher = watch(logsDir, (eventType, filename) => {
-      if (filename === 'current_todos.json') {
+      if (filename === 'current_todos.json' || (filename && filename.endsWith('.jsonl'))) {
         console.log(`[FileWatch] Detected ${eventType} on current_todos.json`);
         scheduleChange({
           eventType,
-          filename: 'current_todos.json',
+          filename: filename || 'current_todos.json',
           timestamp: new Date().toISOString(),
         });
       }

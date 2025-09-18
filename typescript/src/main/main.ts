@@ -22,14 +22,16 @@ import { registerTodoIpc } from './ipc/todos.js';
 import { registerFileIpc } from './ipc/files.js';
 import { registerChatIpc } from './ipc/chat.js';
 import { registerMaintenanceIpc } from './ipc/maintenance.js';
+import { registerProvidersIpc } from './ipc/providers.js';
 import { registerDiagnosticsIpc } from './ipc/diagnostics.js';
 import { setupSingleInstance } from './lifecycle/singleInstance.js';
 import { wireAppEvents } from './lifecycle/appEvents.js';
 import { Aggregator } from './core/aggregator.js';
 import { ClaudeAdapter } from './adapters/claudeAdapter.js';
 import { CodexAdapter } from './adapters/codexAdapter.js';
+import { GeminiAdapter } from './adapters/geminiAdapter.js';
 import type { EventPort, ProviderPort } from './core/ports.js';
-import { loadPrefs, getEnabledProviders, getRepairThreshold } from './utils/prefs.js';
+import { getRepairThreshold } from './utils/prefs.js';
 import { loadTodosData } from './loaders/projects.js';
 
 let mainWindow: BrowserWindowType | null = null;
@@ -44,6 +46,9 @@ const codexDir = path.join(os.homedir(), '.codex');
 const codexTodosDir = path.join(codexDir, 'todos');
 const codexProjectsDir = path.join(codexDir, 'projects');
 const codexLogsDir = path.join(codexDir, 'logs');
+// Gemini provider dirs (sessions-based)
+const geminiDir = path.join(os.homedir(), '.gemini');
+const geminiSessionsDir = path.join(geminiDir, 'sessions');
 
 // Project loading handled by src/main/loaders/projects.ts and IPC module
 
@@ -115,7 +120,27 @@ async function createWindow() {
 
   // Verbose load tracing
   mainWindow!.webContents.on('did-start-loading', () => console.log('[MAIN] Renderer did-start-loading'));
-  mainWindow!.webContents.on('did-finish-load', () => console.log('[MAIN] Renderer did-finish-load URL=', mainWindow?.webContents.getURL()));
+  mainWindow!.webContents.on('did-finish-load', async () => {
+    console.log('[MAIN] Renderer did-finish-load URL=', mainWindow?.webContents.getURL());
+    try {
+      // Dev/testing helper: auto-screenshot if enabled
+      if (process.env.ENTROPIC_AUTOSNAP === '1' && mainWindow) {
+        console.log('[MAIN] ENTROPIC_AUTOSNAP=1 detected; taking screenshot in 1s');
+        setTimeout(async () => {
+          try {
+            const result = await takeScreenshot(mainWindow!);
+            if ((result as any)?.success) {
+              console.log('[MAIN] Auto-screenshot saved to', (result as any).value);
+            } else {
+              console.warn('[MAIN] Auto-screenshot failed', (result as any)?.error || result);
+            }
+          } catch (e) {
+            console.warn('[MAIN] Auto-screenshot exception', e);
+          }
+        }, 1000);
+      }
+    } catch {}
+  });
   mainWindow!.webContents.on('did-fail-load', (_e, errorCode, errorDescription, validatedURL) => {
     console.error('[MAIN] Renderer did-fail-load', { errorCode, errorDescription, validatedURL });
   });
@@ -135,7 +160,7 @@ async function createWindow() {
         try { clipboard.writeText(result.value); } catch {}
         try { mainWindow.webContents.send('screenshot-taken', { path: result.value }); } catch {}
       } else {
-        try { mainWindow.webContents.send('screenshot-taken', { path: '' }); } catch {}
+        try { mainWindow.webContents.send('screenshot-taken', { path: '', error: result.error ? String(result.error) : 'Unknown error' }); } catch {}
       }
     },
     getMainWindow: () => mainWindow,
@@ -164,15 +189,15 @@ app.whenReady().then(() => {
     }
   };
   // Instantiate providers and aggregator
-  const prefs = loadPrefs();
-  const enabled = getEnabledProviders(prefs);
+  // Auto-detect providers — no enabling config; respond to what exists
   const providers: ProviderPort[] = [];
-  if (enabled.claude) {
-    providers.push(new ClaudeAdapter({ projectsDir, logsDir, todosDir }));
-  }
+  providers.push(new ClaudeAdapter({ projectsDir, logsDir, todosDir }));
   try {
-    if (enabled.codex && fsSync.existsSync(codexDir)) {
+    if (fsSync.existsSync(codexDir)) {
       providers.push(new CodexAdapter({ projectsDir: codexProjectsDir, logsDir: codexLogsDir, todosDir: codexTodosDir }));
+    }
+    if (fsSync.existsSync(geminiDir)) {
+      providers.push(new GeminiAdapter({ sessionsDir: geminiSessionsDir }));
     }
   } catch {}
   const aggregator = new Aggregator(providers, eventPort);
@@ -182,6 +207,7 @@ app.whenReady().then(() => {
   registerFileIpc(ipcMain);
   registerChatIpc(ipcMain);
   registerMaintenanceIpc(ipcMain, { projectsDir, todosDir });
+  registerProvidersIpc(ipcMain);
   registerDiagnosticsIpc(ipcMain, providers);
 
   // Screenshot handler (used by renderer via preload)
@@ -193,10 +219,31 @@ app.whenReady().then(() => {
       try { mainWindow.webContents.send('screenshot-taken', { path: result.value }); } catch {}
       return Ok({ path: result.value });
     }
+    try { mainWindow.webContents.send('screenshot-taken', { path: '', error: result.error ? String(result.error) : 'Unknown error' }); } catch {}
     return Err(result.error ? String(result.error) : 'Unknown error');
   });
   
   createWindow();
+
+  // Optional forced autoscreenshot a couple seconds after window creation
+  try {
+    if (process.env.ENTROPIC_AUTOSNAP_FORCE === '1') {
+      console.log('[MAIN] ENTROPIC_AUTOSNAP_FORCE=1 detected; forcing screenshot in 2s');
+      setTimeout(async () => {
+        try {
+          if (!mainWindow) return;
+          const result = await takeScreenshot(mainWindow);
+          if ((result as any)?.success) {
+            console.log('[MAIN] Forced auto-screenshot saved to', (result as any).value);
+          } else {
+            console.warn('[MAIN] Forced auto-screenshot failed', (result as any)?.error || result);
+          }
+        } catch (e) {
+          console.warn('[MAIN] Forced auto-screenshot exception', e);
+        }
+      }, 2000);
+    }
+  } catch {}
 
   // Dev-only consistency check: ClaudeAdapter vs legacy loader
   (async () => {
@@ -238,6 +285,12 @@ app.whenReady().then(() => {
       if (fsSync.existsSync(codexDir)) {
         fileWatchers.push(
           ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir }, 300)
+        );
+      }
+      if (fsSync.existsSync(geminiDir)) {
+        // Reuse watcher infra; we only care about .jsonl changes, so point all three to sessions dir
+        fileWatchers.push(
+          ...setupFileWatchingExt(mainWindow, { projectsDir: geminiSessionsDir, todosDir: geminiSessionsDir, logsDir: geminiSessionsDir }, 300)
         );
       }
     } catch {}
@@ -296,6 +349,11 @@ app.whenReady().then(() => {
           if (fsSync.existsSync(codexDir)) {
             fileWatchers.push(
               ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir }, 300)
+            );
+          }
+          if (fsSync.existsSync(geminiDir)) {
+            fileWatchers.push(
+              ...setupFileWatchingExt(mainWindow, { projectsDir: geminiSessionsDir, todosDir: geminiSessionsDir, logsDir: geminiSessionsDir }, 300)
             );
           }
         } catch {}

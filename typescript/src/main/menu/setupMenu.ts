@@ -261,36 +261,6 @@ export function setupMenu(options: {
             }
           }
         },
-        { type: 'separator' as const },
-        {
-          label: 'Providers',
-          submenu: [
-            {
-              label: 'Enable Claude', type: 'checkbox', checked: true,
-              click: async (item) => {
-                const { loadPrefs, savePrefs } = await import('../utils/prefs.js');
-                const p = loadPrefs();
-                const next = savePrefs(cur => ({ ...(cur||{}), enabledProviders: { ...(p.enabledProviders||{}), claude: !!item.checked } }));
-                const { dialog, app } = await import('electron');
-                const win = getMainWindow ? getMainWindow() : null;
-                const res = await dialog.showMessageBox(win!, { type: 'question', buttons: ['Relaunch Now','Later'], defaultId: 0, cancelId: 1, message: 'Apply Provider Change', detail: 'Relaunch to apply provider toggles.' });
-                if (res.response === 0) { try { app.relaunch(); app.exit(0); } catch {} }
-              }
-            },
-            {
-              label: 'Enable Codex', type: 'checkbox', checked: true,
-              click: async (item) => {
-                const { loadPrefs, savePrefs } = await import('../utils/prefs.js');
-                const p = loadPrefs();
-                const next = savePrefs(cur => ({ ...(cur||{}), enabledProviders: { ...(p.enabledProviders||{}), codex: !!item.checked } }));
-                const { dialog, app } = await import('electron');
-                const win = getMainWindow ? getMainWindow() : null;
-                const res = await dialog.showMessageBox(win!, { type: 'question', buttons: ['Relaunch Now','Later'], defaultId: 0, cancelId: 1, message: 'Apply Provider Change', detail: 'Relaunch to apply provider toggles.' });
-                if (res.response === 0) { try { app.relaunch(); app.exit(0); } catch {} }
-              }
-            },
-          ] as Electron.MenuItemConstructorOptions[],
-        },
         {
           label: 'Repair Settings',
           submenu: [

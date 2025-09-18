@@ -12,6 +12,7 @@
     "build:main": "tsc -p tsconfig.main.json",
     "build:preload": "tsc -p tsconfig.preload.json",
     "build:renderer": "node scripts/vite-build.mjs",
+    "verify:screenshot": "node scripts/launch-autosnap.mjs",
     "start": "NODE_ENV=production electron .",
     "dist": "npm run build && electron-builder",
     "dist:portable": "npm run build && electron-builder --win portable",

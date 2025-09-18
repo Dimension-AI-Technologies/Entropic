@@ -4,38 +4,25 @@ import { Ok, Err, type AsyncResult } from '../../utils/Result.js';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
 
-type LoaderProject = {
-  path: string;
-  sessions: Array<{ id: string; todos: Array<{ content: string; status: string; id?: string; created?: Date; activeForm?: string }>; lastModified: Date; filePath?: string }>;
-  mostRecentTodoDate?: Date;
-  flattenedDir?: string;
-  pathExists?: boolean;
-  startDate?: Date;
-  totalTodos?: number;
-  activeTodos?: number;
-};
-
-export class CodexAdapter implements ProviderPort {
-  readonly id = 'codex';
+export class GeminiAdapter implements ProviderPort {
+  readonly id = 'gemini';
   private _cache?: { sig: string; value: Project[] };
-  constructor(private options: { projectsDir: string; logsDir: string; todosDir?: string }) {}
+  constructor(private options?: { sessionsDir?: string }) {}
 
   async fetchProjects(): AsyncResult<Project[]> {
     try {
-      // Read from ~/.codex/sessions/**/rollout-*.jsonl
-      const sessionsRoot = path.join(os.homedir(), '.codex', 'sessions');
-      const sig = await signatureForCodexSessions(sessionsRoot);
+      const sessionsRoot = this.options?.sessionsDir || path.join(os.homedir(), '.gemini', 'sessions');
+      const sig = await signatureForSessions(sessionsRoot);
       if (this._cache && this._cache.sig === sig) return Ok(this._cache.value);
       const files = await listJsonlFiles(sessionsRoot);
       const byProject = new Map<string, { projectPath: string; sessions: Session[]; mostRecent?: number }>();
       for (const f of files) {
         try {
-          const parsed = await parseCodexSessionJsonl(f);
+          const parsed = await parseSessionJsonl(f);
           if (!parsed) continue;
-          const { sessionId, updatedAt, repoSlug, todos } = parsed;
-          const projectPath = repoSlug ? `/codex/${repoSlug}` : '/codex/Unknown Project';
+          const { sessionId, updatedAt, slug, todos } = parsed;
+          const projectPath = slug ? `/gemini/${slug}` : '/gemini/Unknown Project';
           const s: Session = {
             provider: this.id,
             sessionId,
@@ -67,40 +54,31 @@ export class CodexAdapter implements ProviderPort {
       }));
       this._cache = { sig, value: projects };
       return Ok(projects);
-    } catch (e: any) {
-      return Err(e?.message || 'codex fetch failed');
-    }
+    } catch (e: any) { return Err(e?.message || 'gemini fetch failed'); }
   }
 
-  watchChanges(_onChange: () => void): () => void {
-    return () => void 0;
-  }
+  watchChanges(_onChange: () => void): () => void { return () => void 0; }
 
   async collectDiagnostics(): AsyncResult<{ unknownCount: number; details: string }> {
     try {
-      const sessionsRoot = path.join(os.homedir(), '.codex', 'sessions');
+      const sessionsRoot = this.options?.sessionsDir || path.join(os.homedir(), '.gemini', 'sessions');
       const files = await listJsonlFiles(sessionsRoot);
       let total = 0; let unknown = 0;
       for (const f of files) {
-        const p = await parseCodexSessionJsonl(f).catch(()=>null);
+        const p = await parseSessionJsonl(f).catch(()=>null);
         if (!p) continue; total++;
-        if (!p.repoSlug) unknown++;
+        if (!p.slug) unknown++;
       }
-      const text = `Codex sessions scanned: ${total}\nSessions without repository_url: ${unknown}`;
+      const text = `Gemini sessions scanned: ${total}\nSessions without project slug: ${unknown}`;
       return Ok({ unknownCount: unknown, details: text });
     } catch (e: any) { return Err(e?.message || 'diagnostics failed'); }
   }
 
   async repairMetadata(_dryRun: boolean): AsyncResult<{ planned: number; written: number; unknownCount: number }> {
-    // Placeholder: no write-side repair yet for Codex; return diagnostics summary
     const d = await this.collectDiagnostics();
     if (!d.success) return Err(d.error || 'repair failed');
     return Ok({ planned: 0, written: 0, unknownCount: d.value.unknownCount });
   }
-}
-
-function numberSafe(v?: number): number {
-  return typeof v === 'number' && isFinite(v) ? v : 0;
 }
 
 async function listJsonlFiles(root: string): Promise<string[]> {
@@ -120,10 +98,9 @@ async function listJsonlFiles(root: string): Promise<string[]> {
   return out;
 }
 
-async function signatureForCodexSessions(root: string): Promise<string> {
+async function signatureForSessions(root: string): Promise<string> {
   try {
-    let count = 0;
-    let mtime = 0;
+    let count = 0; let mtime = 0;
     async function walk(dir: string, depth: number) {
       if (depth > 6) return;
       let entries: string[] = [];
@@ -140,34 +117,36 @@ async function signatureForCodexSessions(root: string): Promise<string> {
   } catch { return 'c:0|m:0'; }
 }
 
-async function parseCodexSessionJsonl(file: string): Promise<{ sessionId: string; updatedAt?: number; repoSlug?: string; todos: Todo[] } | null> {
+async function parseSessionJsonl(file: string): Promise<{ sessionId: string; updatedAt?: number; slug?: string; todos: Todo[] } | null> {
   try {
     const raw = await fs.readFile(file, 'utf-8');
     const lines = raw.split('\n').filter(Boolean);
     let sessionId = '';
     let updatedAt: number | undefined = undefined;
-    let repoSlug: string | undefined = undefined;
+    let slug: string | undefined = undefined;
     const todos: Todo[] = [];
-    // find first line for id/repo
+    // First 10 lines for id/slug if present
     for (const line of lines.slice(0, 10)) {
       try {
         const j = JSON.parse(line);
         if (!sessionId && (j.id || j.session_id)) sessionId = String(j.id || j.session_id);
-        if (j.git && typeof j.git.repository_url === 'string') {
-          const url = j.git.repository_url as string;
-          const slug = url.split('/').pop() || url;
-          repoSlug = slug.replace(/\.git$/i, '');
+        // Try common Gemini markers (heuristic): project, repo, workspace
+        const c = JSON.stringify(j).toLowerCase();
+        const m = c.match(/repo(?:sitory)?_url\"\s*:\s*\"([^\"]+)/) || c.match(/workspace\"\s*:\s*\"([^\"]+)/) || c.match(/project\"\s*:\s*\"([^\"]+)/);
+        if (m && m[1]) {
+          const tail = m[1].split('/').pop() || m[1];
+          slug = tail.replace(/\.git$/i, '');
         }
       } catch {}
     }
-    // parse all update_plan occurrences; keep the last one as current todos
+    // parse latest update_plan
     let lastPlan: Array<{ status: string; step: string }>|null = null;
     for (const line of lines) {
       try {
         const j = JSON.parse(line);
         const ts = j.timestamp ? Date.parse(j.timestamp) : undefined;
         if (ts && (!updatedAt || ts > updatedAt)) updatedAt = ts;
-        if (j.type === 'function_call' && j.name === 'update_plan' && j.arguments) {
+        if (j.type === 'function_call' && (j.name === 'update_plan' || j.name === 'updatePlan') && j.arguments) {
           let args: any = j.arguments;
           if (typeof args === 'string') { try { args = JSON.parse(args); } catch {} }
           if (args && Array.isArray(args.plan)) {
@@ -182,12 +161,11 @@ async function parseCodexSessionJsonl(file: string): Promise<{ sessionId: string
       }
     }
     if (!sessionId) {
-      // Extract from filename (UUID at end)
       const base = path.basename(file).replace(/\.jsonl$/,'');
       const maybeId = base.split('-').pop();
       if (maybeId) sessionId = maybeId;
     }
-    return { sessionId, updatedAt, repoSlug, todos };
+    return { sessionId, updatedAt, slug, todos };
   } catch {
     return null;
   }
@@ -199,3 +177,4 @@ function normalizeStatus(s: string): 'pending'|'in_progress'|'completed' {
   if (v.startsWith('comp')) return 'completed';
   return 'pending';
 }
+

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useDismissableMenu } from './hooks/useDismissableMenu';
 import ClaudeLogo from '../../assets/ClaudeLogo.png';
+import OpenAILogo from '../../assets/OpenAI_Logo.svg';
+import GeminiLogo from '../../assets/Google_Gemini_logo.svg';
 
 type ViewMode = 'project' | 'global';
 type SpacingMode = 'wide' | 'normal' | 'compact';
@@ -15,6 +17,8 @@ interface UnifiedTitleBarProps {
   selectedProjectName?: string;
   todoCount?: number;
   projectCount?: number;
+  providerFilter?: { claude: boolean; codex: boolean; gemini: boolean };
+  onProviderFilterChange?: (next: { claude: boolean; codex: boolean; gemini: boolean }) => void;
 }
 
 export function UnifiedTitleBar({
@@ -25,7 +29,9 @@ export function UnifiedTitleBar({
   onRefresh,
   selectedProjectName,
   todoCount,
-  projectCount
+  projectCount,
+  providerFilter,
+  onProviderFilterChange
 }: UnifiedTitleBarProps) {
   console.log('[UnifiedTitleBar] Rendering, viewMode:', viewMode);
 
@@ -130,8 +136,51 @@ export function UnifiedTitleBar({
   return (
     <div className="unified-title-bar">
       <div className="unified-title-bar-content">
-        {/* Left: Refresh and Screenshot buttons */}
+        {/* Left: Provider toggles + Refresh and Screenshot buttons */}
         <div className="title-bar-left">
+          {onProviderFilterChange && (
+            <div className="provider-icon-group" style={{ marginRight: 8 }}>
+              <button
+                className={`provider-icon-btn ${(providerFilter?.claude ?? true) ? 'active' : ''}`}
+                onClick={() => onProviderFilterChange!({
+                  claude: !(providerFilter?.claude ?? true),
+                  codex: providerFilter?.codex ?? true,
+                  gemini: providerFilter?.gemini ?? true,
+                })}
+                title="Show/hide Claude"
+                aria-label="Show or hide Claude"
+                aria-pressed={(providerFilter?.claude ?? true)}
+              >
+                <img src={ClaudeLogo} alt="Claude" className="provider-icon-img" />
+              </button>
+              <button
+                className={`provider-icon-btn ${(providerFilter?.codex ?? true) ? 'active' : ''}`}
+                onClick={() => onProviderFilterChange!({
+                  claude: providerFilter?.claude ?? true,
+                  codex: !(providerFilter?.codex ?? true),
+                  gemini: providerFilter?.gemini ?? true,
+                })}
+                title="Show/hide OpenAI"
+                aria-label="Show or hide OpenAI"
+                aria-pressed={(providerFilter?.codex ?? true)}
+              >
+                <img src={OpenAILogo} alt="OpenAI" className="provider-icon-img" />
+              </button>
+              <button
+                className={`provider-icon-btn ${(providerFilter?.gemini ?? true) ? 'active' : ''}`}
+                onClick={() => onProviderFilterChange!({
+                  claude: providerFilter?.claude ?? true,
+                  codex: providerFilter?.codex ?? true,
+                  gemini: !(providerFilter?.gemini ?? true),
+                })}
+                title="Show/hide Gemini"
+                aria-label="Show or hide Gemini"
+                aria-pressed={(providerFilter?.gemini ?? true)}
+              >
+                <img src={GeminiLogo} alt="Gemini" className="provider-icon-img" />
+              </button>
+            </div>
+          )}
           {onRefresh && (
             <button 
               className="refresh-btn" 
@@ -170,14 +219,7 @@ export function UnifiedTitleBar({
 
         {/* Center: Project View button + Claude logo + Global View button */}
         <div className="title-bar-center">
-          <button
-            type="button"
-            className={`view-toggle-btn ${viewMode === 'project' ? 'active' : ''}`}
-            onClick={() => onViewModeChange('project')}
-            title="View individual project todos"
-          >
-            Project View
-          </button>
+          <button type="button" className={`view-toggle-btn ${viewMode === 'project' ? 'active' : ''}`} onClick={() => onViewModeChange('project')} title="View individual project todos">Project View</button>
           
           <img 
             ref={logoRef}
@@ -190,14 +232,7 @@ export function UnifiedTitleBar({
             }}
           />
           
-          <button
-            type="button"
-            className={`view-toggle-btn ${viewMode === 'global' ? 'active' : ''}`}
-            onClick={() => onViewModeChange('global')}
-            title="View all active todos across projects"
-          >
-            Global View
-          </button>
+          <button type="button" className={`view-toggle-btn ${viewMode === 'global' ? 'active' : ''}`} onClick={() => onViewModeChange('global')} title="View all active todos across projects">Global View</button>
         </div>
 
         {/* Right: Spacing control (cycle + menu) */}

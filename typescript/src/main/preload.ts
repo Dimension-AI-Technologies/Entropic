@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   takeScreenshot: () => ipcRenderer.invoke('take-screenshot'),
   collectDiagnostics: () => ipcRenderer.invoke('collect-diagnostics'),
   repairMetadata: (dryRun: boolean) => ipcRenderer.invoke('repair-metadata', { dryRun }),
+  getProviderPresence: () => ipcRenderer.invoke('get-provider-presence'),
   collectDiagnosticsHex: () => ipcRenderer.invoke('collect-diagnostics-hex'),
   repairMetadataHex: (provider: string | undefined, dryRun: boolean) => ipcRenderer.invoke('repair-metadata-hex', { provider, dryRun }),
   onScreenshotTaken: (callback: (event: any, data: { path: string }) => void) => {

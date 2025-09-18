@@ -1,12 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ClaudeLogo from '../../assets/ClaudeLogo.png';
+import OpenAILogo from '../../assets/OpenAI_Logo.svg';
+import GeminiLogo from '../../assets/Google_Gemini_logo.svg';
+
+type ProviderPresence = { claude: boolean; codex: boolean; gemini: boolean };
 
 interface SplashScreenProps {
   loadingSteps: string[];
   isComplete: boolean;
+  providers?: ProviderPresence;
 }
 
-export const SplashScreen: React.FC<SplashScreenProps> = ({ loadingSteps, isComplete }) => {
+export const SplashScreen: React.FC<SplashScreenProps> = ({ loadingSteps, isComplete, providers }) => {
   const [rotationSpeed, setRotationSpeed] = useState(2); // Initial spin duration in seconds
   const [visibleSteps, setVisibleSteps] = useState<string[]>([]);
   const stepsContainerRef = useRef<HTMLDivElement>(null);
@@ -80,16 +85,30 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ loadingSteps, isComp
   
   return (
     <div className="splash-screen">
-      <div className="splash-logo">
-        <img 
-          src={ClaudeLogo} 
-          alt="Claude" 
+      <div className="splash-logo" style={{ display: 'flex', gap: 24, alignItems: 'center', justifyContent: 'center' }}>
+        {/* Claude */}
+        <img
+          src={ClaudeLogo}
+          alt="Claude"
           className="claude-logo"
           style={{
             animation: `spin ${rotationSpeed}s linear infinite`,
             transform: `scale(${throbScale})`,
-            transition: 'transform 0.1s ease-out'
+            transition: 'transform 0.1s ease-out',
+            filter: providers && providers.claude ? 'none' : 'grayscale(100%) opacity(0.5)'
           }}
+        />
+        {/* Codex */}
+        <img
+          src={OpenAILogo}
+          alt="OpenAI Codex"
+          style={{ width: 120, height: 'auto', filter: providers && providers.codex ? 'none' : 'grayscale(100%) opacity(0.5)' }}
+        />
+        {/* Gemini */}
+        <img
+          src={GeminiLogo}
+          alt="Google Gemini"
+          style={{ width: 120, height: 'auto', filter: providers && providers.gemini ? 'none' : 'grayscale(100%) opacity(0.5)' }}
         />
       </div>
       <div className="splash-text">Loading projects...</div>
