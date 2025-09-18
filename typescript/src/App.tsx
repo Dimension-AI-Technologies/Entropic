@@ -93,11 +93,16 @@ function App() {
     return () => { cancelled = true; };
   }, []);
 
-  // Apply provider filter to DI and persist
+  // Apply provider filter to DI and persist, then trigger refresh so UI updates immediately
   useEffect(() => {
     try { localStorage.setItem('ui.providerFilter', JSON.stringify(providerFilter)); } catch {}
     try { const { setProviderAllow } = require('./services/DIContainer'); setProviderAllow(providerFilter); } catch {}
-  }, [providerFilter]);
+    try {
+      // Refresh underlying view models to re-apply provider filtering
+      projectsViewModel?.refresh?.();
+      todosViewModel?.refresh?.();
+    } catch {}
+  }, [providerFilter, projectsViewModel, todosViewModel]);
   
   // Subscribe to VM changes for status bar counts
   useEffect(() => {
