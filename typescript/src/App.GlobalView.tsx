@@ -17,16 +17,6 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.globalActiveOnly') : null;
     return saved === '1';
   });
-  const [providerFilter, setProviderFilter] = useState<{ claude: boolean; codex: boolean }>(() => {
-    try {
-      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.providerFilter') : null;
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return { claude: parsed.claude !== false, codex: parsed.codex !== false };
-      }
-    } catch {}
-    return { claude: true, codex: true };
-  });
 
   const container = DIContainer.getInstance();
   const projectsViewModel = container.getProjectsViewModel();
@@ -57,9 +47,7 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   useEffect(() => {
     try { localStorage.setItem('ui.globalActiveOnly', activeOnly ? '1' : '0'); } catch {}
   }, [activeOnly]);
-  useEffect(() => {
-    try { localStorage.setItem('ui.providerFilter', JSON.stringify(providerFilter)); } catch {}
-  }, [providerFilter]);
+  // Provider filtering is handled centrally by DIContainer; no local filter here
 
   // Build rows per session across all projects for better coverage
   const allRows = todosViewModel.getSessions().map((s: any) => {
@@ -68,9 +56,6 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
     return { p, s };
   }).sort((a, b) => b.s.lastModified.getTime() - a.s.lastModified.getTime());
   const rows = allRows.filter(({ s }) => {
-    const prov = String(((s as any)?.provider) || 'claude').toLowerCase();
-    const allow = prov === 'codex' ? providerFilter.codex : providerFilter.claude;
-    if (!allow) return false;
     if (!activeOnly) return true;
     const hasActive = (s.todos || []).some((t: any) => t.status !== 'completed');
     return hasActive;

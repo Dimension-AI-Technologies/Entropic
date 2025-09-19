@@ -1,4 +1,5 @@
-export const DEBUG: boolean = !!(import.meta as any)?.env?.DEV;
+// Avoid ESM-only import.meta in tests; rely on NODE_ENV
+export const DEBUG: boolean = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production');
 
 export function dlog(...args: any[]): void {
   if (DEBUG) console.log(...args);
@@ -7,4 +8,3 @@ export function dlog(...args: any[]): void {
 export function dwarn(...args: any[]): void {
   if (DEBUG) console.warn(...args);
 }
-

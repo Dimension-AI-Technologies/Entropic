@@ -114,14 +114,16 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
     };
   }, [projectsViewModel, todosViewModel]);
 
-  // Effect to merge MVVM sessions into legacy project format
+  // Effect to build left pane projects from ViewModel (provider-filtered) with legacy shape
   useEffect(() => {
-    const mergeSessionsIntoProjects = () => {
-      const enhanced = legacyProjects.map(legacyProject => {
-        // Find all sessions for this project path
-        const projectSessions = sessions.filter(s => s.projectPath === legacyProject.path);
-        
-        // Convert MVVM sessions to legacy format
+    const buildProjectsFromVM = () => {
+      const useVM = projects && projects.length > 0;
+      const base = useVM
+        ? projects.map(p => ({ path: p.path, sessions: [] as any[], mostRecentTodoDate: p.lastModified }))
+        : legacyProjects;
+
+      const enhanced = base.map(b => {
+        const projectSessions = sessions.filter(s => s.projectPath === b.path);
         const legacySessions = projectSessions.map(s => ({
           id: s.id,
           todos: s.todos,
@@ -129,28 +131,19 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
           created: s.created,
           filePath: s.filePath
         }));
-        
-        // Use existing sessions if no MVVM sessions found, otherwise merge
-        const finalSessions = legacySessions.length > 0 ? legacySessions : legacyProject.sessions || [];
-        
+        const finalSessions = legacySessions.length > 0 ? legacySessions : (useVM ? [] : (b as any).sessions || []);
         return {
-          ...legacyProject,
+          path: b.path,
           sessions: finalSessions,
-          mostRecentTodoDate: legacyProject.mostRecentTodoDate || 
-            (finalSessions.length > 0 ? 
-              finalSessions.reduce((latest, session) => 
-                session.lastModified > latest ? session.lastModified : latest, 
-                new Date(0)
-              ) : undefined)
+          mostRecentTodoDate: b.mostRecentTodoDate || 
+            (finalSessions.length > 0 ? finalSessions.reduce((latest, session) => session.lastModified > latest ? session.lastModified : latest, new Date(0)) : undefined)
         };
       });
-      
-      console.log('[ProjectView] Enhanced legacy projects:', enhanced.length, 'projects with merged sessions');
+      console.log('[ProjectView] Left pane projects built from', useVM ? 'ViewModel' : 'legacy', 'count=', enhanced.length);
       setEnhancedLegacyProjects(enhanced);
     };
-    
-    mergeSessionsIntoProjects();
-  }, [legacyProjects, sessions]);
+    buildProjectsFromVM();
+  }, [projects, legacyProjects, sessions]);
 
   // Persist empty mode
   useEffect(() => {
