@@ -1,16 +1,7 @@
 import { Aggregator } from '../main/core/aggregator';
 import type { ProviderPort, EventPort } from '../main/core/ports';
 import type { Project, Session } from '../main/core/domain';
-
-type Result<T> = { success: true; value: T } | { success: false; error: string };
-
-function ok<T>(value: T): Result<T> {
-  return { success: true, value };
-}
-
-function err(message: string): Result<never> {
-  return { success: false, error: message };
-}
+import { Ok as ok, Err as err, type Result, type AsyncResult } from '../utils/Result';
 
 function mkSession(provider: string, id: string, updatedAt = Date.now()): Session {
   return {

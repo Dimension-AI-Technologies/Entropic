@@ -6,7 +6,7 @@ import { GlobalView } from './App.GlobalView';
 import { UnifiedTitleBar } from './components/UnifiedTitleBar';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { BoidSystem } from './components/BoidSystem';
-import { DIContainer } from './services/DIContainer';
+import { DIContainer, setProviderAllow } from './services/DIContainer';
 
 
 function App() {
@@ -117,7 +117,7 @@ function App() {
   useEffect(() => {
     console.log('[App] Provider filter changed:', providerFilter);
     try { localStorage.setItem('ui.providerFilter', JSON.stringify(providerFilter)); } catch {}
-    try { const { setProviderAllow } = require('./services/DIContainer'); setProviderAllow(providerFilter); } catch {}
+    setProviderAllow(providerFilter);
     // Refresh underlying view models to re-apply provider filtering
     console.log('[App] Refreshing ViewModels after filter change');
     // Using async IIFE since refresh now returns Result
