@@ -36,25 +36,26 @@ export class TodoManager {
       return ResultUtils.ok([]);
     }
 
-    const parseResult = await ResultUtils.fromPromise(
-      Promise.resolve(JSON.parse(readResult.value))
-    );
-    if (!parseResult.success) {
-      return ResultUtils.fail(`Failed to parse JSON: ${parseResult.error}`, parseResult.details);
+    // Parse with protection against synchronous JSON.parse exceptions
+    let parsed: any;
+    try {
+      parsed = JSON.parse(readResult.value);
+    } catch (e: any) {
+      return ResultUtils.fail(`Failed to parse JSON: ${e?.message || String(e)}`);
     }
     
-    if (!Array.isArray(parseResult.value)) {
+    if (!Array.isArray(parsed)) {
       return ResultUtils.fail('File does not contain a valid todo array');
     }
 
     // Validate each todo
-    for (const todo of parseResult.value) {
+    for (const todo of parsed) {
       if (!this.isValidTodo(todo)) {
         return ResultUtils.fail('Invalid todo structure in file');
       }
     }
 
-    return ResultUtils.ok(parseResult.value);
+    return ResultUtils.ok(parsed);
   }
 
   // Write todos to file

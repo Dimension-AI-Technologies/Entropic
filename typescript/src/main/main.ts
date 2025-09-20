@@ -276,24 +276,22 @@ app.whenReady().then(() => {
   // Set up file watching after window is created (Claude + Codex)
   if (mainWindow) {
     fileWatchers = [];
-    // Claude
-    fileWatchers.push(
-      ...setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir }, 300)
+    const watcherResult = setupFileWatchingExt(
+      mainWindow,
+      {
+        projectsDir,
+        todosDir,
+        logsDir,
+        codexDir: fsSync.existsSync(codexDir) ? codexDir : undefined,
+        geminiDir: fsSync.existsSync(geminiDir) ? geminiDir : undefined,
+      },
+      300
     );
-    // Codex (if present)
-    try {
-      if (fsSync.existsSync(codexDir)) {
-        fileWatchers.push(
-          ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir }, 300)
-        );
-      }
-      if (fsSync.existsSync(geminiDir)) {
-        // Reuse watcher infra; we only care about .jsonl changes, so point all three to sessions dir
-        fileWatchers.push(
-          ...setupFileWatchingExt(mainWindow, { projectsDir: geminiSessionsDir, todosDir: geminiSessionsDir, logsDir: geminiSessionsDir }, 300)
-        );
-      }
-    } catch {}
+    if (watcherResult.success) {
+      fileWatchers.push(...watcherResult.value);
+    } else {
+      console.error('[FileWatch] Failed to set up watchers:', watcherResult.error);
+    }
   }
 
   // One-time repair prompt on startup if unknown sessions exceed threshold
@@ -342,19 +340,28 @@ app.whenReady().then(() => {
     () => {
       if (mainWindow) {
         fileWatchers = [];
-        fileWatchers.push(
-          ...setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir }, 300)
-        );
+        const baseWatchers = setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir }, 300);
+        if (baseWatchers.success) {
+          fileWatchers.push(...baseWatchers.value);
+        } else {
+          console.error('[FileWatch] Failed to setup base watchers:', baseWatchers.error);
+        }
         try {
           if (fsSync.existsSync(codexDir)) {
-            fileWatchers.push(
-              ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir }, 300)
-            );
+            const codexWatchers = setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir }, 300);
+            if (codexWatchers.success) {
+              fileWatchers.push(...codexWatchers.value);
+            } else {
+              console.error('[FileWatch] Failed to setup Codex watchers:', codexWatchers.error);
+            }
           }
           if (fsSync.existsSync(geminiDir)) {
-            fileWatchers.push(
-              ...setupFileWatchingExt(mainWindow, { projectsDir: geminiSessionsDir, todosDir: geminiSessionsDir, logsDir: geminiSessionsDir }, 300)
-            );
+            const geminiWatchers = setupFileWatchingExt(mainWindow, { projectsDir: geminiSessionsDir, todosDir: geminiSessionsDir, logsDir: geminiSessionsDir }, 300);
+            if (geminiWatchers.success) {
+              fileWatchers.push(...geminiWatchers.value);
+            } else {
+              console.error('[FileWatch] Failed to setup Gemini watchers:', geminiWatchers.error);
+            }
           }
         } catch {}
       }

@@ -1,6 +1,7 @@
 import { watch } from 'node:fs';
 import fsSync from 'node:fs';
 import type { BrowserWindow } from 'electron';
+import { Result, Ok, Err } from '../../utils/Result.js';
 
 export type Watcher = fsSync.FSWatcher;
 
@@ -8,23 +9,28 @@ let globalDebounceTimer: NodeJS.Timeout | null = null;
 
 export function setupFileWatching(
   mainWindow: BrowserWindow,
-  options: { projectsDir: string; todosDir: string; logsDir: string },
+  options: {
+    projectsDir: string;
+    todosDir: string;
+    logsDir: string;
+    codexDir?: string;
+    geminiDir?: string;
+  },
   debounceMs: number = 300
-): Watcher[] {
-  const { projectsDir, todosDir, logsDir } = options;
-  const watchers: Watcher[] = [];
-  const scheduleChange = (payload: any) => {
-    // Drop immediate legacy event to avoid high-frequency refresh loops in renderer
-    if (globalDebounceTimer) clearTimeout(globalDebounceTimer);
-    globalDebounceTimer = setTimeout(() => {
-      try {
+): Result<Watcher[]> {
+  try {
+    const { projectsDir, todosDir, logsDir, codexDir, geminiDir } = options;
+    const watchers: Watcher[] = [];
+    const scheduleChange = (payload: any) => {
+      // Drop immediate legacy event to avoid high-frequency refresh loops in renderer
+      if (globalDebounceTimer) clearTimeout(globalDebounceTimer);
+      globalDebounceTimer = setTimeout(() => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           // Provider-agnostic event per Hex plan
           mainWindow.webContents.send('data-changed');
         }
-      } catch {}
-    }, debounceMs);
-  };
+      }, debounceMs);
+    };
 
   if (fsSync.existsSync(projectsDir)) {
     console.log('[FileWatch] Setting up file watching for:', projectsDir);
@@ -71,13 +77,88 @@ export function setupFileWatching(
     watchers.push(watcher);
   }
 
-  return watchers;
+  // Watch Codex CLI directory
+  if (codexDir && fsSync.existsSync(codexDir)) {
+    console.log('[FileWatch] Setting up file watching for Codex:', codexDir);
+    const watcher = watch(codexDir, { recursive: true }, (eventType, filename) => {
+      if (filename && (filename.endsWith('.jsonl') || filename.endsWith('.json'))) {
+        console.log(`[FileWatch] Detected ${eventType} on Codex file: ${filename}`);
+        scheduleChange({
+          eventType,
+          filename,
+          provider: 'codex',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+    watchers.push(watcher);
+  }
+
+  // Watch Gemini CLI directory
+  if (geminiDir && fsSync.existsSync(geminiDir)) {
+    console.log('[FileWatch] Setting up file watching for Gemini:', geminiDir);
+    const watcher = watch(geminiDir, { recursive: true }, (eventType, filename) => {
+      if (filename && (filename.endsWith('.jsonl') || filename.endsWith('.json'))) {
+        console.log(`[FileWatch] Detected ${eventType} on Gemini file: ${filename}`);
+        scheduleChange({
+          eventType,
+          filename,
+          provider: 'gemini',
+          timestamp: new Date().toISOString(),
+        });
+      }
+    });
+    watchers.push(watcher);
+  }
+
+    return Ok(watchers);
+  } catch (error: any) {
+    return Err('Failed to setup file watching', error);
+  }
 }
 
-export function cleanupFileWatchers(watchers: Watcher[]): void {
-  watchers.forEach((w) => {
+// Synchronous version for backward compatibility
+export function setupFileWatchingSync(
+  mainWindow: BrowserWindow,
+  options: {
+    projectsDir: string;
+    todosDir: string;
+    logsDir: string;
+    codexDir?: string;
+    geminiDir?: string;
+  },
+  debounceMs: number = 300
+): Watcher[] {
+  const result = setupFileWatching(mainWindow, options, debounceMs);
+  if (result.success) {
+    return result.value;
+  }
+  console.error('Failed to setup file watching:', result.error);
+  return [];
+}
+
+export function cleanupFileWatchers(watchers: Watcher[]): Result<void> {
+  const errors: string[] = [];
+
+  watchers.forEach((w, index) => {
     try {
       w.close();
-    } catch {}
+    } catch (error: any) {
+      errors.push(`Watcher ${index}: ${error?.message || 'unknown error'}`);
+    }
   });
+
+  if (errors.length > 0) {
+    return Err(`Failed to close some watchers: ${errors.join(', ')}`);
+  }
+
+  return Ok(undefined);
+}
+
+// Synchronous version for backward compatibility
+export function cleanupFileWatchersSync(watchers: Watcher[]): void {
+  const result = cleanupFileWatchers(watchers);
+  if (!result.success) {
+    console.error('Cleanup file watchers warning:', result.error);
+  }
 }

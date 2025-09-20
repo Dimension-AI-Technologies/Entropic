@@ -3,10 +3,11 @@ import { describe, it, expect, beforeEach } from '@jest/globals';
 describe('UI Interaction Tests', () => {
   describe('Tab Click Behaviors', () => {
     it('should handle normal click', () => {
+      let preventDefaultCalled = false;
       const event = {
         ctrlKey: false,
         metaKey: false,
-        preventDefault: jest.fn()
+        preventDefault: () => { preventDefaultCalled = true; }
       };
       
       let selectedTabs = new Set<string>();
@@ -23,10 +24,11 @@ describe('UI Interaction Tests', () => {
     });
 
     it('should handle Ctrl+Click for multi-select', () => {
+      let preventDefaultCalled = false;
       const event = {
         ctrlKey: true,
         metaKey: false,
-        preventDefault: jest.fn()
+        preventDefault: () => { preventDefaultCalled = true; }
       };
       
       let selectedTabs = new Set<string>();
@@ -44,14 +46,15 @@ describe('UI Interaction Tests', () => {
       }
       
       expect(selectedTabs.has('session1')).toBe(true);
-      expect(event.preventDefault).toHaveBeenCalled();
+      expect(preventDefaultCalled).toBe(true);
     });
 
     it('should handle Cmd+Click on Mac', () => {
+      let preventDefaultCalled = false;
       const event = {
         ctrlKey: false,
         metaKey: true, // Mac Cmd key
-        preventDefault: jest.fn()
+        preventDefault: () => { preventDefaultCalled = true; }
       };
       
       let selectedTabs = new Set<string>();
@@ -62,14 +65,15 @@ describe('UI Interaction Tests', () => {
       }
       
       expect(selectedTabs.has('session1')).toBe(true);
-      expect(event.preventDefault).toHaveBeenCalled();
+      expect(preventDefaultCalled).toBe(true);
     });
   });
 
   describe('Right-Click Context Menu', () => {
     it('should show context menu on right-click', () => {
+      let preventDefaultCalled = false;
       const event = {
-        preventDefault: jest.fn(),
+        preventDefault: () => { preventDefaultCalled = true; },
         clientX: 100,
         clientY: 200
       };
@@ -87,7 +91,7 @@ describe('UI Interaction Tests', () => {
       expect(showContextMenu).toBe(true);
       expect(contextMenuPosition).toEqual({ x: 100, y: 200 });
       expect(contextMenuTab).toBe('session1');
-      expect(event.preventDefault).toHaveBeenCalled();
+      expect(preventDefaultCalled).toBe(true);
     });
 
     it('should hide context menu on click away', () => {

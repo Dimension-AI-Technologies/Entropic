@@ -2,45 +2,59 @@ import { Aggregator } from '../main/core/aggregator';
 import type { ProviderPort, EventPort } from '../main/core/ports';
 import type { Project, Session } from '../main/core/domain';
 
+type Result<T> = { success: true; value: T } | { success: false; error: string };
+
+function ok<T>(value: T): Result<T> {
+  return { success: true, value };
+}
+
+function err(message: string): Result<never> {
+  return { success: false, error: message };
+}
+
 function mkSession(provider: string, id: string, updatedAt = Date.now()): Session {
-  return { provider, sessionId: id, todos: [], updatedAt } as any;
+  return {
+    provider,
+    sessionId: id,
+    todos: [],
+    updatedAt,
+  } as Session;
 }
 
 function mkProject(provider: string, path: string, sessions: Session[] = []): Project {
   return {
     provider,
     projectPath: path,
-    startDate: Date.now() - 1000,
-    mostRecentTodoDate: sessions.reduce((m, s) => Math.max(m, s.updatedAt || 0), 0),
+    flattenedDir: path.replace(/[\\/:]/g, '-'),
+    startDate: Date.now() - 1_000,
+    mostRecentTodoDate: sessions.reduce((m, s) => Math.max(m, s.updatedAt ?? 0), 0),
     sessions,
-    stats: { todos: sessions.length, active: sessions.length },
+    stats: { todos: sessions.length, active: sessions.length, completed: 0 },
     pathExists: true,
-  } as any;
+  } as Project;
 }
 
-function ok<T>(value: T) { return { success: true as const, value }; }
-function err(msg: string) { return { success: false as const, error: msg }; }
-
 describe('Aggregator', () => {
-  test('merges projects from multiple providers and dedupes sessions', async () => {
-    const provA: ProviderPort = {
+  test('merges provider results and dedupes sessions per provider/project', async () => {
+    const providerA: ProviderPort = {
       id: 'claude',
       async fetchProjects() {
         return ok([
-          mkProject('claude', '/p1', [mkSession('claude', 's1'), mkSession('claude', 's2')]),
-          mkProject('claude', '/p2', [mkSession('claude', 's3')]),
+          mkProject('claude', '/alpha', [mkSession('claude', 's1'), mkSession('claude', 's2')]),
+          mkProject('claude', '/beta', [mkSession('claude', 's3')]),
         ]);
       },
       watchChanges: () => () => {},
       collectDiagnostics: async () => ok({ unknownCount: 0, details: '' }),
       repairMetadata: async () => ok({ planned: 0, written: 0, unknownCount: 0 }),
     };
-    const provB: ProviderPort = {
+
+    const providerB: ProviderPort = {
       id: 'codex',
       async fetchProjects() {
         return ok([
-          mkProject('codex', '/p1', [mkSession('codex', 's10'), mkSession('codex', 's2') /* collision id across providers ok */]),
-          mkProject('codex', '/p3', [mkSession('codex', 's11')]),
+          mkProject('codex', '/alpha', [mkSession('codex', 's10'), mkSession('codex', 's2')]),
+          mkProject('codex', '/gamma', [mkSession('codex', 's11')]),
         ]);
       },
       watchChanges: () => () => {},
@@ -48,41 +62,52 @@ describe('Aggregator', () => {
       repairMetadata: async () => ok({ planned: 0, written: 0, unknownCount: 0 }),
     };
 
-    let eventFired = false;
-    const events: EventPort = { dataChanged() { eventFired = true; } };
+    let eventTriggered = 0;
+    const events: EventPort = {
+      dataChanged() {
+        eventTriggered += 1;
+      },
+    };
 
-    const aggr = new Aggregator([provA, provB], events);
-    const res = await aggr.getProjects();
-    expect(res.success).toBe(true);
-    if (!res.success) return;
+    const aggregator = new Aggregator([providerA, providerB], events);
+    const result = await aggregator.getProjects();
 
-    const projects = res.value;
-    // Expect distinct entries by (provider, projectPath)
-    const keys = projects.map(p => `${p.provider}::${p.projectPath}`).sort();
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    const projects = result.value;
+    const keys = projects.map((p) => `${p.provider}::${p.projectPath}`).sort();
     expect(keys).toEqual([
-      'claude::/p1', 'claude::/p2', 'codex::/p1', 'codex::/p3'
+      'claude::/alpha',
+      'claude::/beta',
+      'codex::/alpha',
+      'codex::/gamma',
     ]);
 
-    // Sessions deduped per (provider, sessionId) within the same project/provider
-    const p1Codex = projects.find(p => p.provider === 'codex' && p.projectPath === '/p1')!;
-    const ids = new Set(p1Codex.sessions.map(s => `${s.provider}::${s.sessionId}`));
-    expect(ids.size).toBe(p1Codex.sessions.length);
+    const codexAlpha = projects.find((p) => p.provider === 'codex' && p.projectPath === '/alpha');
+    expect(codexAlpha).toBeTruthy();
+    if (!codexAlpha) return;
 
-    // EventPort fired
-    expect(eventFired).toBe(true);
+    const sessionKeys = new Set(codexAlpha.sessions.map((s) => `${s.provider}::${s.sessionId}`));
+    expect(sessionKeys.size).toBe(codexAlpha.sessions.length);
+    expect(eventTriggered).toBe(1);
   });
 
-  test('returns error if all providers fail', async () => {
-    const bad: ProviderPort = {
-      id: 'x',
-      fetchProjects: async () => err('nope'),
+  test('reports error when every provider fails', async () => {
+    const failing: ProviderPort = {
+      id: 'gemini',
+      fetchProjects: async () => err('boom'),
       watchChanges: () => () => {},
-      collectDiagnostics: async () => err('nope'),
-      repairMetadata: async () => err('nope'),
+      collectDiagnostics: async () => err('boom'),
+      repairMetadata: async () => err('boom'),
     };
-    const aggr = new Aggregator([bad]);
-    const res = await aggr.getProjects();
-    expect(res.success).toBe(false);
+
+    const aggregator = new Aggregator([failing]);
+    const result = await aggregator.getProjects();
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+
+    expect(result.error).toBe('boom');
   });
 });
-

@@ -1,15 +1,21 @@
-# Claude Todo Monitor - Electron App
+# Entropic - Multi-Provider Todo Monitor
 
-A beautiful Slack-like Electron app for monitoring Claude Code todo lists across all projects and sessions.
+[![GitHub Clones](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Frepos%2FDoowell2%2FEntropic%2Ftraffic%2Fclones&query=%24.count&label=clones&color=blue)](https://github.com/Doowell2/Entropic)
+[![GitHub Stars](https://img.shields.io/github/stars/Doowell2/Entropic?style=social)](https://github.com/Doowell2/Entropic)
+
+A beautiful Slack-like Electron app for monitoring todo lists across multiple AI coding assistants - Claude Code, OpenAI Codex, and Google Gemini CLI.
 
 ## Features
 
+- **Multi-Provider Support**: Works with Claude Code, OpenAI Codex, and Google Gemini CLI
+- **Provider Filtering**: Toggle visibility for each provider independently
 - **Slack-like UI**: Clean, modern interface with dark theme
 - **Project Sidebar**: All projects with active todos listed on the left
-- **Session Tabs**: Each project shows tabs for different Claude Code sessions
-- **Live Updates**: Auto-refreshes every 5 seconds
+- **Session Tabs**: Each project shows tabs for different AI assistant sessions
+- **Live Updates**: Auto-refreshes every 5 seconds with file watching
 - **Status Indicators**: Visual indicators for completed (✓), active (▶), and pending (○) todos
 - **Sorted Display**: Todos sorted by status - completed first, then active, then pending
+- **Global View**: See all todos across all providers and projects in one place
 
 ## Installation
 
@@ -55,23 +61,35 @@ typescript/
 └── vite.config.ts      # Vite configuration
 ```
 
+## Supported AI Assistants
+
+Entropic monitors todo lists from:
+
+- **Claude Code**: Reads from `~/.claude/` directory
+- **OpenAI Codex**: Reads from `~/.codex/` directory
+- **Google Gemini CLI**: Reads from `~/.gemini/` directory
+
+Each provider can be toggled on/off independently via the title bar controls.
+
 ## How It Works
 
 1. **Main Process** (`main.ts`):
-   - Reads todo files from `~/.claude/todos/`
-   - Reads project mappings from `~/.claude/projects/`
+   - Reads todo files from provider directories (`~/.claude/`, `~/.codex/`, `~/.gemini/`)
+   - Reads project mappings from provider-specific project directories
    - Converts flattened paths back to real paths
    - Provides IPC endpoint for renderer to fetch data
+   - Monitors file system changes for live updates
 
 2. **Preload Script** (`preload.ts`):
    - Safely exposes `getTodos` API to renderer
 
 3. **Renderer Process** (`App.tsx`):
-   - Fetches todo data via IPC
-   - Displays projects in sidebar
+   - Fetches todo data via IPC from all providers
+   - Displays projects in sidebar with provider indicators
    - Shows session tabs for selected project
    - Renders todos with status indicators
-   - Auto-refreshes every 5 seconds
+   - Auto-refreshes on file system changes
+   - Provider filtering via title bar toggles
 
 ## Building for Distribution
 

@@ -14,6 +14,6 @@
     "noEmit": false,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["src/main/**/*"],
+  "include": ["src/main/**/*", "src/utils/**/*"],
   "exclude": ["node_modules", "dist", "src/main/preload.ts"]
 }

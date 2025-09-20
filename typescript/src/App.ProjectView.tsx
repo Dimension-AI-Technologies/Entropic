@@ -8,6 +8,20 @@ import { Session, Todo } from './models/Todo';
 import { ProjectContextMenuController } from './components/menus/ProjectContextMenuController';
 import { useResize } from './components/hooks/useResize';
 import { dlog } from './utils/log';
+import { Result, Ok, Err } from './utils/Result';
+
+// Safe localStorage wrapper
+function getLocalStorageItem(key: string): Result<string | null> {
+  try {
+    if (typeof localStorage === 'undefined') {
+      return Ok(null);
+    }
+    const value = localStorage.getItem(key);
+    return Ok(value);
+  } catch (error: any) {
+    return Err(`Failed to read localStorage key '${key}'`, error);
+  }
+}
 
 
 interface ProjectViewProps {
@@ -30,7 +44,8 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
   const [contextMenu, setContextMenu] = useState<{x: number, y: number, project: MVVMProject} | null>(null);
   const [deletedProjects, setDeletedProjects] = useState<Set<string>>(new Set());
   const [emptyMode, setEmptyMode] = useState<'all' | 'has_sessions' | 'has_todos' | 'active_only'>(() => {
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.emptyMode') as any : null;
+    const savedResult = getLocalStorageItem('ui.emptyMode');
+    const saved = savedResult.success ? savedResult.value : null;
     return saved === 'all' || saved === 'has_sessions' || saved === 'has_todos' || saved === 'active_only' ? saved : 'has_todos';
   });
 
@@ -88,19 +103,19 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
     const updateProjects = () => {
       const vmProjects = projectsViewModel.getProjects();
       setProjects(vmProjects);
-      console.log('[ProjectView] Updated projects from ViewModel:', vmProjects.length);
+      console.log('[ProjectView] Updated projects from ViewModel:', vmProjects.length, 'projects:', vmProjects.map(p => p.provider));
     };
-    
+
     const updateSessions = () => {
       const vmSessions = todosViewModel.getSessions();
       setSessions(vmSessions);
-      console.log('[ProjectView] Updated sessions from ViewModel:', vmSessions.length);
+      console.log('[ProjectView] Updated sessions from ViewModel:', vmSessions.length, 'sessions with providers:', vmSessions.map(s => s.provider));
     };
     
-    // Load legacy data immediately
-    dlog('[ProjectView] ===== LOADING LEGACY DATA =====');
-    loadLegacyData();
-    
+    // Don't load legacy data - use filtered ViewModels only
+    dlog('[ProjectView] ===== USING VIEWMODEL DATA (FILTERED) =====');
+    // loadLegacyData(); // REMOVED - this bypasses provider filtering
+
     updateProjects();
     updateSessions();
     
@@ -117,10 +132,13 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
   // Effect to build left pane projects from ViewModel (provider-filtered) with legacy shape
   useEffect(() => {
     const buildProjectsFromVM = () => {
-      const useVM = projects && projects.length > 0;
-      const base = useVM
-        ? projects.map(p => ({ path: p.path, sessions: [] as any[], mostRecentTodoDate: p.lastModified }))
-        : legacyProjects;
+      // Always use ViewModel data (which is already filtered by provider)
+      // Don't fall back to legacy projects as they bypass filtering
+      const base = projects.map(p => ({
+        path: p.path,
+        sessions: [] as any[],
+        mostRecentTodoDate: p.lastModified
+      }));
 
       const enhanced = base.map(b => {
         const projectSessions = sessions.filter(s => s.projectPath === b.path);
@@ -131,7 +149,7 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
           created: s.created,
           filePath: s.filePath
         }));
-        const finalSessions = legacySessions.length > 0 ? legacySessions : (useVM ? [] : (b as any).sessions || []);
+        const finalSessions = legacySessions; // Always use filtered sessions, no legacy fallback
         return {
           path: b.path,
           sessions: finalSessions,
@@ -139,11 +157,11 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
             (finalSessions.length > 0 ? finalSessions.reduce((latest, session) => session.lastModified > latest ? session.lastModified : latest, new Date(0)) : undefined)
         };
       });
-      console.log('[ProjectView] Left pane projects built from', useVM ? 'ViewModel' : 'legacy', 'count=', enhanced.length);
+      console.log('[ProjectView] Left pane projects built from ViewModel (filtered), count=', enhanced.length, 'from', projects.length, 'projects and', sessions.length, 'sessions');
       setEnhancedLegacyProjects(enhanced);
     };
     buildProjectsFromVM();
-  }, [projects, legacyProjects, sessions]);
+  }, [projects, sessions]); // Removed legacyProjects - we only use filtered ViewModels
 
   // Persist empty mode
   useEffect(() => {
@@ -157,7 +175,8 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
   // Remember last selected project across refreshes
   const lastProjectPathRef = useRef<string | null>(null);
   useEffect(() => {
-    try { lastProjectPathRef.current = localStorage.getItem('ui.lastProjectPath'); } catch {}
+    const savedResult = getLocalStorageItem('ui.lastProjectPath');
+    lastProjectPathRef.current = savedResult.success ? savedResult.value : null;
   }, []);
   
   // Auto-select on first data load: prefer saved project; else most recent. Run once.
@@ -181,8 +200,8 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
   // Authoritatively preserve user selection based on saved path across refreshes
   useEffect(() => {
     if (!projects || projects.length === 0) return;
-    let saved: string | null = null;
-    try { saved = localStorage.getItem('ui.lastProjectPath'); } catch {}
+    const savedResult = getLocalStorageItem('ui.lastProjectPath');
+    const saved = savedResult.success ? savedResult.value : null;
     if (!saved) return;
     if (!selectedMVVMProject || selectedMVVMProject.path !== saved) {
       const match = projects.find(p => p.path === saved);

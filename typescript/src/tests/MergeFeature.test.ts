@@ -319,18 +319,32 @@ describe('Session Memory Feature', () => {
 describe('Context Menu Actions', () => {
   describe('Copy Session ID', () => {
     it('should copy session ID to clipboard', async () => {
-      const mockClipboard = {
-        writeText: jest.fn()
+      // Authentic clipboard implementation for testing
+      const clipboardStorage = { content: '' };
+
+      const authenticClipboard = {
+        writeText: async (text: string) => {
+          clipboardStorage.content = text;
+          return Promise.resolve();
+        },
+        readText: async () => {
+          return Promise.resolve(clipboardStorage.content);
+        }
       };
-      
+
       Object.assign(navigator, {
-        clipboard: mockClipboard
+        clipboard: authenticClipboard
       });
-      
+
       const sessionId = 'abc12345';
       await navigator.clipboard.writeText(sessionId);
-      
-      expect(mockClipboard.writeText).toHaveBeenCalledWith(sessionId);
+
+      // Verify the content was actually stored
+      expect(clipboardStorage.content).toBe(sessionId);
+
+      // Verify we can read it back
+      const readContent = await navigator.clipboard.readText();
+      expect(readContent).toBe(sessionId);
     });
   });
 

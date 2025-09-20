@@ -50,8 +50,9 @@ export const getSessionTooltip = (session: Session, project: Project, isMultiSel
   });
   
   // Get the todo folder path
-  const lastSlashIndex = Math.max(session.filePath.lastIndexOf('/'), session.filePath.lastIndexOf('\\'));
-  const todoFolderPath = session.filePath.substring(0, lastSlashIndex);
+  const filePath = session.filePath || '';
+  const lastSlashIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+  const todoFolderPath = filePath.substring(0, lastSlashIndex);
   
   return `Project: ${projectName}
 Session: ${session.id}

@@ -267,26 +267,26 @@ export function setupMenu(options: {
             {
               label: 'Default Dry-Run', type: 'checkbox', checked: true,
               click: async (item) => {
-                const { loadPrefs, savePrefs } = await import('../utils/prefs.js');
-                const p = loadPrefs();
-                savePrefs(cur => ({ ...(cur||{}), repair: { ...(p.repair||{}), defaultDryRun: !!item.checked } }));
+                const { loadPrefsSync, savePrefsSync } = await import('../utils/prefs.js');
+                const p = loadPrefsSync();
+                savePrefsSync(cur => ({ ...(cur||{}), repair: { ...(p.repair||{}), defaultDryRun: !!item.checked } }));
               }
             },
             { type: 'separator' as const },
             {
               label: 'Set Threshold = 5',
               click: async () => {
-                const { loadPrefs, savePrefs } = await import('../utils/prefs.js');
-                const p = loadPrefs();
-                savePrefs(cur => ({ ...(cur||{}), repair: { ...(p.repair||{}), threshold: 5 } }));
+                const { loadPrefsSync, savePrefsSync } = await import('../utils/prefs.js');
+                const p = loadPrefsSync();
+                savePrefsSync(cur => ({ ...(cur||{}), repair: { ...(p.repair||{}), threshold: 5 } }));
               }
             },
             {
               label: 'Set Threshold = 10',
               click: async () => {
-                const { loadPrefs, savePrefs } = await import('../utils/prefs.js');
-                const p = loadPrefs();
-                savePrefs(cur => ({ ...(cur||{}), repair: { ...(p.repair||{}), threshold: 10 } }));
+                const { loadPrefsSync, savePrefsSync } = await import('../utils/prefs.js');
+                const p = loadPrefsSync();
+                savePrefsSync(cur => ({ ...(cur||{}), repair: { ...(p.repair||{}), threshold: 10 } }));
               }
             },
           ] as Electron.MenuItemConstructorOptions[],

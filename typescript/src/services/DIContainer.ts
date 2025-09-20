@@ -2,6 +2,7 @@
 // electronAPI directly and provides minimal ViewModel-like objects
 // with the methods our UI expects.
 import { dlog } from '../utils/log';
+import { Ok, Err, type Result, type AsyncResult } from '../utils/Result';
 
 type Project = {
   path: string;
@@ -13,6 +14,7 @@ type Project = {
 const providerAllow: Record<string, boolean> = { claude: true, codex: true, gemini: true };
 export function setProviderAllow(next: Partial<Record<string, boolean>>) {
   Object.assign(providerAllow, next || {});
+  console.log('[DIContainer] Provider filters updated:', providerAllow);
 }
 
 class SimpleProjectsViewModel {
@@ -31,18 +33,25 @@ class SimpleProjectsViewModel {
   }
   getProjects(): Project[] { return this.projects; }
   setProjects(p: Project[]): void { this.projects = p || []; this.emit(); }
-  async refresh(): Promise<void> {
+  async refresh(): AsyncResult<void> {
     const now = Date.now();
-    if (this.refreshing) return; // drop concurrent refreshes
-    if (now - this.lastRefresh < 250) return; // throttle bursts
+    if (this.refreshing) return Ok(undefined); // drop concurrent refreshes
+    if (now - this.lastRefresh < 250) return Ok(undefined); // throttle bursts
     this.refreshing = true;
     try {
       const res = await (window as any).electronAPI?.getProjects?.();
       if (res && typeof res === 'object' && 'success' in res) {
         if (res.success && Array.isArray(res.value)) {
           // Map domain -> legacy UI shape expected by MVVM/Views, apply provider filter
-          this.projects = (res.value as any[])
-            .filter((p: any) => providerAllow[String(p.provider || '').toLowerCase()] !== false)
+          const allProjects = res.value as any[];
+          console.log('[ProjectsViewModel] Before filter:', allProjects.length, 'projects');
+          this.projects = allProjects
+            .filter((p: any) => {
+              const provider = String(p.provider || 'claude').toLowerCase();
+              const allowed = providerAllow[provider] !== false;
+              if (!allowed) console.log('[ProjectsViewModel] Filtering out project with provider:', provider);
+              return allowed;
+            })
             .map((p: any) => ({
             id: p.flattenedDir || (p.projectPath || '').replace(/[\\/:]/g, '-'),
             path: p.projectPath,
@@ -63,6 +72,7 @@ class SimpleProjectsViewModel {
             })),
             mostRecentTodoDate: p.mostRecentTodoDate ? new Date(p.mostRecentTodoDate) : undefined,
           }));
+          console.log('[ProjectsViewModel] After filter:', this.projects.length, 'projects');
         } else {
           (window as any).__addToast?.(`Failed to load projects${res?.error ? ': '+res.error : ''}`);
           this.projects = [];
@@ -76,10 +86,15 @@ class SimpleProjectsViewModel {
       this.projects = [];
       const msg = e instanceof Error ? e.message : String(e);
       (window as any).__addToast?.(`Error refreshing projects: ${msg}`);
+      this.refreshing = false;
+      this.lastRefresh = Date.now();
+      this.emit();
+      return Err(`Failed to refresh projects: ${msg}`, e);
     }
     this.refreshing = false;
     this.lastRefresh = Date.now();
     this.emit();
+    return Ok(undefined);
   }
   onChange(cb: () => void): () => void { this.listeners.add(cb); return () => this.listeners.delete(cb); }
   private emit(){ this.listeners.forEach(f=>{ try{f();}catch{} }); }
@@ -96,7 +111,7 @@ class SimpleProjectsViewModel {
   getTooltip(project: any): string { return project.pathExists? `Path: ${project.path}`:`Path: ${project.path} (does not exist)\nFlattened: ${project.flattenedDir}`; }
 }
 
-type Session = { id: string; todos: any[]; lastModified: Date; created?: Date; filePath?: string; projectPath?: string };
+type Session = { id: string; todos: any[]; lastModified: Date; created?: Date; filePath?: string; projectPath?: string; provider?: string };
 
 class SimpleTodosViewModel {
   private sessions: Session[] = [];
@@ -115,10 +130,10 @@ class SimpleTodosViewModel {
     // Just refresh the sessions
     return this.refresh();
   }
-  async refresh(): Promise<void> {
+  async refresh(): AsyncResult<void> {
     const now = Date.now();
-    if (this.refreshing) return; // drop concurrent refreshes
-    if (now - this.lastRefresh < 250) return; // throttle bursts
+    if (this.refreshing) return Ok(undefined); // drop concurrent refreshes
+    if (now - this.lastRefresh < 250) return Ok(undefined); // throttle bursts
     this.refreshing = true;
     try {
       const maybeRes = await (window as any).electronAPI?.getProjects?.();
@@ -133,26 +148,49 @@ class SimpleTodosViewModel {
         projects = await (window as any).electronAPI?.getTodos?.();
       }
       const sess: Session[] = [];
-      (projects||[]).forEach((p: any) => (p.sessions||[]).forEach((s: any)=> {
-        const prov = String(s.provider || p.provider || '').toLowerCase();
-        if (providerAllow[prov] === false) return;
-        sess.push({
-          ...s,
-          id: s.sessionId || s.id,
-          lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(s.lastModified||0),
-          projectPath: p.projectPath || p.path
+      let filteredOutProjects = 0;
+      let filteredOutSessions = 0;
+      (projects||[]).forEach((p: any) => {
+        // Filter at project level first
+        const projectProvider = String(p.provider || 'claude').toLowerCase();
+        if (projectProvider && providerAllow[projectProvider] === false) {
+          filteredOutProjects++;
+          return;
+        }
+
+        (p.sessions||[]).forEach((s: any)=> {
+          // Then filter at session level (session provider overrides project provider)
+          const sessionProvider = String(s.provider || p.provider || 'claude').toLowerCase();
+          if (sessionProvider && providerAllow[sessionProvider] === false) {
+            filteredOutSessions++;
+            return;
+          }
+
+          sess.push({
+            ...s,
+            id: s.sessionId || s.id,
+            lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(s.lastModified||0),
+            projectPath: p.projectPath || p.path,
+            provider: sessionProvider || 'claude'
+          });
         });
-      }));
+      });
+      console.log('[TodosViewModel] Filtered out', filteredOutProjects, 'projects and', filteredOutSessions, 'sessions. Remaining:', sess.length);
       // normalize dates
       this.sessions = sess.map(s=> ({...s, lastModified: s.lastModified instanceof Date ? s.lastModified : new Date(s.lastModified)}));
     } catch (e) {
       this.sessions = [];
       const msg = e instanceof Error ? e.message : String(e);
       (window as any).__addToast?.(`Error refreshing sessions: ${msg}`);
+      this.refreshing = false;
+      this.lastRefresh = Date.now();
+      this.emit();
+      return Err(`Failed to refresh sessions: ${msg}`, e);
     }
     this.refreshing = false;
     this.lastRefresh = Date.now();
     this.emit();
+    return Ok(undefined);
   }
   onChange(cb: () => void): () => void { this.listeners.add(cb); return () => this.listeners.delete(cb); }
   private emit(){ this.listeners.forEach(f=>{ try{f();}catch{} }); }

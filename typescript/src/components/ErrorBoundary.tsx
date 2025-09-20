@@ -1,4 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Result, Ok, Err } from '../utils/Result';
 
 interface Props {
   children: ReactNode;
@@ -7,20 +8,45 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  errorResult?: Result<never>;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
+    errorResult: undefined,
   };
 
   public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    // Convert error to Result pattern for consistent error handling
+    const errorResult = Err(
+      error.message || 'Unknown error occurred',
+      { stack: error.stack, name: error.name }
+    );
+    return {
+      hasError: true,
+      error,
+      errorResult
+    };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
+    // Log using Result pattern for consistency
+    const errorResult = Err(
+      'Component error caught by boundary',
+      {
+        error: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack
+      }
+    );
+
+    console.error('ErrorBoundary caught error:', {
+      success: false,
+      error: errorResult.error,
+      details: errorResult.details
+    });
   }
 
   private handleReload = () => {

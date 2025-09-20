@@ -10,7 +10,7 @@ import { DIContainer } from './services/DIContainer';
 
 
 function App() {
-  const DEBUG = !!(import.meta as any)?.env?.DEV;
+  const DEBUG = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production');
   const dlog = (...args: any[]) => { if (DEBUG) console.log(...args); };
   dlog('[APP] App component rendering!');
   dlog('=== APP DEBUG: Function App() called ===');
@@ -87,21 +87,50 @@ function App() {
           ]);
         }
       } catch {}
-      // small delay for splash; proceed
-      if (!cancelled) setTimeout(() => setLoading(false), 900);
+      // Wait for projects to actually load before hiding splash
+      const checkLoaded = () => {
+        if (cancelled) return;
+        try {
+          const projects = projectsViewModel?.getProjects?.() || [];
+          const sessions = todosViewModel?.getSessions?.() || [];
+
+          // Check if we have any data loaded (give it at least 900ms minimum)
+          if (projects.length > 0 || sessions.length > 0) {
+            setLoading(false);
+          } else {
+            // Keep checking every 100ms until data loads
+            setTimeout(checkLoaded, 100);
+          }
+        } catch {
+          // If ViewModels aren't ready yet, try again
+          setTimeout(checkLoaded, 100);
+        }
+      };
+
+      // Start checking after minimum splash duration
+      if (!cancelled) setTimeout(checkLoaded, 900);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [projectsViewModel, todosViewModel]);
 
   // Apply provider filter to DI and persist, then trigger refresh so UI updates immediately
   useEffect(() => {
+    console.log('[App] Provider filter changed:', providerFilter);
     try { localStorage.setItem('ui.providerFilter', JSON.stringify(providerFilter)); } catch {}
     try { const { setProviderAllow } = require('./services/DIContainer'); setProviderAllow(providerFilter); } catch {}
-    try {
-      // Refresh underlying view models to re-apply provider filtering
-      projectsViewModel?.refresh?.();
-      todosViewModel?.refresh?.();
-    } catch {}
+    // Refresh underlying view models to re-apply provider filtering
+    console.log('[App] Refreshing ViewModels after filter change');
+    // Using async IIFE since refresh now returns Result
+    (async () => {
+      const projectResult = await projectsViewModel?.refresh?.();
+      if (projectResult && !projectResult.success) {
+        console.error('[App] Failed to refresh projects:', projectResult.error);
+      }
+      const todoResult = await todosViewModel?.refresh?.();
+      if (todoResult && !todoResult.success) {
+        console.error('[App] Failed to refresh todos:', todoResult.error);
+      }
+    })();
   }, [providerFilter, projectsViewModel, todosViewModel]);
   
   // Subscribe to VM changes for status bar counts
@@ -184,21 +213,17 @@ function App() {
       (window as any).__addToast?.('Reloading...');
 
       if (projectsViewModel && typeof projectsViewModel.refresh === 'function') {
-        try {
-          await projectsViewModel.refresh();
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          (window as any).__addToast?.(`Project refresh failed: ${msg}`);
-          console.error('Project refresh failed:', e);
+        const projectResult = await projectsViewModel.refresh();
+        if (!projectResult.success) {
+          (window as any).__addToast?.(`Project refresh failed: ${projectResult.error}`);
+          console.error('Project refresh failed:', projectResult.error);
         }
       }
       if (todosViewModel && typeof todosViewModel.refresh === 'function') {
-        try {
-          await todosViewModel.refresh();
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          (window as any).__addToast?.(`Session refresh failed: ${msg}`);
-          console.error('Session refresh failed:', e);
+        const todoResult = await todosViewModel.refresh();
+        if (!todoResult.success) {
+          (window as any).__addToast?.(`Session refresh failed: ${todoResult.error}`);
+          console.error('Session refresh failed:', todoResult.error);
         }
       }
       (window as any).__addToast?.('Refresh complete');

@@ -1,23 +1,28 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import '../tests/setupElectronApi';
-import { DIContainer } from '../services/DIContainer';
+import { ProjectsViewModel } from '../viewmodels/ProjectsViewModel';
+import type { IProjectRepository, Project } from '../models/Project';
+import { Ok } from '../utils/Result';
 
-describe('ProjectsViewModel (direct facade)', () => {
-  const setMockProjects: (p:any[]) => void = (global as any).setMockProjects;
-  const container = DIContainer.getInstance();
-  const viewModel: any = container.getProjectsViewModel();
-  let sampleProjects: any[];
+describe('ProjectsViewModel (agnostic)', () => {
+  let sampleProjects: Project[];
+  let repo: IProjectRepository;
+  let viewModel: ProjectsViewModel;
 
   beforeEach(() => {
     const now = Date.now();
     sampleProjects = [
-      { id: '-Users-doowell2-Source-repos-DT-Entropic', path: '/Users/doowell2/Source/repos/DT/Entropic', pathExists: true, lastModified: new Date(now - 1000) },
-      { id: '-Users-doowell2-Source-repos-DT-OthelloN', path: '/Users/doowell2/Source/repos/DT/OthelloN', pathExists: true, lastModified: new Date(now - 2000) },
-      { id: '-Users-doowell2-Source-repos-DT-MacroN', path: '/Users/doowell2/Source/repos/DT/MacroN', pathExists: true, lastModified: new Date(now - 3000) },
-      { id: 'test-project-alpha', path: 'Unknown Project', pathExists: false, flattenedDir: 'test-project-alpha', lastModified: new Date(now - 4000) },
+      { id: '-tmp-Entropic', path: '/tmp/Entropic', flattenedDir: '-tmp-Entropic', pathExists: true, lastModified: new Date(now - 1000) },
+      { id: '-tmp-ProjectTwo', path: '/tmp/ProjectTwo', flattenedDir: '-tmp-ProjectTwo', pathExists: true, lastModified: new Date(now - 2000) },
+      { id: '-tmp-ProjectThree', path: '/tmp/ProjectThree', flattenedDir: '-tmp-ProjectThree', pathExists: true, lastModified: new Date(now - 3000) },
+      { id: 'test-project-alpha', path: 'Unknown Project', flattenedDir: 'test-project-alpha', pathExists: false, lastModified: new Date(now - 4000) },
     ];
-    setMockProjects(sampleProjects);
-    // push into VM directly
+    repo = {
+      async getAllProjects() { return Ok(sampleProjects); },
+      async getProject(id: string) { return Ok(sampleProjects.find(p => p.id === id) || null); },
+      async projectExists(id: string) { return Ok(sampleProjects.some(p => p.id === id)); },
+    };
+    viewModel = new ProjectsViewModel(repo);
+    // Inject directly to avoid timing of auto-load in ctor
     viewModel.setProjects(sampleProjects);
   });
 
@@ -66,10 +71,10 @@ describe('ProjectsViewModel (direct facade)', () => {
     });
 
     it('should find project by ID', () => {
-      const project = viewModel.getProject('-Users-doowell2-Source-repos-DT-Entropic');
-      
+      const project = viewModel.getProject('-tmp-Entropic');
+
       expect(project).not.toBeNull();
-      expect(project?.path).toBe('/Users/doowell2/Source/repos/DT/Entropic');
+      expect(project?.path).toBe('/tmp/Entropic');
     });
 
     it('should return null for non-existent project ID', () => {
@@ -80,9 +85,7 @@ describe('ProjectsViewModel (direct facade)', () => {
   });
 
   describe('project filtering', () => {
-    beforeEach(async () => {
-      await viewModel.loadProjects();
-    });
+    beforeEach(async () => { await viewModel.loadProjects(); });
 
     it('should filter existing projects', () => {
       const existingProjects = viewModel.getExistingProjects();
@@ -136,7 +139,7 @@ describe('ProjectsViewModel (direct facade)', () => {
     });
 
     it('should generate display names for existing projects', () => {
-      const project = viewModel.getProject('-Users-doowell2-Source-repos-DT-Entropic')!;
+      const project = viewModel.getProject('-tmp-Entropic')!;
       const displayName = viewModel.getDisplayName(project);
       
       expect(displayName).toBe('Entropic');
@@ -150,7 +153,7 @@ describe('ProjectsViewModel (direct facade)', () => {
     });
 
     it('should generate correct status icons', () => {
-      const existingProject = viewModel.getProject('-Users-doowell2-Source-repos-DT-Entropic')!;
+      const existingProject = viewModel.getProject('-tmp-Entropic')!;
       const unmatchedProject = viewModel.getProject('test-project-alpha')!;
       
       expect(viewModel.getStatusIcon(existingProject)).toBe('✅');
@@ -158,10 +161,10 @@ describe('ProjectsViewModel (direct facade)', () => {
     });
 
     it('should generate informative tooltips', () => {
-      const existingProject = viewModel.getProject('-Users-doowell2-Source-repos-DT-Entropic')!;
+      const existingProject = viewModel.getProject('-tmp-Entropic')!;
       const tooltip = viewModel.getTooltip(existingProject);
-      
-      expect(tooltip).toContain('/Users/doowell2/Source/repos/DT/Entropic');
+
+      expect(tooltip).toContain('/tmp/Entropic');
       expect(tooltip).toContain('Last Modified:');
     });
 
@@ -188,20 +191,10 @@ describe('ProjectsViewModel (direct facade)', () => {
     it('should reload projects when refreshed', async () => {
       await viewModel.loadProjects();
       expect(viewModel.getProjectCount()).toBe(4);
-      
-      // Add a project to the mock repository
-      const newProject: Project = {
-        id: 'new-test-project',
-        path: '/test/new-project',
-        flattenedDir: 'new-test-project',
-        pathExists: true,
-        lastModified: new Date()
-      };
-      mockRepository.addProject(newProject);
-      
-      // Refresh should pick up the new project
+      // mutate underlying sampleProjects then refresh
+      const newProject: Project = { id: 'new-test-project', path: '/test/new-project', flattenedDir: 'new-test-project', pathExists: true, lastModified: new Date() };
+      sampleProjects = [...sampleProjects, newProject];
       const result = await viewModel.refresh();
-      
       expect(result.success).toBe(true);
       expect(viewModel.getProjectCount()).toBe(5);
     });
@@ -209,11 +202,9 @@ describe('ProjectsViewModel (direct facade)', () => {
 
   describe('edge cases', () => {
     it('should handle empty repository', async () => {
-      const emptyRepo = new MockProjectRepository([]);
+      const emptyRepo: IProjectRepository = { async getAllProjects(){ return Ok([]); }, async getProject(){ return Ok(null); }, async projectExists(){ return Ok(false); } };
       const emptyViewModel = new ProjectsViewModel(emptyRepo);
-      
       await emptyViewModel.loadProjects();
-      
       expect(emptyViewModel.getProjectCount()).toBe(0);
       expect(emptyViewModel.getExistingProjectCount()).toBe(0);
       expect(emptyViewModel.getUnmatchedProjectCount()).toBe(0);
@@ -239,7 +230,7 @@ describe('ProjectsViewModel (direct facade)', () => {
         }
       ];
       
-      const repo = new MockProjectRepository(projectsWithSameDate);
+      const repo: IProjectRepository = { async getAllProjects(){ return Ok(projectsWithSameDate); }, async getProject(){ return Ok(null); }, async projectExists(){ return Ok(false); } };
       const vm = new ProjectsViewModel(repo);
       
       expect(async () => {
