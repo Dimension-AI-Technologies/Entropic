@@ -4,7 +4,7 @@ import ClaudeLogo from '../../assets/ClaudeLogo.png';
 import OpenAILogo from '../../assets/OpenAI_Logo.svg';
 import GeminiLogo from '../../assets/Google_Gemini_logo.svg';
 
-type ViewMode = 'project' | 'global';
+type ViewMode = 'project' | 'global' | 'git' | 'commit';
 type SpacingMode = 'wide' | 'normal' | 'compact';
 
 interface UnifiedTitleBarProps {
@@ -217,10 +217,11 @@ export function UnifiedTitleBar({
           </button>
         </div>
 
-        {/* Center: Project View button + Claude logo + Global View button */}
+        {/* Center: Claude logo with surrounding view buttons */}
         <div className="title-bar-center">
           <button type="button" className={`view-toggle-btn ${viewMode === 'project' ? 'active' : ''}`} onClick={() => onViewModeChange('project')} title="View individual project todos">Project View</button>
-          
+          <button type="button" className={`view-toggle-btn ${viewMode === 'global' ? 'active' : ''}`} onClick={() => onViewModeChange('global')} title="View all active todos across projects">Global View</button>
+
           <img 
             ref={logoRef}
             src={ClaudeLogo} 
@@ -231,8 +232,9 @@ export function UnifiedTitleBar({
               transition: 'none' // No CSS transitions, we're animating manually
             }}
           />
-          
-          <button type="button" className={`view-toggle-btn ${viewMode === 'global' ? 'active' : ''}`} onClick={() => onViewModeChange('global')} title="View all active todos across projects">Global View</button>
+
+          <button type="button" className={`view-toggle-btn ${viewMode === 'git' ? 'active' : ''}`} onClick={() => onViewModeChange('git')} title="Inspect git status across repos">Git View</button>
+          <button type="button" className={`view-toggle-btn ${viewMode === 'commit' ? 'active' : ''}`} onClick={() => onViewModeChange('commit')} title="Browse recent commits across repos">Commit View</button>
         </div>
 
         {/* Right: Spacing control (cycle + menu) */}

@@ -3,6 +3,8 @@ import './App.css';
 import { SplashScreen } from './components/SplashScreen';
 import { ProjectView } from './App.ProjectView';
 import { GlobalView } from './App.GlobalView';
+import { GitView } from './App.GitView';
+import { CommitView } from './App.CommitView';
 import { UnifiedTitleBar } from './components/UnifiedTitleBar';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { BoidSystem } from './components/BoidSystem';
@@ -30,7 +32,7 @@ function App() {
     return { claude: true, codex: true, gemini: true };
   });
   
-  const [viewMode, setViewMode] = useState<'project' | 'global'>('project');
+  const [viewMode, setViewMode] = useState<'project' | 'global' | 'git' | 'commit'>('project');
   const [spacingMode, setSpacingMode] = useState<'wide' | 'normal' | 'compact'>(() => {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.spacingMode') as any : null;
     return saved === 'wide' || saved === 'normal' || saved === 'compact' ? saved : 'compact';
@@ -283,14 +285,21 @@ function App() {
         {/* Content area - either project view or global view */}
         <div className="content-area" style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           {(() => {
-            dlog(`[APP RENDER DEBUG] viewMode = "${viewMode}", about to render ${viewMode === 'global' ? 'GlobalView' : 'ProjectView'}`);
+            dlog(`[APP RENDER DEBUG] viewMode = "${viewMode}"`);
             if (viewMode === 'global') {
               dlog('[APP RENDER] Rendering GlobalView component');
               return <GlobalView spacingMode={spacingMode} />;
-            } else {
-              dlog('[APP RENDER] Rendering ProjectView component');
-              return <ProjectView activityMode={activityMode} setActivityMode={setActivityMode} spacingMode={spacingMode} onSpacingModeChange={setSpacingMode} />;
             }
+            if (viewMode === 'git') {
+              dlog('[APP RENDER] Rendering GitView component');
+              return <GitView spacingMode={spacingMode} />;
+            }
+            if (viewMode === 'commit') {
+              dlog('[APP RENDER] Rendering CommitView component');
+              return <CommitView spacingMode={spacingMode} />;
+            }
+            dlog('[APP RENDER] Rendering ProjectView component');
+            return <ProjectView activityMode={activityMode} setActivityMode={setActivityMode} spacingMode={spacingMode} onSpacingModeChange={setSpacingMode} />;
           })()}
           {/* Overlay during reload - scoped to content area only */}
           {reloading && (

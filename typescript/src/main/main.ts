@@ -24,6 +24,7 @@ import { registerChatIpc } from './ipc/chat.js';
 import { registerMaintenanceIpc } from './ipc/maintenance.js';
 import { registerProvidersIpc } from './ipc/providers.js';
 import { registerDiagnosticsIpc } from './ipc/diagnostics.js';
+import { registerGitStatusIpc } from './ipc/gitStatus.js';
 import { setupSingleInstance } from './lifecycle/singleInstance.js';
 import { wireAppEvents } from './lifecycle/appEvents.js';
 import { Aggregator } from './core/aggregator.js';
@@ -209,6 +210,7 @@ app.whenReady().then(() => {
   registerMaintenanceIpc(ipcMain, { projectsDir, todosDir });
   registerProvidersIpc(ipcMain);
   registerDiagnosticsIpc(ipcMain, providers);
+  registerGitStatusIpc(ipcMain);
 
   // Screenshot handler (used by renderer via preload)
   ipcMain.handle('take-screenshot', async () => {

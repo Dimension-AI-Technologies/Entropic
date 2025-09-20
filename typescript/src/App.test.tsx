@@ -137,6 +137,8 @@ describe('App', () => {
       getProviderPresence: jest.fn().mockResolvedValue({ claude: true, codex: true, gemini: true }),
       getProjects: jest.fn().mockResolvedValue({ success: true, value: diTest.projectData }),
       onScreenshotTaken: jest.fn().mockReturnValue(() => {}),
+      getGitStatus: jest.fn().mockResolvedValue({ success: true, value: [] }),
+      getGitCommits: jest.fn().mockResolvedValue({ success: true, value: [] }),
     };
     lastTitleBarProps = undefined;
     lastProjectViewProps = undefined;
@@ -194,5 +196,27 @@ describe('App', () => {
     });
 
     await waitFor(() => expect(screen.getByTestId('project-view')).toHaveTextContent('Project view (on)'));
+  });
+
+  test('switches to git view when requested', async () => {
+    await renderApp();
+    expect(lastTitleBarProps).toBeDefined();
+
+    act(() => {
+      lastTitleBarProps.onViewModeChange('git');
+    });
+
+    await waitFor(() => expect(screen.getByTestId('git-view')).toBeInTheDocument());
+  });
+
+  test('switches to commit view when requested', async () => {
+    await renderApp();
+    expect(lastTitleBarProps).toBeDefined();
+
+    act(() => {
+      lastTitleBarProps.onViewModeChange('commit');
+    });
+
+    await waitFor(() => expect(screen.getByTestId('commit-view')).toBeInTheDocument());
   });
 });

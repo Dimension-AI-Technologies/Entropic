@@ -41,6 +41,14 @@ declare global {
       takeScreenshot?: () => Promise<{ success: boolean; value?: { path: string } } | { success: false; error: string }>;
       onScreenshotTaken?: (callback: (event: any, data: { path: string }) => void) => () => void;
       onTodoFilesChanged?: (callback: (event: any, data: any) => void) => () => void;
+      getGitStatus?: (baseDir?: string) => Promise<any>;
+      getGitCommits?: (options?: { baseDir?: string; limit?: number }) => Promise<any>;
+      getProjects?: () => Promise<any>;
+      getProviderPresence?: () => Promise<any>;
+      collectDiagnostics?: () => Promise<any>;
+      repairMetadata?: (dryRun: boolean) => Promise<any>;
+      collectDiagnosticsHex?: () => Promise<any>;
+      repairMetadataHex?: (provider: string | undefined, dryRun: boolean) => Promise<any>;
     };
   }
 }
