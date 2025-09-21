@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import './App.css';
 
-interface GitRepoStatus {
+export interface GitRepoStatus {
   name: string;
   relativePath: string;
   languages: string[];
@@ -16,6 +16,10 @@ type SpacingMode = 'wide' | 'normal' | 'compact';
 
 interface GitViewProps {
   spacingMode: SpacingMode;
+  repos: GitRepoStatus[];
+  loading: boolean;
+  error: string | null;
+  onRefresh: () => void;
 }
 
 const formatDate = (iso: string | null) => {
@@ -25,45 +29,7 @@ const formatDate = (iso: string | null) => {
   return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 };
 
-export function GitView({ spacingMode }: GitViewProps) {
-  const [repos, setRepos] = useState<GitRepoStatus[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    if (!window.electronAPI?.getGitStatus) {
-      setError('Git status API unavailable');
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await window.electronAPI.getGitStatus();
-      if (result && typeof result === 'object' && 'success' in result) {
-        if (result.success) {
-          setRepos(Array.isArray(result.value) ? result.value : []);
-        } else {
-          setError(result.error || 'Failed to load git status');
-          setRepos([]);
-        }
-      } else if (Array.isArray(result)) {
-        setRepos(result);
-      } else {
-        setError('Unsupported response from git status');
-        setRepos([]);
-      }
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load git status');
-      setRepos([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
+export function GitView({ spacingMode, repos, loading, error, onRefresh }: GitViewProps) {
   const summary = useMemo(() => {
     let aheadTotal = 0;
     let behindTotal = 0;
@@ -84,7 +50,7 @@ export function GitView({ spacingMode }: GitViewProps) {
         <span>{repos.length} Repos • {summary.stale} Out of Sync • ↑{summary.aheadTotal} ↓{summary.behindTotal}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {error && <span style={{ color: '#ff7b7b' }}>{error}</span>}
-          <button className="pane-button" onClick={load} disabled={loading} style={{ opacity: loading ? 0.6 : 1 }}>
+          <button className="pane-button" onClick={onRefresh} disabled={loading} style={{ opacity: loading ? 0.6 : 1 }}>
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
         </div>

@@ -67,6 +67,7 @@ describe('git status collectors', () => {
     if (!firstCommit) return;
     expect(firstCommit.coAuthors).toContain('Co Author <co@example.com>');
     expect(firstCommit.stats.additions).toBeGreaterThanOrEqual(1);
-    expect(firstCommit.stats.filesChanged).toBeGreaterThanOrEqual(1);
+    expect(firstCommit.stats.totalLines).toBeGreaterThanOrEqual(1);
+    expect(firstCommit.stats.filesAdded + firstCommit.stats.filesChanged + firstCommit.stats.filesDeleted).toBeGreaterThanOrEqual(1);
   });
 });

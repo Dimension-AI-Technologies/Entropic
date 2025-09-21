@@ -1,13 +1,15 @@
-# Entropic - Multi-Provider AI Todo GUI, Project History & Git Status Monitor
+# Entropic - AI Coding Agent TODO and History live status monitor GUI
 
 <!-- Project badges -->
 [![GitHub Stars](https://img.shields.io/github/stars/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/stargazers)
 [![Forks](https://img.shields.io/github/forks/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/network/members)
 [![Watchers](https://img.shields.io/github/watchers/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/watchers)
-[![Clones](https://img.shields.io/badge/dynamic/json?color=success&label=clones&query=%24.count&url=https%3A%2F%2Fapi.github.com%2Frepos%2Fdimension-zero%2FEntropic%2Ftraffic%2Fclones&logo=git)](https://github.com/dimension-zero/Entropic)
+![Clones](https://img.shields.io/badge/clones-14/week-success?logo=git)
+
 [![Open Issues](https://img.shields.io/github/issues/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic/pulls)
 [![Last Commit](https://img.shields.io/github/last-commit/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic/commits)
+
 [![License](https://img.shields.io/github/license/dimension-zero/Entropic)](#license)
 [![Code Size](https://img.shields.io/github/languages/code-size/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic)
 [![Top Language](https://img.shields.io/github/languages/top/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic)
@@ -19,19 +21,20 @@
 
 A comprehensive monitoring system for AI coding assistants that provides real-time tracking across **Claude Code**, **OpenAI Codex**, and **Google Gemini**. Displays live updates of Todo items, project history, and Git repository status with commit monitoring.
 
-**Multi-Provider Support:**
-- 🤖 **Claude Code** - Official Anthropic CLI integration
-- 🔧 **OpenAI Codex** - Full session and project tracking
-- 💎 **Google Gemini** - Complete workflow monitoring
+**Multi-Agent Monitoring:**
+- 🤖 **Claude Code** - TODO list and Project History monitoring
+- 🔧 **OpenAI Codex** - TODO list and Project History monitoring
+- 💎 **Google Gemini** - TODO list and Project History monitoring
 
 **Git Integration:**
-- 📊 **Repository Status** - Real-time monitoring of all Git repositories
+- 📊 **Repository Status** - Real-time monitoring of Git repositories under ~/source directory on Windows, macOS and Linux
 - 📝 **Commit History** - Detailed commit tracking with stats and co-authors
 - 🔄 **Live Updates** - Automatic refresh of repository states
 
-Available as a cross-platform TypeScript/Electron GUI and terminal versions in PowerShell by [dimension-zero](@dimension-zero) and original Bash by [@JamesonNyp](@JamesonNyp).
-
-![Claude Code Todo Tracker Live Monitor](Todo%20Tracker.png)
+**Available as:**
+- Cross-platform Electron/TypeScript GUI
+- Cross-platform CLI / PowerShell version
+- Original Bash version by [@JamesonNyp](@JamesonNyp)
 
 ## Overview
 
@@ -119,26 +122,25 @@ This project provides comprehensive monitoring for multiple AI coding assistants
 - Optionally uses `inotifywait` (Linux) or `fswatch` (macOS) for file monitoring
 - See [README-sh.md](README-sh.md) for setup instructions
 
+![Claude Code Todo Tracker Live Monitor](Todo%20Tracker.png)
+
 ## Project Structure
 
+See [Structure.md](Structure.md) for detailed project structure.
+
 ```
-cc-todo-hook-tracker/
-├── README.md           # This file
-├── README-sh.md        # Bash setup guide
-├── README-ps.md        # PowerShell setup guide
-├── TESTING-ps.md       # PowerShell testing guide
-├── Todo Tracker.png    # Screenshot of the monitor
-├── bash/               # Bash implementation
-│   ├── todo_hook_post_tool.sh
-│   └── todo_live_monitor.sh
-├── powershell7/        # PowerShell 7 implementation
-│   ├── todo_hook_post_tool.ps1
-│   ├── todo_live_monitor.ps1
-│   └── tests/          # Test scripts
+Entropic/
+├── README.md           # Main documentation
+├── Structure.md        # Detailed project structure
+├── bash/               # Bash terminal implementation
+├── powershell7/        # PowerShell implementation
 └── typescript/         # Electron GUI implementation
-    ├── src/            # React/TypeScript source
-    ├── package.json    # Node dependencies
-    └── README.md       # GUI setup guide
+    ├── src/            # Source code
+    │   ├── main/       # Electron main process
+    │   ├── preload/    # Preload scripts
+    │   ├── services/   # Business logic (MVVM)
+    │   └── tests/      # Test suite
+    └── dist/           # Build output
 ```
 
 ## Quick Start
@@ -186,6 +188,8 @@ Contributions are welcome. Please feel free to submit pull requests or open issu
 
 ## Author
 
-* TypeScript/Electron GUI by Dimension Zero (@dimension-zero)
-* PowerShell implementation by Dimension Zero (@dimension-zero)
-* Original Bash CLI version created by Jameson Nyp (@JamesonNyp) [cc-todo-hook-tracker](https://github.com/JamesonNyp/cc-todo-hook-tracker)
+* TypeScript/Electron GUI by Dimension Zero ([@dimension-zero](https://github.com/dimension-zero))
+* PowerShell implementation by Dimension Zero ([@dimension-zero](https://github.com/dimension-zero))
+* Original Bash CLI version created by Jameson Nyp ([@JamesonNyp](https://github.com/JamesonNyp)) [cc-todo-hook-tracker](https://github.com/JamesonNyp/cc-todo-hook-tracker)
+
+Entropic has been created by Dimension Technologies (www.ditech.ai) for the open-source community.

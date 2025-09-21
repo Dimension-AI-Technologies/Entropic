@@ -24,12 +24,16 @@ export interface GitCommitSummary {
     hash: string;
     date: string;
     message: string;
-    author: string;
+    authorName: string;
+    authorEmail?: string;
     coAuthors: string[];
     stats: {
       additions: number;
       deletions: number;
+      totalLines: number;
+      filesAdded: number;
       filesChanged: number;
+      filesDeleted: number;
     };
   }>;
 }
@@ -224,6 +228,7 @@ async function inspectCommits(root: string, repoPath: string, limit: number): As
     for (const raw of rawCommits) {
       const [hashRaw, dateRaw, authorName, authorEmail, body] = raw.split('\x1f');
       const hash = (hashRaw || '').trim();
+      if (!hash) continue;
       const date = (dateRaw || '').trim();
       const trimmedBody = body || '';
       const messageLine = trimmedBody.split(/\r?\n/).find(Boolean) || '';
@@ -233,7 +238,8 @@ async function inspectCommits(root: string, repoPath: string, limit: number): As
         hash,
         date,
         message: messageLine,
-        author: `${authorName || ''}${authorEmail ? ` <${authorEmail}>` : ''}`.trim(),
+        authorName: authorName || '',
+        authorEmail: authorEmail || undefined,
         coAuthors,
         stats,
       });
@@ -263,22 +269,36 @@ function extractCoAuthors(message: string): string[] {
 
 async function getCommitStats(repoPath: string, hash: string, env: NodeJS.ProcessEnv) {
   try {
-    const { stdout } = await execGit(repoPath, ['show', '--numstat', '--format=%H', hash], env);
-    const lines = asString(stdout).split(/\r?\n/);
+    const { stdout: numstatOutput } = await execGit(repoPath, ['show', '--numstat', '--format=%H', hash], env);
+    const numLines = asString(numstatOutput).split(/\r?\n/);
     let additions = 0;
     let deletions = 0;
-    let filesChanged = 0;
-    for (const line of lines) {
-      const match = line.match(/^(\d+)\t(\d+)\t.+$/);
-      if (match) {
-        additions += Number(match[1]);
-        deletions += Number(match[2]);
-        filesChanged += 1;
-      }
+    for (const line of numLines) {
+      const match = line.match(/^([\d-]+)\t([\d-]+)\t(.+)$/);
+      if (!match) continue;
+      const add = match[1] === '-' ? 0 : Number(match[1]);
+      const del = match[2] === '-' ? 0 : Number(match[2]);
+      additions += add;
+      deletions += del;
     }
-    return { additions, deletions, filesChanged };
+
+    const { stdout: statusOutput } = await execGit(repoPath, ['show', '--name-status', '--format=%H', hash], env);
+    const statusLines = asString(statusOutput).split(/\r?\n/);
+    let filesAdded = 0;
+    let filesChanged = 0;
+    let filesDeleted = 0;
+    for (const line of statusLines) {
+      const match = line.match(/^([ADMRTUXB])\t(.+)$/);
+      if (!match) continue;
+      const code = match[1];
+      if (code === 'A') filesAdded += 1;
+      else if (code === 'D') filesDeleted += 1;
+      else filesChanged += 1;
+    }
+
+    return { additions, deletions, totalLines: additions + deletions, filesAdded, filesChanged, filesDeleted };
   } catch {
-    return { additions: 0, deletions: 0, filesChanged: 0 };
+    return { additions: 0, deletions: 0, totalLines: 0, filesAdded: 0, filesChanged: 0, filesDeleted: 0 };
   }
 }
 

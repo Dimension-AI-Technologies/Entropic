@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import './App.css';
 import { SplashScreen } from './components/SplashScreen';
 import { ProjectView } from './App.ProjectView';
 import { GlobalView } from './App.GlobalView';
-import { GitView } from './App.GitView';
-import { CommitView } from './App.CommitView';
+import { GitView, type GitRepoStatus } from './App.GitView';
+import { CommitView, type RepoCommits } from './App.CommitView';
 import { UnifiedTitleBar } from './components/UnifiedTitleBar';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { BoidSystem } from './components/BoidSystem';
@@ -43,6 +43,92 @@ function App() {
   // Activity mode state for auto-selection
   const [activityMode, setActivityMode] = useState(false);
   const [statusText, setStatusText] = useState('Ready');
+
+  const [gitRepos, setGitRepos] = useState<GitRepoStatus[]>([]);
+  const [gitLoading, setGitLoading] = useState(false);
+  const [gitError, setGitError] = useState<string | null>(null);
+  const [gitLastLoaded, setGitLastLoaded] = useState<number | null>(null);
+
+  const [commitRepos, setCommitRepos] = useState<RepoCommits[]>([]);
+  const [commitLoading, setCommitLoading] = useState(false);
+  const [commitError, setCommitError] = useState<string | null>(null);
+  const [commitLastLoaded, setCommitLastLoaded] = useState<number | null>(null);
+
+  const STALE_MS = 5 * 60 * 1000;
+
+  const loadGitStatus = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
+    if (!window.electronAPI?.getGitStatus) {
+      setGitError('Git status API unavailable');
+      setGitRepos([]);
+      return;
+    }
+    if (!force) {
+      if (gitLoading) return;
+      if (gitRepos.length > 0 && gitLastLoaded && Date.now() - gitLastLoaded < STALE_MS) return;
+    }
+    setGitLoading(true);
+    setGitError(null);
+    try {
+      const result = await window.electronAPI.getGitStatus();
+      if (result && typeof result === 'object' && 'success' in result) {
+        if (result.success) {
+          setGitRepos(Array.isArray(result.value) ? result.value : []);
+          setGitLastLoaded(Date.now());
+        } else {
+          setGitError(result.error || 'Failed to load git status');
+          setGitRepos([]);
+        }
+      } else if (Array.isArray(result)) {
+        setGitRepos(result);
+        setGitLastLoaded(Date.now());
+      } else {
+        setGitError('Unsupported response from git status');
+        setGitRepos([]);
+      }
+    } catch (e: any) {
+      setGitError(e?.message || 'Failed to load git status');
+      setGitRepos([]);
+    } finally {
+      setGitLoading(false);
+    }
+  }, [gitLoading, gitRepos, gitLastLoaded]);
+
+  const loadCommitHistory = useCallback(async ({ force = false }: { force?: boolean } = {}) => {
+    if (!window.electronAPI?.getGitCommits) {
+      setCommitError('Commit API unavailable');
+      setCommitRepos([]);
+      return;
+    }
+    if (!force) {
+      if (commitLoading) return;
+      if (commitRepos.length > 0 && commitLastLoaded && Date.now() - commitLastLoaded < STALE_MS) return;
+    }
+    setCommitLoading(true);
+    setCommitError(null);
+    try {
+      const result = await window.electronAPI.getGitCommits({ limit: 100 });
+      if (result && typeof result === 'object' && 'success' in result) {
+        if (result.success) {
+          setCommitRepos(Array.isArray(result.value) ? result.value : []);
+          setCommitLastLoaded(Date.now());
+        } else {
+          setCommitError(result.error || 'Failed to load commit history');
+          setCommitRepos([]);
+        }
+      } else if (Array.isArray(result)) {
+        setCommitRepos(result);
+        setCommitLastLoaded(Date.now());
+      } else {
+        setCommitError('Unsupported response from commit history');
+        setCommitRepos([]);
+      }
+    } catch (e: any) {
+      setCommitError(e?.message || 'Failed to load commit history');
+      setCommitRepos([]);
+    } finally {
+      setCommitLoading(false);
+    }
+  }, [commitLoading, commitRepos, commitLastLoaded]);
   
   // Initialize MVVM container and viewModels using useMemo to prevent recreation
   const { container, projectsViewModel, todosViewModel, initError } = useMemo(() => {
@@ -174,6 +260,15 @@ function App() {
     try { localStorage.setItem('ui.spacingMode', spacingMode); } catch {}
   }, [spacingMode]);
 
+  useEffect(() => {
+    if (viewMode === 'git') {
+      loadGitStatus();
+    }
+    if (viewMode === 'commit') {
+      loadCommitHistory();
+    }
+  }, [viewMode, loadGitStatus, loadCommitHistory]);
+
   // Expose toast helper
   useEffect(() => {
     (window as any).__addToast = (text: string) => {
@@ -184,6 +279,11 @@ function App() {
     return () => { try { delete (window as any).__addToast; } catch {} };
   }, []);
   
+  useEffect(() => {
+    loadGitStatus({ force: true });
+    loadCommitHistory({ force: true });
+  }, [loadGitStatus, loadCommitHistory]);
+
   // Listen for screenshot notifications from main and show consistent toast
   useEffect(() => {
     const api: any = (window as any).electronAPI;
@@ -292,11 +392,27 @@ function App() {
             }
             if (viewMode === 'git') {
               dlog('[APP RENDER] Rendering GitView component');
-              return <GitView spacingMode={spacingMode} />;
+              return (
+                <GitView
+                  spacingMode={spacingMode}
+                  repos={gitRepos}
+                  loading={gitLoading}
+                  error={gitError}
+                  onRefresh={loadGitStatus}
+                />
+              );
             }
             if (viewMode === 'commit') {
               dlog('[APP RENDER] Rendering CommitView component');
-              return <CommitView spacingMode={spacingMode} />;
+              return (
+                <CommitView
+                  spacingMode={spacingMode}
+                  repos={commitRepos}
+                  loading={commitLoading}
+                  error={commitError}
+                  onRefresh={loadCommitHistory}
+                />
+              );
             }
             dlog('[APP RENDER] Rendering ProjectView component');
             return <ProjectView activityMode={activityMode} setActivityMode={setActivityMode} spacingMode={spacingMode} onSpacingModeChange={setSpacingMode} />;

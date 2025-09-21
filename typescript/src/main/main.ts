@@ -69,7 +69,7 @@ async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    title: 'ClaudeToDo - Session Monitor',
+    title: 'Entropic - Coding Agent & Git Monitor',
     webPreferences: {
       nodeIntegration: hasPreload ? false : true,
       contextIsolation: hasPreload ? true : false,
