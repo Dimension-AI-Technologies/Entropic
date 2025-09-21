@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, within, fireEvent, act, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import App from '../App';
+import { Ok } from '../utils/Result';
 
 // Mock electronAPI with deterministic mixed-provider data
 const now = Date.now();
@@ -12,14 +13,11 @@ beforeAll(() => {
   (window as any).electronAPI = {
     async getProviderPresence() { return { claude: true, codex: true, gemini: true }; },
     async getProjects() {
-      return {
-        success: true,
-        value: [
-          { provider: 'claude', projectPath: '/proj-c', sessions: [{ provider: 'claude', sessionId: 'c1', todos: mkTodos(1), updatedAt: now - 1000 }] },
-          { provider: 'codex', projectPath: '/proj-o', sessions: [{ provider: 'codex', sessionId: 'o1', todos: mkTodos(2), updatedAt: now - 900 }] },
-          { provider: 'gemini', projectPath: '/proj-g', sessions: [{ provider: 'gemini', sessionId: 'g1', todos: mkTodos(1), updatedAt: now - 800 }] },
-        ]
-      };
+      return Ok([
+        { provider: 'claude', projectPath: '/proj-c', sessions: [{ provider: 'claude', sessionId: 'c1', todos: mkTodos(1), updatedAt: now - 1000 }] },
+        { provider: 'codex', projectPath: '/proj-o', sessions: [{ provider: 'codex', sessionId: 'o1', todos: mkTodos(2), updatedAt: now - 900 }] },
+        { provider: 'gemini', projectPath: '/proj-g', sessions: [{ provider: 'gemini', sessionId: 'g1', todos: mkTodos(1), updatedAt: now - 800 }] },
+      ]);
     },
     onDataChanged: (cb: () => void) => cb,
   };

@@ -40,7 +40,13 @@ const formatDate = (iso: string) => {
   if (!iso) return '—';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = date.toLocaleString('en-GB', { month: 'short' }).toUpperCase();
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 };
 
 export function CommitView({ spacingMode, repos, loading, error, onRefresh }: CommitViewProps) {
@@ -159,7 +165,7 @@ export function CommitView({ spacingMode, repos, loading, error, onRefresh }: Co
           <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>
               {selected ? `${selected.repo} • ${selected.commits.length} commits` : 'Select a repository'}
-              {' • Lines '} {summary.deletions} / {summary.additions + summary.deletions} / {summary.additions}
+              {' • Lines '} {summary.deletions} / {(summary.additions + summary.deletions)} / {summary.additions}
               {' • Files '} {summary.filesDeleted} / {summary.filesChanged} / {summary.filesAdded}
             </span>
           </div>
@@ -189,14 +195,14 @@ export function CommitView({ spacingMode, repos, loading, error, onRefresh }: Co
                       <td>{commit.message.split('\n')[0]}</td>
                       <td>{commit.authorName ? stripEmail(commit.authorName) : '—'}</td>
                       <td>{commit.coAuthors && commit.coAuthors.length ? commit.coAuthors.map(stripEmail).join(', ') : '—'}</td>
-                      <td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
                         <span className="git-count-negative">{commit.stats.deletions}</span>
                         {' / '}
                         {commit.stats.totalLines}
                         {' / '}
                         <span className="git-count-positive">{commit.stats.additions}</span>
                       </td>
-                      <td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
                         {commit.stats.filesDeleted}
                         {' / '}
                         {commit.stats.filesChanged}

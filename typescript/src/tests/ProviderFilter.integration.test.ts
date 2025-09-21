@@ -1,17 +1,15 @@
 import { DIContainer, setProviderAllow as setAllow } from '../services/DIContainer';
+import { Ok } from '../utils/Result';
 
 // Minimal mock electronAPI for provider presence and projects
 (global as any).window = (global as any).window || {};
 (window as any).electronAPI = {
   async getProjects() {
-    return {
-      success: true,
-      value: [
-        { provider: 'claude', projectPath: '/a', sessions: [{ provider: 'claude', sessionId: 'c1', todos: [], updatedAt: Date.now() }] },
-        { provider: 'codex', projectPath: '/a', sessions: [{ provider: 'codex', sessionId: 'o1', todos: [], updatedAt: Date.now() }] },
-        { provider: 'gemini', projectPath: '/b', sessions: [{ provider: 'gemini', sessionId: 'g1', todos: [], updatedAt: Date.now() }] },
-      ]
-    };
+    return Ok([
+      { provider: 'claude', projectPath: '/a', sessions: [{ provider: 'claude', sessionId: 'c1', todos: [], updatedAt: Date.now() }] },
+      { provider: 'codex', projectPath: '/a', sessions: [{ provider: 'codex', sessionId: 'o1', todos: [], updatedAt: Date.now() }] },
+      { provider: 'gemini', projectPath: '/b', sessions: [{ provider: 'gemini', sessionId: 'g1', todos: [], updatedAt: Date.now() }] },
+    ]);
   },
   onDataChanged: (cb: () => void) => cb,
 };

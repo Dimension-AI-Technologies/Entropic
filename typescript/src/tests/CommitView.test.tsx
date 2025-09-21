@@ -39,6 +39,7 @@ describe('CommitView', () => {
 
     expect(screen.getAllByText('alpha').length).toBeGreaterThan(0);
     expect(screen.getByText('Initial commit')).toBeInTheDocument();
+    expect(screen.getByText('10-FEB-2024 10:00:00')).toBeInTheDocument();
     expect(screen.getByText('Alice Doe')).toBeInTheDocument();
     expect(screen.getByText((content, node) => node?.textContent === '2 / 12 / 10')).toBeInTheDocument();
     expect(screen.getByText((content, node) => node?.textContent === '1 / 1 / 1')).toBeInTheDocument();

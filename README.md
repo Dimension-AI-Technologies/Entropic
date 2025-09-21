@@ -4,7 +4,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/stargazers)
 [![Forks](https://img.shields.io/github/forks/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/network/members)
 [![Watchers](https://img.shields.io/github/watchers/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/watchers)
-![Clones](https://img.shields.io/badge/clones-14/week-success?logo=git)
+![Clones](https://img.shields.io/badge/clones-154/14days-success?logo=git)
 
 [![Open Issues](https://img.shields.io/github/issues/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic/pulls)
@@ -42,11 +42,11 @@ This project provides comprehensive monitoring for multiple AI coding assistants
 
 ## Features
 
-**Multi-Provider AI Integration:**
+**Multi Coding Agent Integration:**
 - 🤖 **Claude Code**: Full TodoWrite tool integration with real-time updates
 - 🔧 **OpenAI Codex**: Session and project tracking with metadata support
 - 💎 **Google Gemini**: Complete workflow monitoring and history
-- 🔄 **Provider Filtering**: Toggle between providers or view all simultaneously
+- 🔄 **Agent Filtering**: Toggle between agents or view all simultaneously
 
 **Git Repository Monitoring:**
 - 📊 **Repository Status**: Real-time tracking of all Git repositories in your workspace
@@ -65,24 +65,31 @@ This project provides comprehensive monitoring for multiple AI coding assistants
 
 ## How It Works
 
-**Multi-Provider Data Collection:**
+**Multi Coding Agent Data Collection:**
 1. **Claude Code Integration**: Intercepts PostToolUse events for TodoWrite
    - Captures todo data from Claude Code sessions
    - Extracts relevant information (todos, session, directory)
    - Saves formatted JSON to `~/.claude/logs/current_todos.json`
 
-2. **Codex & Gemini Monitoring**: Watches session files and project directories
-   - Monitors `~/.codex/todos/` and `~/.gemini/sessions/` for updates
+2. **OpenAI Codex Monitoring**: Watches Codex session files and project directories
+   - Monitors `~/.codex/todos/` for todo updates
+   - Tracks `~/.codex/projects/` for project history
    - Associates sessions with projects via metadata files
-   - Tracks project history and todo state changes
+   - Maintains real-time synchronization with Codex CLI state
+
+3. **Google Gemini Monitoring**: Watches Gemini session directories
+   - Monitors `~/.gemini/sessions/` for session updates
+   - Tracks todo state changes and project associations
+   - Processes session metadata for project linkage
+   - Provides unified view with other AI providers
 
 **Git Repository Tracking:**
-3. **Repository Discovery**: Automatically finds all Git repositories in your workspace
+4. **Repository Discovery**: Automatically finds all Git repositories in your workspace
    - Scans for `.git` directories recursively
    - Identifies programming languages used in each repository
    - Tracks remote repository URLs and status
 
-4. **Live Monitoring**: Provides real-time updates across all data sources
+5. **Live Monitoring**: Provides real-time updates across all data sources
    - Watches files for changes using native OS mechanisms
    - Parses and displays data with color coding and filtering
    - Updates display automatically with minimal resource usage
@@ -92,11 +99,11 @@ This project provides comprehensive monitoring for multiple AI coding assistants
 ### TypeScript/Electron GUI Version (`typescript/`) - Cross-Platform Desktop Application
 - **Modern Desktop GUI**: Slack-like interface with dark theme
 - **Cross-platform**: Runs as a native desktop app on Windows, macOS, and Linux
-- **Multi-Provider Support**: Unified interface for Claude Code, OpenAI Codex, and Google Gemini
+- **Multi Coding Agent Support**: Unified interface for Claude Code, OpenAI Codex, and Google Gemini
 - **Git Integration**: Built-in Git status monitoring and commit history viewer
 - **Advanced Features**:
-  - Real-time monitoring of all AI provider sessions across projects
-  - Provider filtering with toggle controls (Claude/Codex/Gemini)
+  - Real-time monitoring of all AI agent sessions across projects
+  - Agent filtering with toggle controls (Claude/Codex/Gemini)
   - Multiple view modes: Project Todos, Project History, Global View, Git Status, Commit History
   - Tri-state toggle controls for sorting and spacing customization
   - Session tabs with automatic deduplication
@@ -169,7 +176,7 @@ All implementations use the same file structure:
 └── scripts/                    # (Optional) Script installation location
 ```
 
-## Codex Provider Hooks (optional but recommended)
+## Codex Agent Hooks (optional but recommended)
 
 To help Entropic reliably associate Codex sessions with projects, write a sidecar metadata file next to each Codex todo file:
 
