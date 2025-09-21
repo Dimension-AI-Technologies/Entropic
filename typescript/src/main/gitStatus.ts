@@ -1,6 +1,6 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
+import fsSync, { Dirent } from 'node:fs';
 import os from 'node:os';
 import { promisify } from 'node:util';
 import { execFile } from 'node:child_process';
@@ -35,6 +35,10 @@ export interface GitCommitSummary {
 }
 
 const execFileAsync = promisify(execFile);
+
+function asString(output: string | Buffer): string {
+  return typeof output === 'string' ? output : output.toString('utf-8');
+}
 
 const EXTENSION_LANG_MAP: Record<string, string> = {
   '.ts': 'TypeScript',
@@ -135,7 +139,7 @@ async function findGitRepos(root: string, output: string[]): Promise<void> {
   while (stack.length) {
     const dir = stack.pop();
     if (!dir) continue;
-    let entries: fs.Dirent[] = [];
+    let entries: Dirent[] = [];
     try {
       entries = await fs.readdir(dir, { withFileTypes: true });
     } catch {
@@ -212,19 +216,23 @@ async function inspectCommits(root: string, repoPath: string, limit: number): As
     const relativePath = path.relative(root, repoPath) || path.basename(repoPath);
     const name = path.basename(repoPath);
 
-    const format = ['%H', '%cI', '%s', '%an', '%ae'].join('%x1f');
+    const format = '%H%x1f%cI%x1f%an%x1f%ae%x1f%B%x1e';
     const { stdout } = await execGit(repoPath, ['log', `-n${limit}`, `--format=${format}`], env);
-    const lines = stdout.split('\n').filter(Boolean);
+    const rawCommits = asString(stdout).split('\x1e').filter(Boolean);
     const commits: GitCommitSummary['commits'] = [];
 
-    for (const line of lines) {
-      const [hash, date, message, authorName, authorEmail] = line.split('\x1f');
+    for (const raw of rawCommits) {
+      const [hashRaw, dateRaw, authorName, authorEmail, body] = raw.split('\x1f');
+      const hash = (hashRaw || '').trim();
+      const date = (dateRaw || '').trim();
+      const trimmedBody = body || '';
+      const messageLine = trimmedBody.split(/\r?\n/).find(Boolean) || '';
       const stats = await getCommitStats(repoPath, hash, env);
-      const coAuthors = extractCoAuthors(message);
+      const coAuthors = extractCoAuthors(trimmedBody);
       commits.push({
         hash,
         date,
-        message,
+        message: messageLine,
         author: `${authorName || ''}${authorEmail ? ` <${authorEmail}>` : ''}`.trim(),
         coAuthors,
         stats,
@@ -255,15 +263,20 @@ function extractCoAuthors(message: string): string[] {
 
 async function getCommitStats(repoPath: string, hash: string, env: NodeJS.ProcessEnv) {
   try {
-    const { stdout } = await execGit(repoPath, ['show', '--stat', '--format=%H', hash], env);
-    const additions = (stdout.match(/(\d+) insertions?\(\+\)/) || [])[1];
-    const deletions = (stdout.match(/(\d+) deletions?\(-\)/) || [])[1];
-    const files = (stdout.match(/ (\d+) files? changed/) || [])[1];
-    return {
-      additions: additions ? Number(additions) : 0,
-      deletions: deletions ? Number(deletions) : 0,
-      filesChanged: files ? Number(files) : 0,
-    };
+    const { stdout } = await execGit(repoPath, ['show', '--numstat', '--format=%H', hash], env);
+    const lines = asString(stdout).split(/\r?\n/);
+    let additions = 0;
+    let deletions = 0;
+    let filesChanged = 0;
+    for (const line of lines) {
+      const match = line.match(/^(\d+)\t(\d+)\t.+$/);
+      if (match) {
+        additions += Number(match[1]);
+        deletions += Number(match[2]);
+        filesChanged += 1;
+      }
+    }
+    return { additions, deletions, filesChanged };
   } catch {
     return { additions: 0, deletions: 0, filesChanged: 0 };
   }
@@ -272,7 +285,7 @@ async function getCommitStats(repoPath: string, hash: string, env: NodeJS.Proces
 async function getRemoteUrl(repoPath: string, env: NodeJS.ProcessEnv): Promise<string | null> {
   try {
     const { stdout } = await execGit(repoPath, ['remote', 'get-url', 'origin'], env);
-    return stdout.trim() || null;
+    return asString(stdout).trim() || null;
   } catch {
     return null;
   }
@@ -281,7 +294,7 @@ async function getRemoteUrl(repoPath: string, env: NodeJS.ProcessEnv): Promise<s
 async function getCommitDate(repoPath: string, ref: string, env: NodeJS.ProcessEnv): Promise<string | null> {
   try {
     const { stdout } = await execGit(repoPath, ['log', '-1', '--format=%cI', ref], env);
-    return stdout.trim() || null;
+    return asString(stdout).trim() || null;
   } catch {
     return null;
   }
@@ -290,7 +303,7 @@ async function getCommitDate(repoPath: string, ref: string, env: NodeJS.ProcessE
 async function detectLanguages(repoPath: string, env: NodeJS.ProcessEnv): Promise<string[]> {
   try {
     const { stdout } = await execGit(repoPath, ['ls-files'], env);
-    const files = stdout.split('\n').filter(Boolean);
+    const files = asString(stdout).split('\n').filter(Boolean);
     const counts = new Map<string, number>();
     for (const file of files) {
       const ext = path.extname(file).toLowerCase();

@@ -30,7 +30,6 @@ describe('GitView', () => {
     const remoteCell = await screen.findByText('git@github.com:example/alpha.git');
     const row = remoteCell.closest('tr');
     expect(row).not.toBeNull();
-    if (!row) throw new Error('Row not found');
     expect(row).toHaveTextContent('alpha');
     expect(row).toHaveTextContent('TypeScript, Shell');
     expect(row).toHaveTextContent('2');

@@ -1,9 +1,10 @@
-# Entropic - a Claude Code Todo GUI and Project History viewer
+# Entropic - Multi-Provider AI Todo GUI, Project History & Git Status Monitor
 
 <!-- Project badges -->
 [![GitHub Stars](https://img.shields.io/github/stars/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/stargazers)
 [![Forks](https://img.shields.io/github/forks/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/network/members)
 [![Watchers](https://img.shields.io/github/watchers/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/watchers)
+[![Clones](https://img.shields.io/badge/dynamic/json?color=success&label=clones&query=%24.count&url=https%3A%2F%2Fapi.github.com%2Frepos%2Fdimension-zero%2FEntropic%2Ftraffic%2Fclones&logo=git)](https://github.com/dimension-zero/Entropic)
 [![Open Issues](https://img.shields.io/github/issues/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic/pulls)
 [![Last Commit](https://img.shields.io/github/last-commit/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic/commits)
@@ -16,48 +17,84 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 
-A real-time ToDo monitoring system for Claude Code that displays live updates of Todo items as they are created, modified, and completed.
-This tool provides a visual dashboard in your terminal or as a GUI that automatically updates whenever Claude Code uses the TodoWrite tool.
-GUI versuib is in cross-platform TypeScript / Electron.
-Terminal version is in cross-platform PowerShell by [dimension-zero](@dimension-zero) and original Bash by [@JamesonNyp](@JamesonNyp).
+A comprehensive monitoring system for AI coding assistants that provides real-time tracking across **Claude Code**, **OpenAI Codex**, and **Google Gemini**. Displays live updates of Todo items, project history, and Git repository status with commit monitoring.
+
+**Multi-Provider Support:**
+- 🤖 **Claude Code** - Official Anthropic CLI integration
+- 🔧 **OpenAI Codex** - Full session and project tracking
+- 💎 **Google Gemini** - Complete workflow monitoring
+
+**Git Integration:**
+- 📊 **Repository Status** - Real-time monitoring of all Git repositories
+- 📝 **Commit History** - Detailed commit tracking with stats and co-authors
+- 🔄 **Live Updates** - Automatic refresh of repository states
+
+Available as a cross-platform TypeScript/Electron GUI and terminal versions in PowerShell by [dimension-zero](@dimension-zero) and original Bash by [@JamesonNyp](@JamesonNyp).
 
 ![Claude Code Todo Tracker Live Monitor](Todo%20Tracker.png)
 
 ## Overview
 
-This project provides scripts that integrate with Claude Code's hook system to capture and display todo updates in real-time. When Claude Code uses its TodoWrite tool, these scripts intercept the data and provide a live monitoring dashboard showing the current state of all todos.
+This project provides comprehensive monitoring for multiple AI coding assistants and Git repositories. It integrates with hook systems from Claude Code, OpenAI Codex, and Google Gemini to capture and display todo updates, project history, and Git status in real-time. When any supported AI tool modifies todos or project state, Entropic provides a unified live monitoring dashboard.
 
 ## Features
 
-- 🔄 **Live Updates**: Automatically refreshes when Claude Code modifies todos
+**Multi-Provider AI Integration:**
+- 🤖 **Claude Code**: Full TodoWrite tool integration with real-time updates
+- 🔧 **OpenAI Codex**: Session and project tracking with metadata support
+- 💎 **Google Gemini**: Complete workflow monitoring and history
+- 🔄 **Provider Filtering**: Toggle between providers or view all simultaneously
+
+**Git Repository Monitoring:**
+- 📊 **Repository Status**: Real-time tracking of all Git repositories in your workspace
+- 📝 **Commit History**: Detailed commit logs with statistics and co-author information
+- 🔍 **Language Detection**: Automatic identification of programming languages per repository
+- 🌐 **Remote Tracking**: Monitor ahead/behind status with remote repositories
+
+**Visual Interface:**
 - 🎨 **Color-Coded Status**: Visual indicators for different todo states
   - ✅ Green for completed items
-  - ▶️ Blue for active/in-progress items  
+  - ▶️ Blue for active/in-progress items
   - ○ Default for pending items
 - 📊 **Session Tracking**: Displays session ID and working directory
 - ⚡ **Efficient Monitoring**: Uses native file watching for minimal resource usage
-- 🌍 **Cross-Platform**: Available in both Bash and PowerShell implementations
+- 🌍 **Cross-Platform**: Available in TypeScript/Electron GUI, PowerShell, and Bash implementations
 
 ## How It Works
 
-1. **Hook Script**: Intercepts PostToolUse events for TodoWrite
-   - Captures todo data from Claude Code
+**Multi-Provider Data Collection:**
+1. **Claude Code Integration**: Intercepts PostToolUse events for TodoWrite
+   - Captures todo data from Claude Code sessions
    - Extracts relevant information (todos, session, directory)
    - Saves formatted JSON to `~/.claude/logs/current_todos.json`
 
-2. **Monitor Script**: Displays live todo updates
-   - Watches the JSON file for changes
-   - Parses and displays todos with color coding
-   - Updates display in real-time
-   - Uses efficient file watching mechanisms
+2. **Codex & Gemini Monitoring**: Watches session files and project directories
+   - Monitors `~/.codex/todos/` and `~/.gemini/sessions/` for updates
+   - Associates sessions with projects via metadata files
+   - Tracks project history and todo state changes
+
+**Git Repository Tracking:**
+3. **Repository Discovery**: Automatically finds all Git repositories in your workspace
+   - Scans for `.git` directories recursively
+   - Identifies programming languages used in each repository
+   - Tracks remote repository URLs and status
+
+4. **Live Monitoring**: Provides real-time updates across all data sources
+   - Watches files for changes using native OS mechanisms
+   - Parses and displays data with color coding and filtering
+   - Updates display automatically with minimal resource usage
 
 ## Available Implementations
 
 ### TypeScript/Electron GUI Version (`typescript/`) - Cross-Platform Desktop Application
 - **Modern Desktop GUI**: Slack-like interface with dark theme
 - **Cross-platform**: Runs as a native desktop app on Windows, macOS, and Linux
+- **Multi-Provider Support**: Unified interface for Claude Code, OpenAI Codex, and Google Gemini
+- **Git Integration**: Built-in Git status monitoring and commit history viewer
 - **Advanced Features**:
-  - Real-time monitoring of all Claude Code sessions across projects
+  - Real-time monitoring of all AI provider sessions across projects
+  - Provider filtering with toggle controls (Claude/Codex/Gemini)
+  - Multiple view modes: Project Todos, Project History, Global View, Git Status, Commit History
   - Tri-state toggle controls for sorting and spacing customization
   - Session tabs with automatic deduplication
   - Auto-refresh every 5 seconds

@@ -112,9 +112,7 @@ describe('Real Provider Filtering (No Mocks)', () => {
       p.provider === 'codex' || p.path.includes('codex')
     );
 
-    if (hasCodex) {
-      throw new Error('Codex projects still visible after filtering!');
-    }
+    expect(hasCodex).toBe(false);
 
     console.log('✅ Provider filtering works correctly with real data');
   });
@@ -152,9 +150,7 @@ describe('Real Provider Filtering (No Mocks)', () => {
     projectsVM.setProjects(testProjects);
 
     // Should have been notified when projects were set
-    if (notificationCount === 0) {
-      throw new Error('No notifications received from ViewModel');
-    }
+    expect(notificationCount).toBeGreaterThan(0);
 
     console.log(`✅ Received ${notificationCount} notifications from ViewModel`);
 
@@ -177,8 +173,8 @@ describe('Real Provider Filtering (No Mocks)', () => {
     const providers = projects.map(p => p.provider).filter(Boolean);
     const hasOnlyCodex = providers.every(p => p === 'codex');
 
-    if (!hasOnlyCodex && providers.length > 0) {
-      throw new Error(`Expected only Codex, but got: ${providers.join(', ')}`);
+    if (providers.length > 0) {
+      expect(hasOnlyCodex).toBe(true);
     }
 
     console.log('✅ Filter state persists correctly');
