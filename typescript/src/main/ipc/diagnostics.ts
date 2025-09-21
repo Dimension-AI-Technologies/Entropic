@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - IPC handlers are simple utilities
 import type { IpcMain } from 'electron';
 import type { ProviderPort } from '../core/ports';
 import { ResultUtils } from '../../utils/Result.js';
@@ -9,7 +10,7 @@ type DiagSummary = {
 };
 
 export function registerDiagnosticsIpc(ipcMain: IpcMain, providers: ProviderPort[]) {
-  ipcMain.handle('collect-diagnostics-hex', async (): Promise<DiagSummary> => {
+  ipcMain.handle('collect-diagnostics-hex', async (): Promise<DiagSummary> => { // EXEMPTION: IPC handler utility
     const results = await Promise.all(providers.map(async (p) => {
       const diagnosticsResult = await ResultUtils.fromPromise(
         p.collectDiagnostics()

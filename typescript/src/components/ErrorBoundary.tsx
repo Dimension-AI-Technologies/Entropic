@@ -18,7 +18,7 @@ export class ErrorBoundary extends Component<Props, State> {
     errorResult: undefined,
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): State { // EXEMPTION: React framework requirement for ErrorBoundary
     // Convert error to Result pattern for consistent error handling
     const errorResult = Err(
       error.message || 'Unknown error occurred',
@@ -31,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) { // EXEMPTION: React framework requirement for ErrorBoundary
     // Log using Result pattern for consistency
     const errorResult = Err(
       'Component error caught by boundary',

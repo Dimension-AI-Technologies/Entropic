@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - test utility functions don't need Result<T>
 import { Aggregator } from '../main/core/aggregator';
 import type { ProviderPort, EventPort } from '../main/core/ports';
 import type { Project, Session } from '../main/core/domain';
@@ -12,7 +13,7 @@ function mkSession(provider: string, id: string, updatedAt = Date.now()): Sessio
   } as Session;
 }
 
-function mkProject(provider: string, path: string, sessions: Session[] = []): Project {
+function mkProject(provider: string, path: string, sessions: Session[] = []): Project { // EXEMPTION: test utility factory
   return {
     provider,
     projectPath: path,

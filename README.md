@@ -1,6 +1,8 @@
 # Entropic - AI Coding Agent TODO and History live status monitor GUI
 
 <!-- Project badges -->
+<div align="center">
+
 [![GitHub Stars](https://img.shields.io/github/stars/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/stargazers)
 [![Forks](https://img.shields.io/github/forks/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/network/members)
 [![Watchers](https://img.shields.io/github/watchers/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/watchers)
@@ -19,12 +21,21 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 
-A comprehensive monitoring system for AI coding assistants that provides real-time tracking across **Claude Code**, **OpenAI Codex**, and **Google Gemini**. Displays live updates of Todo items, project history, and Git repository status with commit monitoring.
+</div>
+
+**Entropic** provides comprehensive monitoring for AI coding assistants, allowing you to track Project TODO lists and Project chat history in real-time. It offers a Global Git view showing status across all projects, plus a single-Project commit view to examine the detailed history of commits. Monitor your development workflow across **Claude Code**, **OpenAI Codex**, and **Google Gemini** from a unified interface.
 
 **Multi-Agent Monitoring:**
-- 🤖 **Claude Code** - TODO list and Project History monitoring
-- 🔧 **OpenAI Codex** - TODO list and Project History monitoring
-- 💎 **Google Gemini** - TODO list and Project History monitoring
+
+Three monitoring modes provide complete visibility:
+- 📋 **Per-Project TODO Lists** - Live updates of TODO items as they're created, modified, and completed
+- 💬 **Per-Project User-Prompt History** - Amalgamated history of all user prompts to review project evolution
+- 🌐 **Global View** - Shows current and next TODOs across all projects simultaneously
+
+Key capabilities:
+- **Live Updates** - Project TODO view and Global TODO view update in real-time
+- **History Tracking** - Project History view amalgamates all user-prompts per project for comprehensive review
+- **Multi-CLI Support** - Supports Claude Code, OpenAI Codex, and Google Gemini CLI tools
 
 **Git Integration:**
 - 📊 **Repository Status** - Real-time monitoring of Git repositories under ~/source directory on Windows, macOS and Linux

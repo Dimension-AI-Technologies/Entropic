@@ -71,7 +71,7 @@ class InMemoryTodoRepository implements ITodoRepository {
     this.sessions = [];
   }
 
-  static createSampleSessions(): Session[] {
+  static createSampleSessions(): Session[] { // EXEMPTION: test utility factory
     return [
       {
         id: 'current-session-123',

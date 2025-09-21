@@ -50,5 +50,12 @@ declare global {
       collectDiagnosticsHex?: () => Promise<any>;
       repairMetadataHex?: (provider: string | undefined, dryRun: boolean) => Promise<any>;
     };
+    __initialSplash?: {
+      addStep?: (text: string) => void;
+      syncSteps?: (steps: string[]) => void;
+      setStatus?: (text: string) => void;
+      markReactReady?: () => void;
+      hide?: () => void;
+    };
   }
 }

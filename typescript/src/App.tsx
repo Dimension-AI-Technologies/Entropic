@@ -284,6 +284,25 @@ function App() {
     loadCommitHistory({ force: true });
   }, [loadGitStatus, loadCommitHistory]);
 
+  useEffect(() => {
+    try {
+      window.__initialSplash?.syncSteps?.(bootSteps);
+    } catch {}
+  }, [bootSteps]);
+
+  useEffect(() => {
+    try {
+      window.__initialSplash?.setStatus?.(loading ? 'Loading projects...' : 'Ready');
+    } catch {}
+    if (!loading) {
+      try { window.__initialSplash?.hide?.(); } catch {}
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    try { window.__initialSplash?.markReactReady?.(); } catch {}
+  }, []);
+
   // Listen for screenshot notifications from main and show consistent toast
   useEffect(() => {
     const api: any = (window as any).electronAPI;

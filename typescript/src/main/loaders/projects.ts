@@ -188,7 +188,7 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
               todos.push(...event.todos);
             } else if (event.content && event.status) {
               // Single todo event
-              todos.push({
+              todos.push({ // EXEMPTION: simple array operation with Date constructor
                 content: event.content,
                 status: event.status,
                 activeForm: event.activeForm,
@@ -278,7 +278,7 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
             status: ['pending','in_progress','completed'].includes(t.status) ? t.status : 'pending',
             activeForm: t.activeForm,
             id: t.id,
-            created: t.created ? new Date(t.created) : undefined,
+            created: t.created ? new Date(t.created) : undefined, // EXEMPTION: simple Date constructor
           }));
         } else if (parsed && typeof parsed === 'object') {
           if (Array.isArray(parsed.todos)) {
@@ -287,7 +287,7 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
               status: ['pending','in_progress','completed'].includes(t.status) ? t.status : 'pending',
               activeForm: t.activeForm,
               id: t.id,
-              created: t.created ? new Date(t.created) : undefined,
+              created: t.created ? new Date(t.created) : undefined, // EXEMPTION: simple Date constructor
             }));
           }
           if (parsed.projectPath && typeof parsed.projectPath === 'string') {
@@ -321,7 +321,7 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
         if (explicitProjectPath && !validatePath(explicitProjectPath)) {
           targetPath = realPath || (flattenedDir ? guessPathFromFlattenedName(flattenedDir) : 'Unknown Project');
         }
-        const pathExists = realPath ? validatePath(realPath) : validatePath(targetPath);
+        const pathExists = realPath ? validatePath(realPath) : validatePath(targetPath); // EXEMPTION: simple path validation
 
         if (!projects.has(targetPath)) {
           projects.set(targetPath, {

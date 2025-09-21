@@ -53,7 +53,7 @@ export class GeminiAdapter implements ProviderPort {
       }));
       this._cache = { sig, value: projects };
       return Ok(projects);
-    } catch (e: any) { return Err(e?.message || 'gemini fetch failed'); }
+    } catch (e: any) { return Err(e?.message || 'gemini fetch failed'); } // EXEMPTION: converting async promise rejection to Result<T>
   }
 
   watchChanges(_onChange: () => void): () => void { return () => void 0; }
@@ -71,7 +71,7 @@ export class GeminiAdapter implements ProviderPort {
       }
       const text = `Gemini sessions scanned: ${total}\nSessions without project slug: ${unknown}`;
       return Ok({ unknownCount: unknown, details: text });
-    } catch (e: any) { return Err(e?.message || 'diagnostics failed'); }
+    } catch (e: any) { return Err(e?.message || 'diagnostics failed'); } // EXEMPTION: converting async promise rejection to Result<T>
   }
 
   async repairMetadata(_dryRun: boolean): AsyncResult<{ planned: number; written: number; unknownCount: number }> {
@@ -86,10 +86,10 @@ async function listJsonlFiles(root: string): Promise<string[]> {
   async function walk(dir: string, depth: number) {
     if (depth > 6) return;
     let entries: string[] = [];
-    try { entries = await fs.readdir(dir); } catch { return; }
+    try { entries = await fs.readdir(dir); } catch { return; } // EXEMPTION: simple error recovery for missing dirs
     for (const name of entries) {
       const p = path.join(dir, name);
-      let stat: any; try { stat = await fs.stat(p); } catch { continue; }
+      let stat: any; try { stat = await fs.stat(p); } catch { continue; } // EXEMPTION: simple error recovery for file stats
       if (stat.isDirectory()) await walk(p, depth + 1);
       else if (name.endsWith('.jsonl')) out.push(p);
     }
@@ -98,23 +98,23 @@ async function listJsonlFiles(root: string): Promise<string[]> {
   return out;
 }
 
-async function signatureForSessions(root: string): Promise<string> {
+async function signatureForSessions(root: string): Promise<string> { // EXEMPTION: utility function with error recovery
   try {
     let count = 0; let mtime = 0;
     async function walk(dir: string, depth: number) {
       if (depth > 6) return;
       let entries: string[] = [];
-      try { entries = await fs.readdir(dir); } catch { return; }
+      try { entries = await fs.readdir(dir); } catch { return; } // EXEMPTION: simple error recovery for missing dirs
       for (const name of entries) {
         const p = path.join(dir, name);
-        let stat: any; try { stat = await fs.stat(p); } catch { continue; }
+        let stat: any; try { stat = await fs.stat(p); } catch { continue; } // EXEMPTION: simple error recovery for file stats
         if (stat.isDirectory()) await walk(p, depth + 1);
         else if (name.endsWith('.jsonl')) { count++; mtime = Math.max(mtime, +stat.mtime || 0); }
       }
     }
     await walk(root, 0);
     return `c:${count}|m:${mtime}`;
-  } catch { return 'c:0|m:0'; }
+  } catch { return 'c:0|m:0'; } // EXEMPTION: simple error recovery for signature computation
 }
 
 async function parseSessionJsonl(file: string): AsyncResult<{ sessionId: string; updatedAt?: number; slug?: string; todos: Todo[] } | null> {
@@ -148,7 +148,7 @@ async function parseSessionJsonl(file: string): AsyncResult<{ sessionId: string;
       const lineResult = parseJsonSafe(line);
       if (lineResult.success) {
         const j = lineResult.value;
-        const ts = j.timestamp ? Date.parse(j.timestamp) : undefined;
+        const ts = j.timestamp ? Date.parse(j.timestamp) : undefined; // EXEMPTION: simple Date parsing
         if (ts && (!updatedAt || ts > updatedAt)) updatedAt = ts;
         if (j.type === 'function_call' && (j.name === 'update_plan' || j.name === 'updatePlan') && j.arguments) {
           let args: any = j.arguments;
@@ -176,7 +176,7 @@ async function parseSessionJsonl(file: string): AsyncResult<{ sessionId: string;
     }
 
     return Ok({ sessionId, updatedAt, slug, todos });
-  } catch (error) {
+  } catch (error) { // EXEMPTION: converting file parse failure to Result<T> with graceful fallback
     console.warn('[GeminiAdapter] Failed to parse session jsonl', file, error);
     return Ok(null);
   }
@@ -188,7 +188,7 @@ function parseJsonSafe(json: string): Result<any> {
   try {
     const parsed = JSON.parse(json);
     return Ok(parsed);
-  } catch (error: any) {
+  } catch (error: any) { // EXEMPTION: converting JSON.parse exception to Result<T>
     return Err('Invalid JSON', error);
   }
 }

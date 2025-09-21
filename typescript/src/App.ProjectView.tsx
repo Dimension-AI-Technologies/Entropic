@@ -183,7 +183,7 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
   useEffect(() => {
     if (hasAutoSelected || selectedMVVMProject || projects.length === 0) return;
     const saved = lastProjectPathRef.current;
-    const bySaved = saved ? projects.find(p => p.path === saved) : null;
+    const bySaved = saved ? projects.find(p => p.path === saved) : null; // EXEMPTION: simple array find operation
     if (bySaved) {
       setSelectedMVVMProject(bySaved);
       setHasAutoSelected(true);

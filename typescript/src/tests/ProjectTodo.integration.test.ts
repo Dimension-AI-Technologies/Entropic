@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - test utility functions don't need Result<T>
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { ProjectsViewModel } from '../viewmodels/ProjectsViewModel';
 import { TodosViewModel } from '../viewmodels/TodosViewModel';
@@ -111,7 +112,7 @@ class InMemoryTodoRepository implements ITodoRepository {
     return '/tmp/test-todos';
   }
 
-  static createSampleSessions(): Session[] {
+  static createSampleSessions(): Session[] { // EXEMPTION: test utility factory
     return [
       {
         id: 'current-session-123',

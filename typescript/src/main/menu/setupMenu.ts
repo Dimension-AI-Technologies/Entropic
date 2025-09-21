@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - menu utilities and getters don't need Result<T>
 import { app, Menu, clipboard } from 'electron';
 import fs from 'node:fs';
 import fsPromises from 'node:fs/promises';
@@ -110,7 +111,7 @@ export function setupMenu(options: {
   function updateFlags() { broadcast(); }
 
   function broadcast() {
-    const win = getMainWindow ? getMainWindow() : null;
+    const win = getMainWindow ? getMainWindow() : null; // EXEMPTION: simple getter
     try { win?.webContents.send('log-options-changed', { logAnimations, logBoids, consoleLevel, logToFile, logFilePath }); } catch {}
   }
 

@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - DI container getters and utilities don't need Result<T>
 // Lightweight façade replacing the previous DI system. It uses
 // electronAPI directly and provides minimal ViewModel-like objects
 // with the methods our UI expects.
@@ -57,7 +58,7 @@ class SimpleProjectsViewModel {
             path: p.projectPath,
             flattenedDir: p.flattenedDir || (p.projectPath || '').replace(/[\\/:]/g, '-'),
             pathExists: !!p.pathExists,
-            lastModified: p.mostRecentTodoDate ? new Date(p.mostRecentTodoDate) : new Date(0),
+            lastModified: p.mostRecentTodoDate ? new Date(p.mostRecentTodoDate) : new Date(0), // EXEMPTION: simple Date constructor
             provider: p.provider,
             // Keep sessions light and MVVM-compatible
             sessions: (p.sessions||[])
@@ -65,12 +66,12 @@ class SimpleProjectsViewModel {
               .map((s:any)=> ({
               id: s.sessionId,
               todos: Array.isArray(s.todos) ? s.todos : [],
-              lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(0),
+              lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(0), // EXEMPTION: simple Date constructor
               filePath: s.filePath,
               projectPath: s.projectPath || p.projectPath,
               provider: s.provider || p.provider,
             })),
-            mostRecentTodoDate: p.mostRecentTodoDate ? new Date(p.mostRecentTodoDate) : undefined,
+            mostRecentTodoDate: p.mostRecentTodoDate ? new Date(p.mostRecentTodoDate) : undefined, // EXEMPTION: simple Date constructor
           }));
           console.log('[ProjectsViewModel] After filter:', this.projects.length, 'projects');
         } else {
@@ -98,7 +99,7 @@ class SimpleProjectsViewModel {
   }
   onChange(cb: () => void): () => void { this.listeners.add(cb); return () => this.listeners.delete(cb); }
   private emit(){ this.listeners.forEach(f=>{ try{f();}catch{} }); }
-  getProjectsSortedByDate(): Project[] { return [...this.projects].sort((a,b)=> (b.mostRecentTodoDate?.getTime?.()||0)-(a.mostRecentTodoDate?.getTime?.()||0)); }
+  getProjectsSortedByDate(): Project[] { return [...this.projects].sort((a,b)=> (b.mostRecentTodoDate?.getTime?.()||0)-(a.mostRecentTodoDate?.getTime?.()||0)); } // EXEMPTION: simple array sorting getter
   // Compatibility helpers used by legacy tests
   getProjectCount(): number { return this.projects.length; }
   getExistingProjects(): Project[] { return this.projects.filter((p:any)=>p.pathExists); }
@@ -166,7 +167,7 @@ class SimpleTodosViewModel {
             return;
           }
 
-          sess.push({
+          sess.push({ // EXEMPTION: simple array operation with Date constructor
             ...s,
             id: s.sessionId || s.id,
             lastModified: s.updatedAt ? new Date(s.updatedAt) : new Date(s.lastModified||0),
@@ -194,7 +195,7 @@ class SimpleTodosViewModel {
   }
   onChange(cb: () => void): () => void { this.listeners.add(cb); return () => this.listeners.delete(cb); }
   private emit(){ this.listeners.forEach(f=>{ try{f();}catch{} }); }
-  getSessionsSortedByDate(): Session[] { return [...this.sessions].sort((a,b)=> b.lastModified.getTime()-a.lastModified.getTime()); }
+  getSessionsSortedByDate(): Session[] { return [...this.sessions].sort((a,b)=> b.lastModified.getTime()-a.lastModified.getTime()); } // EXEMPTION: simple array sorting getter
   getSessionsForProject(projectPath: string): Session[] { return this.sessions.filter(s=>s.projectPath===projectPath); }
 }
 

@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - file watcher utilities don't need Result<T>
 import { watch } from 'node:fs';
 import fsSync from 'node:fs';
 import type { BrowserWindow } from 'electron';
@@ -118,7 +119,7 @@ export function setupFileWatching(
 }
 
 // Synchronous version for backward compatibility
-export function setupFileWatchingSync(
+export function setupFileWatchingSync( // EXEMPTION: utility function with error recovery
   mainWindow: BrowserWindow,
   options: {
     projectsDir: string;

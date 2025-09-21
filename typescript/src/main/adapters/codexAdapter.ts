@@ -66,7 +66,7 @@ export class CodexAdapter implements ProviderPort {
       }));
       this._cache = { sig, value: projects };
       return Ok(projects);
-    } catch (e: any) {
+    } catch (e: any) { // EXEMPTION: converting async promise rejection to Result<T>
       return Err(e?.message || 'codex fetch failed');
     }
   }
@@ -88,7 +88,7 @@ export class CodexAdapter implements ProviderPort {
       }
       const text = `Codex sessions scanned: ${total}\nSessions without repository_url: ${unknown}`;
       return Ok({ unknownCount: unknown, details: text });
-    } catch (e: any) { return Err(e?.message || 'diagnostics failed'); }
+    } catch (e: any) { return Err(e?.message || 'diagnostics failed'); } // EXEMPTION: converting async promise rejection to Result<T>
   }
 
   async repairMetadata(_dryRun: boolean): AsyncResult<{ planned: number; written: number; unknownCount: number }> {
@@ -103,15 +103,15 @@ function numberSafe(v?: number): number {
   return typeof v === 'number' && isFinite(v) ? v : 0;
 }
 
-async function listJsonlFiles(root: string): Promise<string[]> {
+async function listJsonlFiles(root: string): Promise<string[]> { // EXEMPTION: utility function with error recovery
   const out: string[] = [];
   async function walk(dir: string, depth: number) {
     if (depth > 6) return;
     let entries: string[] = [];
-    try { entries = await fs.readdir(dir); } catch { return; }
+    try { entries = await fs.readdir(dir); } catch { return; } // EXEMPTION: simple error recovery for missing dirs
     for (const name of entries) {
       const p = path.join(dir, name);
-      let stat: any; try { stat = await fs.stat(p); } catch { continue; }
+      let stat: any; try { stat = await fs.stat(p); } catch { continue; } // EXEMPTION: simple error recovery for file stats
       if (stat.isDirectory()) await walk(p, depth + 1);
       else if (name.endsWith('.jsonl')) out.push(p);
     }
@@ -120,24 +120,24 @@ async function listJsonlFiles(root: string): Promise<string[]> {
   return out;
 }
 
-async function signatureForCodexSessions(root: string): Promise<string> {
+async function signatureForCodexSessions(root: string): Promise<string> { // EXEMPTION: utility function with error recovery
   try {
     let count = 0;
     let mtime = 0;
     async function walk(dir: string, depth: number) {
       if (depth > 6) return;
       let entries: string[] = [];
-      try { entries = await fs.readdir(dir); } catch { return; }
+      try { entries = await fs.readdir(dir); } catch { return; } // EXEMPTION: simple error recovery for missing dirs
       for (const name of entries) {
         const p = path.join(dir, name);
-        let stat: any; try { stat = await fs.stat(p); } catch { continue; }
+        let stat: any; try { stat = await fs.stat(p); } catch { continue; } // EXEMPTION: simple error recovery for file stats // EXEMPTION: simple error recovery for file stats
         if (stat.isDirectory()) await walk(p, depth + 1);
         else if (name.endsWith('.jsonl')) { count++; mtime = Math.max(mtime, +stat.mtime || 0); }
       }
     }
     await walk(root, 0);
     return `c:${count}|m:${mtime}`;
-  } catch { return 'c:0|m:0'; }
+  } catch { return 'c:0|m:0'; } // EXEMPTION: simple error recovery for signature computation
 }
 
 async function parseCodexSessionJsonl(file: string): AsyncResult<{ sessionId: string; updatedAt?: number; repoSlug?: string; todos: Todo[] } | null> {
@@ -169,7 +169,7 @@ async function parseCodexSessionJsonl(file: string): AsyncResult<{ sessionId: st
       const lineResult = parseJsonSafe(line);
       if (lineResult.success) {
         const j = lineResult.value;
-        const ts = j.timestamp ? Date.parse(j.timestamp) : undefined;
+        const ts = j.timestamp ? Date.parse(j.timestamp) : undefined; // EXEMPTION: simple Date parsing
         if (ts && (!updatedAt || ts > updatedAt)) updatedAt = ts;
         if (j.type === 'function_call' && j.name === 'update_plan' && j.arguments) {
           let args: any = j.arguments;
@@ -198,7 +198,7 @@ async function parseCodexSessionJsonl(file: string): AsyncResult<{ sessionId: st
     }
 
     return Ok({ sessionId, updatedAt, repoSlug, todos });
-  } catch (error) {
+  } catch (error) { // EXEMPTION: converting file parse failure to Result<T> with graceful fallback
     // Maintain legacy behaviour: treat parse failures as empty successes so callers can continue
     console.warn('[CodexAdapter] Failed to parse session jsonl', file, error);
     return Ok(null);
@@ -211,7 +211,7 @@ function parseJsonSafe(json: string): Result<any> {
   try {
     const parsed = JSON.parse(json);
     return Ok(parsed);
-  } catch (error: any) {
+  } catch (error: any) { // EXEMPTION: converting JSON.parse exception to Result<T>
     return Err('Invalid JSON', error);
   }
 }

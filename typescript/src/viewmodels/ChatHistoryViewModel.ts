@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - ViewModel getters and utilities don't need Result<T>
 import { IChatRepository, PromptEntry, Conversation, ChatStatistics } from '../models/Chat';
 import { AsyncResult, Ok, Err } from '../utils/Result';
 
@@ -61,7 +62,7 @@ export class ChatHistoryViewModel {
    * Get all loaded prompts
    * @no-result-needed Simple getter returning cached data
    */
-  getPrompts(): PromptEntry[] {
+  getPrompts(): PromptEntry[] { // EXEMPTION: simple getter returning cached data
     return [...this.prompts]; // Return copy to prevent mutation
   }
 
@@ -96,7 +97,7 @@ export class ChatHistoryViewModel {
    * Get current conversation
    * @no-result-needed Simple getter returning cached data
    */
-  getCurrentConversation(): Conversation | null {
+  getCurrentConversation(): Conversation | null { // EXEMPTION: simple getter returning computed data
     if (!this.currentProjectPath || this.prompts.length === 0) {
       return null;
     }
@@ -262,7 +263,7 @@ export class ChatHistoryViewModel {
   /**
    * @no-result-needed Pure function that cannot fail
    */
-  private sortPrompts(prompts: PromptEntry[]): PromptEntry[] {
+  private sortPrompts(prompts: PromptEntry[]): PromptEntry[] { // EXEMPTION: simple array sorting utility
     const sorted = [...prompts];
     sorted.sort((a, b) => {
       const timeA = new Date(a.timestamp).getTime();

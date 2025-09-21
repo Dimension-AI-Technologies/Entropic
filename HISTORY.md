@@ -80,4 +80,4 @@
 - Full Node.js API access is most reliable with CommonJS
 
 ## Previous Updates
-(Add previous history entries here)
+(Add previous history entries here)| 2025-09-21 18:29:09 | doowell2 | refactor: enhance UI with splash screen and improve error handling |

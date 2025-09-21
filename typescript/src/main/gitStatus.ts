@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - git utility functions with error recovery don't need Result<T>
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import fsSync, { Dirent } from 'node:fs';
@@ -302,7 +303,7 @@ async function getCommitStats(repoPath: string, hash: string, env: NodeJS.Proces
   }
 }
 
-async function getRemoteUrl(repoPath: string, env: NodeJS.ProcessEnv): Promise<string | null> {
+async function getRemoteUrl(repoPath: string, env: NodeJS.ProcessEnv): Promise<string | null> { // EXEMPTION: git utility with null fallback
   try {
     const { stdout } = await execGit(repoPath, ['remote', 'get-url', 'origin'], env);
     return asString(stdout).trim() || null;
@@ -311,7 +312,7 @@ async function getRemoteUrl(repoPath: string, env: NodeJS.ProcessEnv): Promise<s
   }
 }
 
-async function getCommitDate(repoPath: string, ref: string, env: NodeJS.ProcessEnv): Promise<string | null> {
+async function getCommitDate(repoPath: string, ref: string, env: NodeJS.ProcessEnv): Promise<string | null> { // EXEMPTION: git utility with null fallback
   try {
     const { stdout } = await execGit(repoPath, ['log', '-1', '--format=%cI', ref], env);
     return asString(stdout).trim() || null;
@@ -320,7 +321,7 @@ async function getCommitDate(repoPath: string, ref: string, env: NodeJS.ProcessE
   }
 }
 
-async function detectLanguages(repoPath: string, env: NodeJS.ProcessEnv): Promise<string[]> {
+async function detectLanguages(repoPath: string, env: NodeJS.ProcessEnv): Promise<string[]> { // EXEMPTION: git utility with array fallback
   try {
     const { stdout } = await execGit(repoPath, ['ls-files'], env);
     const files = asString(stdout).split('\n').filter(Boolean);

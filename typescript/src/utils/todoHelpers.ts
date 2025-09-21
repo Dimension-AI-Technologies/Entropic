@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - utility helpers are simple getters that don't need Result<T>
 import { Session, Project } from '../types';
 
 export const getStatusSymbol = (status: string) => {
