@@ -7,22 +7,10 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: filesystem: file:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: filesystem: file:; style-src 'self' 'unsafe-inline' blob:; img-src * data: blob: filesystem: file:; font-src 'self' data: blob:; connect-src * ws: http: https: file:; media-src * blob: file:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';" />
     <title>Entropic - Coding Agent & Git Monitor</title>
     <style>
-      :root {
-        color-scheme: dark;
-      }
-
       body {
         margin: 0;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background: radial-gradient(circle at 20% 20%, rgba(58, 74, 99, 0.25), transparent 55%),
-                    radial-gradient(circle at 80% 0%, rgba(123, 70, 149, 0.2), transparent 60%),
-                    #0f1115;
+        background: #0f1115;
         color: #e3e7ef;
-      }
-
-      #root {
-        position: relative;
-        z-index: 1;
       }
 
       #initial-splash {
@@ -31,10 +19,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: linear-gradient(160deg, rgba(19, 22, 27, 0.92), rgba(12, 14, 18, 0.96));
-        backdrop-filter: blur(18px);
+        background: rgba(15, 17, 21, 0.95);
         z-index: 9999;
-        transition: opacity 280ms ease;
+        transition: opacity 200ms ease;
       }
 
       #initial-splash.is-hidden {
@@ -46,66 +33,34 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 20px;
-        padding: 32px 40px;
-        border-radius: 16px;
-        background: rgba(23, 27, 34, 0.7);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-        border: 1px solid rgba(163, 174, 206, 0.08);
-        width: min(420px, 90vw);
+        gap: 16px;
+        padding: 28px 34px;
+        border-radius: 14px;
+        background: rgba(28, 32, 40, 0.85);
+        border: 1px solid rgba(150, 170, 210, 0.12);
+        min-width: 240px;
       }
 
       .initial-splash-title {
-        font-size: 22px;
+        font-size: 18px;
         font-weight: 600;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
-        color: #f5f7fb;
       }
 
-      .initial-splash-subtitle {
-        font-size: 14px;
-        color: #b7bfd1;
-        text-align: center;
-        max-width: 320px;
-      }
-
-      .initial-spinner {
-        width: 64px;
-        height: 64px;
+      .initial-splash-spinner {
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
         border: 3px solid rgba(212, 127, 96, 0.18);
         border-top-color: rgba(212, 127, 96, 0.85);
         animation: initial-spin 900ms linear infinite;
       }
 
-      .initial-steps {
-        align-self: stretch;
-        max-height: 180px;
-        overflow: hidden;
-        border-radius: 12px;
-        border: 1px solid rgba(163, 174, 206, 0.08);
-        background: rgba(10, 12, 16, 0.55);
-        padding: 14px 18px;
-        font-family: 'SFMono-Regular', 'JetBrains Mono', monospace;
-        font-size: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        color: #d0d6e1;
-        box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35);
-      }
-
-      .initial-step-line {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        opacity: 0.85;
-      }
-
-      .initial-step-line::before {
-        content: '▸';
-        color: #d47f60;
+      .initial-splash-status {
+        font-size: 13px;
+        color: #c7cedd;
+        text-align: center;
       }
 
       @keyframes initial-spin {
@@ -118,59 +73,11 @@
     <div id="initial-splash">
       <div class="initial-splash-card">
         <div class="initial-splash-title">Entropic</div>
-        <div class="initial-splash-subtitle">Booting coding agent monitor. Sit tight while we gather your projects.</div>
-        <div class="initial-spinner" aria-hidden="true"></div>
-        <div id="initial-splash-status" class="initial-splash-subtitle" style="font-size: 13px; color: #c7cedd;">Launching renderer...</div>
-        <div id="initial-splash-steps" class="initial-steps" role="status" aria-live="polite"></div>
+        <div class="initial-splash-spinner" aria-hidden="true"></div>
+        <div id="initial-splash-status" class="initial-splash-status">Launching renderer...</div>
       </div>
     </div>
     <div id="root"></div>
-    <script>
-      (function bootstrapInitialSplash() {
-        const splash = document.getElementById('initial-splash');
-        const stepsEl = document.getElementById('initial-splash-steps');
-        const statusEl = document.getElementById('initial-splash-status');
-
-        if (!splash || !stepsEl || !statusEl) {
-          return;
-        }
-
-        const addStep = (text) => {
-          const line = document.createElement('div');
-          line.className = 'initial-step-line';
-          line.textContent = text;
-          stepsEl.appendChild(line);
-          stepsEl.scrollTop = stepsEl.scrollHeight;
-        };
-
-        const syncSteps = (steps) => {
-          if (!Array.isArray(steps)) return;
-          stepsEl.innerHTML = '';
-          steps.forEach(addStep);
-        };
-
-        addStep('Bootstrapping renderer...');
-
-        window.__initialSplash = {
-          addStep,
-          syncSteps,
-          setStatus: (text) => {
-            statusEl.textContent = text;
-          },
-          markReactReady: () => {
-            window.__initialSplash?.hide?.();
-          },
-          hide: () => {
-            if (!splash.classList.contains('is-hidden')) {
-              splash.classList.add('is-hidden');
-              window.setTimeout(() => {
-                splash.remove();
-              }, 320);
-            }
-          }
-        };
-      })();
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

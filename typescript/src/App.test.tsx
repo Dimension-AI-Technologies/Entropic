@@ -129,7 +129,6 @@ function primeData() {
 
 describe('App', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
     diTest.reset();
     primeData();
     localStorage.clear();
@@ -137,24 +136,57 @@ describe('App', () => {
       getProviderPresence: jest.fn().mockResolvedValue({ claude: true, codex: true, gemini: true }),
       getProjects: jest.fn().mockResolvedValue({ success: true, value: diTest.projectData }),
       onScreenshotTaken: jest.fn().mockReturnValue(() => {}),
-      getGitStatus: jest.fn().mockResolvedValue({ success: true, value: [] }),
-      getGitCommits: jest.fn().mockResolvedValue({ success: true, value: [] }),
+      getGitStatus: jest.fn().mockResolvedValue({
+        success: true,
+        value: [
+          {
+            name: 'Repo',
+            relativePath: 'repo',
+            languages: ['ts'],
+            remoteUrl: null,
+            lastLocalCommit: null,
+            lastRemoteCommit: null,
+            ahead: 0,
+            behind: 0,
+          },
+        ],
+      }),
+      getGitCommits: jest.fn().mockResolvedValue({
+        success: true,
+        value: [
+          {
+            repo: 'Repo',
+            relativePath: 'repo',
+            commits: [
+              {
+                hash: 'abcdef1234567890',
+                date: new Date().toISOString(),
+                message: 'Initial commit',
+                authorName: 'Tester',
+                coAuthors: [],
+                stats: {
+                  additions: 1,
+                  deletions: 0,
+                  totalLines: 1,
+                  filesAdded: 1,
+                  filesChanged: 0,
+                  filesDeleted: 0,
+                },
+              },
+            ],
+          },
+        ],
+      }),
     };
     lastTitleBarProps = undefined;
     lastProjectViewProps = undefined;
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   async function renderApp() {
     const renderResult = render(<App />);
-    await act(async () => {
-      jest.advanceTimersByTime(950);
-      await Promise.resolve();
+    await waitFor(() => expect(screen.queryByTestId('project-view')).toBeInTheDocument(), {
+      timeout: 2000,
     });
-    await waitFor(() => expect(screen.queryByTestId('project-view')).toBeInTheDocument());
     return renderResult;
   }
 

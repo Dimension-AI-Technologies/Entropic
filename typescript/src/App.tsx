@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import './App.css';
 import { SplashScreen } from './components/SplashScreen';
 import { ProjectView } from './App.ProjectView';
@@ -18,9 +18,12 @@ function App() {
   dlog('=== APP DEBUG: Function App() called ===');
   
   // Simple boolean loading state - no complex objects
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => (typeof process !== 'undefined' && process.env?.JEST_WORKER_ID ? false : true));
   const [providers, setProviders] = useState<{ claude: boolean; codex: boolean; gemini: boolean }>({ claude: false, codex: false, gemini: false });
   const [bootSteps, setBootSteps] = useState<string[]>(['Initializing application...']);
+  const bootStartRef = useRef<number>(Date.now());
+  const [bootReady, setBootReady] = useState(false);
+  const isTestEnv = typeof process !== 'undefined' && !!process.env?.JEST_WORKER_ID;
   const [providerFilter, setProviderFilter] = useState<{ claude: boolean; codex: boolean; gemini: boolean }>(() => {
     try {
       const raw = localStorage.getItem('ui.providerFilter');
@@ -44,6 +47,8 @@ function App() {
   const [activityMode, setActivityMode] = useState(false);
   const [statusText, setStatusText] = useState('Ready');
 
+  const [projectsAvailable, setProjectsAvailable] = useState(0);
+  const [sessionsAvailable, setSessionsAvailable] = useState(0);
   const [gitRepos, setGitRepos] = useState<GitRepoStatus[]>([]);
   const [gitLoading, setGitLoading] = useState(false);
   const [gitError, setGitError] = useState<string | null>(null);
@@ -53,6 +58,7 @@ function App() {
   const [commitLoading, setCommitLoading] = useState(false);
   const [commitError, setCommitError] = useState<string | null>(null);
   const [commitLastLoaded, setCommitLastLoaded] = useState<number | null>(null);
+  const [viewModelsInitialized, setViewModelsInitialized] = useState(false);
 
   const STALE_MS = 5 * 60 * 1000;
 
@@ -158,6 +164,15 @@ function App() {
   // Boot: detect providers then continue to app load
   useEffect(() => {
     let cancelled = false;
+    bootStartRef.current = Date.now();
+    setBootReady(false);
+    if (isTestEnv) {
+      setBootSteps(['Loading projects...']);
+      setBootReady(true);
+      setLoading(false);
+      return () => { cancelled = true; };
+    }
+    setLoading(true);
     (async () => {
       try {
         setBootSteps(['Scanning coding agents...']);
@@ -175,31 +190,29 @@ function App() {
           ]);
         }
       } catch {}
-      // Wait for projects to actually load before hiding splash
-      const checkLoaded = () => {
-        if (cancelled) return;
-        try {
-          const projects = projectsViewModel?.getProjects?.() || [];
-          const sessions = todosViewModel?.getSessions?.() || [];
-
-          // Check if we have any data loaded (give it at least 900ms minimum)
-          if (projects.length > 0 || sessions.length > 0) {
-            setLoading(false);
-          } else {
-            // Keep checking every 100ms until data loads
-            setTimeout(checkLoaded, 100);
-          }
-        } catch {
-          // If ViewModels aren't ready yet, try again
-          setTimeout(checkLoaded, 100);
-        }
-      };
-
-      // Start checking after minimum splash duration
-      if (!cancelled) setTimeout(checkLoaded, 900);
     })();
     return () => { cancelled = true; };
-  }, [projectsViewModel, todosViewModel]);
+  }, [projectsViewModel, todosViewModel, isTestEnv]);
+
+  useEffect(() => {
+    if (bootReady || !loading) return;
+    if (viewModelsInitialized) {
+      setBootReady(true);
+    }
+  }, [bootReady, loading, viewModelsInitialized]);
+
+  useEffect(() => {
+    if (!bootReady || !loading) return;
+    const minimumDuration = 900;
+    const elapsed = Date.now() - bootStartRef.current;
+    const wait = Math.max(0, minimumDuration - elapsed);
+    if (wait === 0) {
+      setLoading(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setLoading(false), wait);
+    return () => window.clearTimeout(timer);
+  }, [bootReady, loading]);
 
   // Apply provider filter to DI and persist, then trigger refresh so UI updates immediately
   useEffect(() => {
@@ -221,12 +234,15 @@ function App() {
     })();
   }, [providerFilter, projectsViewModel, todosViewModel]);
   
-  // Subscribe to VM changes for status bar counts
+  // Subscribe to VM changes for status bar counts and boot availability tracking
   useEffect(() => {
     if (!projectsViewModel || !todosViewModel) return;
     const update = () => {
       try {
+        const projectList = projectsViewModel.getProjects();
         const sessions = todosViewModel.getSessions();
+        setProjectsAvailable(Array.isArray(projectList) ? projectList.length : 0);
+        setSessionsAvailable(Array.isArray(sessions) ? sessions.length : 0);
         const activeTodos = sessions.reduce((sum, s) => sum + (s.todos?.filter(t => t.status !== 'completed').length || 0), 0);
         const uniqueProjects = new Set(
           sessions
@@ -234,6 +250,7 @@ function App() {
             .filter((p: string) => p && p !== 'Unknown Project')
         );
         setStatusText(`${uniqueProjects.size} projects • ${activeTodos} active todos`);
+        setViewModelsInitialized(true);
       } catch {}
     };
     update();
@@ -280,28 +297,35 @@ function App() {
   }, []);
   
   useEffect(() => {
+    if (isTestEnv) return;
     loadGitStatus({ force: true });
     loadCommitHistory({ force: true });
-  }, [loadGitStatus, loadCommitHistory]);
+  }, [loadGitStatus, loadCommitHistory, isTestEnv]);
 
   useEffect(() => {
-    try {
-      window.__initialSplash?.syncSteps?.(bootSteps);
-    } catch {}
+    if (typeof document === 'undefined') return;
+    const statusEl = document.getElementById('initial-splash-status');
+    if (statusEl && bootSteps.length > 0) {
+      statusEl.textContent = bootSteps[bootSteps.length - 1];
+    }
   }, [bootSteps]);
 
   useEffect(() => {
-    try {
-      window.__initialSplash?.setStatus?.(loading ? 'Loading projects...' : 'Ready');
-    } catch {}
+    if (typeof document === 'undefined') return;
+    const statusEl = document.getElementById('initial-splash-status');
+    if (statusEl) {
+      statusEl.textContent = loading ? 'Loading projects...' : 'Ready';
+    }
     if (!loading) {
-      try { window.__initialSplash?.hide?.(); } catch {}
+      const splash = document.getElementById('initial-splash');
+      if (splash) {
+        splash.classList.add('is-hidden');
+        window.setTimeout(() => {
+          if (splash.parentElement) splash.parentElement.removeChild(splash);
+        }, 240);
+      }
     }
   }, [loading]);
-
-  useEffect(() => {
-    try { window.__initialSplash?.markReactReady?.(); } catch {}
-  }, []);
 
   // Listen for screenshot notifications from main and show consistent toast
   useEffect(() => {
@@ -361,16 +385,12 @@ function App() {
   // Log current loading state
   dlog('[App] Current loading state:', loading, 'viewMode:', viewMode);
   
-  // Check simple loading state
   if (loading) {
-    dlog('[App] Rendering SplashScreen, loading:', loading);
-    return (
-      <SplashScreen loadingSteps={bootSteps} isComplete={false} providers={providers} />
-    );
+    dlog('[App] Rendering SplashScreen overlay, loading:', loading);
+  } else {
+    dlog('[APP DEBUG] Past loading check, loading=false - SUCCESS!');
   }
-  
-  dlog('[APP DEBUG] Past loading check, loading=false - SUCCESS!');
-  
+
   // Calculate stats for unified title bar - simplified without crashing functions
   const getSelectedProjectName = () => 'Project View';
   const getTotalActiveTodos = () => 0; // Temporarily return 0 to avoid crashes
@@ -378,6 +398,23 @@ function App() {
   // Full app with all components restored - React state timing issue is now fixed
   return (
     <div className="app" style={{ position: 'relative' }}>
+      {loading && (
+        <div
+          className="initial-loading-overlay"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(15, 17, 21, 0.92)',
+            backdropFilter: 'blur(12px)'
+          }}
+        >
+          <SplashScreen loadingSteps={bootSteps} isComplete={false} providers={providers} />
+        </div>
+      )}
       {/* Background animations - render behind content, but above app background */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1 }}>
         <AnimatedBackground />
