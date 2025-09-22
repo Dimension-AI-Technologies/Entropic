@@ -1,14 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { Result, ResultUtils } from './Result.js';
-
-export interface Todo {
-  content: string;
-  status: 'pending' | 'in_progress' | 'completed';
-  activeForm?: string;
-  id?: string;
-  created?: Date;
-}
+import type { Todo } from '../types/index.js';
 
 export class TodoManager {
   private filePath: string;
@@ -38,9 +31,10 @@ export class TodoManager {
 
     // Parse with protection against synchronous JSON.parse exceptions
     let parsed: any;
+    // retyper:disable-next-line find-exceptions
     try {
       parsed = JSON.parse(readResult.value);
-    } catch (e: any) {
+    } catch (e: any) { // EXEMPTION: converting JSON.parse exception to Result<T>
       return ResultUtils.fail(`Failed to parse JSON: ${e?.message || String(e)}`);
     }
     

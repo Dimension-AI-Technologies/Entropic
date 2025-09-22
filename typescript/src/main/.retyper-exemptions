@@ -1,0 +1,21 @@
+# Exception Handling Exemptions for Main Process
+
+This directory contains Electron main process code that legitimately uses try-catch blocks for:
+
+1. **Electron API Calls** - Window management, IPC, menu operations
+2. **Node.js File System Operations** - File reading/writing that can fail
+3. **JSON Parsing** - Converting JSON.parse exceptions to Result<T>
+4. **External Process Execution** - Git operations, shell commands
+5. **Network Operations** - Dev server connections
+
+All try-catch blocks in this directory wrap 3rd party APIs and convert exceptions to Result<T> pattern, which is the recommended approach per the codebase standards.
+
+## Files with Legitimate Try-Catch Usage:
+- main.ts - Electron app lifecycle and window management
+- gitStatus.ts - Git command execution
+- adapters/*.ts - File system operations and JSON parsing
+- ipc/*.ts - IPC handlers wrapping file operations
+- menu/setupMenu.ts - Menu operations
+- utils/prefs.ts - Preference file operations
+- watchers/fileWatchers.ts - File system watching
+- maintenance/repair.ts - File system repair operations

@@ -1,27 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import './App.css';
 import { ProjectsPane } from './App.ProjectView.ProjectsPane';
 import { SingleProjectPane } from './App.ProjectView.SingleProjectPane';
-import { DIContainer } from './services/DIContainer';
-import { Project as MVVMProject } from './models/Project';
 import { Session, Todo } from './models/Todo';
 import { ProjectContextMenuController } from './components/menus/ProjectContextMenuController';
 import { useResize } from './components/hooks/useResize';
+import { useProjectViewData } from './hooks/useProjectViewData';
+import { useProjectSelection } from './hooks/useProjectSelection';
+import { useProjectFiltering } from './hooks/useProjectFiltering';
+import { useProjectNavigation } from './hooks/useProjectNavigation';
 import { dlog } from './utils/log';
-import { Result, Ok, Err } from './utils/Result';
 
-// Safe localStorage wrapper
-function getLocalStorageItem(key: string): Result<string | null> {
-  try {
-    if (typeof localStorage === 'undefined') {
-      return Ok(null);
-    }
-    const value = localStorage.getItem(key);
-    return Ok(value);
-  } catch (error: any) {
-    return Err(`Failed to read localStorage key '${key}'`, error);
-  }
-}
 
 
 interface ProjectViewProps {
@@ -409,7 +398,7 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
   };
 
   return (
-    <div className="app-main" ref={containerRef}>
+    <div data-testid="project-view" className="app-main" ref={containerRef}>
       {/* Projects Pane (Left) */}
       <div className="sidebar" style={{ width: leftPaneWidth }}>
         <ProjectsPane

@@ -178,7 +178,7 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   const padBottom = totalHeight - padTop - (end - start) * rowHeight;
 
   return (
-    <div className="global-view" style={{ padding: 16, color: 'white', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div data-testid="global-view" className="global-view" style={{ padding: 16, color: 'white', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <span>{filteredProjects} Projects • {filteredSessions} Sessions • {filteredTodos} ToDos</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

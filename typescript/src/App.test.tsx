@@ -78,8 +78,7 @@ jest.mock('./services/DIContainer', () => {
   };
 });
 
-const diModule = require('./services/DIContainer') as any;
-const diTest = diModule.__test__;
+import { __test__ as diTest } from './services/DIContainer';
 
 let lastTitleBarProps: any;
 let lastProjectViewProps: any;

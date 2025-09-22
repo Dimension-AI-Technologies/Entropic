@@ -99,7 +99,17 @@ const EXTENSION_LANG_MAP: Record<string, string> = {
 const IGNORED_DIRS = new Set(['.git', 'node_modules', 'vendor', 'dist', 'build', '.next']);
 
 export async function collectGitStatus(baseDir?: string): AsyncResult<GitRepoStatus[]> {
-  const root = baseDir || path.join(os.homedir(), 'source', 'repos');
+  let root = baseDir || path.join(os.homedir(), 'source', 'repos');
+
+  // Handle Windows case-insensitive path for Source/source
+  if (!baseDir && process.platform === 'win32') {
+    const lowerPath = path.join(os.homedir(), 'source', 'repos');
+    const upperPath = path.join(os.homedir(), 'Source', 'repos');
+    if (!fsSync.existsSync(lowerPath) && fsSync.existsSync(upperPath)) {
+      root = upperPath;
+    }
+  }
+
   try {
     const exists = fsSync.existsSync(root);
     if (!exists) {
@@ -122,7 +132,17 @@ export async function collectGitStatus(baseDir?: string): AsyncResult<GitRepoSta
 }
 
 export async function collectCommitHistory(baseDir?: string, limit = 50): AsyncResult<GitCommitSummary[]> {
-  const root = baseDir || path.join(os.homedir(), 'source', 'repos');
+  let root = baseDir || path.join(os.homedir(), 'source', 'repos');
+
+  // Handle Windows case-insensitive path for Source/source
+  if (!baseDir && process.platform === 'win32') {
+    const lowerPath = path.join(os.homedir(), 'source', 'repos');
+    const upperPath = path.join(os.homedir(), 'Source', 'repos');
+    if (!fsSync.existsSync(lowerPath) && fsSync.existsSync(upperPath)) {
+      root = upperPath;
+    }
+  }
+
   try {
     const exists = fsSync.existsSync(root);
     if (!exists) return Ok([]);

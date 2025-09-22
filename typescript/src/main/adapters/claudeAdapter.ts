@@ -3,6 +3,7 @@ import fsSync from 'node:fs';
 import type { ProviderPort } from '../core/ports';
 import type { Project, Session, Todo } from '../core/domain';
 import { Ok, Err, type AsyncResult } from '../../utils/Result.js';
+import { numberSafe } from '../../utils/FileSystemUtils.js';
 import { loadTodosData } from '../loaders/projects.js';
 import { collectDiagnostics as collectClaudeDiagnostics, repairProjectMetadata as repairClaude } from '../maintenance/repair.js';
 
@@ -91,9 +92,6 @@ export class ClaudeAdapter implements ProviderPort {
   }
 }
 
-function numberSafe(v?: number): number {
-  return typeof v === 'number' && isFinite(v) ? v : 0;
-}
 
 async function computeSignature(projectsDir: string, todosDir?: string): Promise<string> { // EXEMPTION: utility function with error recovery
   try {

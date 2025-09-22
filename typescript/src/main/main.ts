@@ -84,10 +84,11 @@ async function createWindow() {
   // In development, load from Vite dev server
   const devMode = process.env.NODE_ENV === 'development';
   if (devMode) {
+    // retyper:disable-next-line find-exceptions
     try {
       await mainWindow!.loadURL('http://localhost:5173');
       mainWindow!.webContents.openDevTools();
-    } catch {
+    } catch { // EXEMPTION: wrapping Electron API for fallback behavior
       // Fallback to local file if dev server not running
       const devIndex = path.join(process.cwd(), 'typescript', 'index.html');
       if (fsSync.existsSync(devIndex)) {

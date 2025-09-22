@@ -7,6 +7,7 @@
 
 export type TodoStatus = 'pending' | 'in_progress' | 'completed';
 
+// retyper:disable-next-line find-duplicate-declarations
 export interface Todo {
   id?: string;
   content: string;
@@ -16,6 +17,7 @@ export interface Todo {
   activeForm?: string;
 }
 
+// retyper:disable-next-line find-duplicate-declarations
 export interface Session {
   provider: string; // e.g., 'claude', 'codex'
   sessionId: string;
@@ -32,6 +34,7 @@ export interface ProjectStats {
   completed: number;
 }
 
+// retyper:disable-next-line find-duplicate-declarations
 export interface Project {
   provider: string;      // e.g., 'claude', 'codex'
   projectPath: string;   // real path

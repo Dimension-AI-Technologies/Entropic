@@ -134,7 +134,7 @@ export function UnifiedTitleBar({
   }, [animate]);
 
   return (
-    <div className="unified-title-bar">
+    <div className="unified-title-bar" data-testid="title-bar" data-view={viewMode}>
       <div className="unified-title-bar-content">
         {/* Left: Provider toggles + Refresh and Screenshot buttons */}
         <div className="title-bar-left">
@@ -219,8 +219,8 @@ export function UnifiedTitleBar({
 
         {/* Center: Claude logo with surrounding view buttons */}
         <div className="title-bar-center">
-          <button type="button" className={`view-toggle-btn ${viewMode === 'project' ? 'active' : ''}`} onClick={() => onViewModeChange('project')} title="View individual project todos">Project View</button>
-          <button type="button" className={`view-toggle-btn ${viewMode === 'global' ? 'active' : ''}`} onClick={() => onViewModeChange('global')} title="View all active todos across projects">Global View</button>
+          <button type="button" data-testid="view-tab-project" className={`view-toggle-btn ${viewMode === 'project' ? 'active' : ''}`} onClick={() => onViewModeChange('project')} title="View individual project todos">Project View</button>
+          <button type="button" data-testid="view-tab-global" className={`view-toggle-btn ${viewMode === 'global' ? 'active' : ''}`} onClick={() => onViewModeChange('global')} title="View all active todos across projects">Global View</button>
 
           <img 
             ref={logoRef}
@@ -233,8 +233,8 @@ export function UnifiedTitleBar({
             }}
           />
 
-          <button type="button" className={`view-toggle-btn ${viewMode === 'git' ? 'active' : ''}`} onClick={() => onViewModeChange('git')} title="Inspect git status across repos">Git View</button>
-          <button type="button" className={`view-toggle-btn ${viewMode === 'commit' ? 'active' : ''}`} onClick={() => onViewModeChange('commit')} title="Browse recent commits across repos">Commit View</button>
+          <button type="button" data-testid="view-tab-git" className={`view-toggle-btn ${viewMode === 'git' ? 'active' : ''}`} onClick={() => onViewModeChange('git')} title="Inspect git status across repos">Git View</button>
+          <button type="button" data-testid="view-tab-commit" className={`view-toggle-btn ${viewMode === 'commit' ? 'active' : ''}`} onClick={() => onViewModeChange('commit')} title="Browse recent commits across repos">Commit View</button>
         </div>
 
         {/* Right: Spacing control (cycle + menu) */}

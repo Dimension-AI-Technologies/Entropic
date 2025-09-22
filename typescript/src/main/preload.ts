@@ -31,5 +31,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => {
       ipcRenderer.removeListener('todo-files-changed', callback);
     };
+  },
+  // Add listener for view switching from menu
+  onSwitchView: (callback: (event: any, data: { mode: string; subview?: string }) => void) => {
+    ipcRenderer.on('switch-view', callback);
+    return () => {
+      ipcRenderer.removeListener('switch-view', callback);
+    };
   }
 });

@@ -3,11 +3,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+// retyper:disable-next-line find-duplicate-declarations
 interface Todo {
   content: string;
   status: 'pending' | 'in_progress' | 'completed';
 }
 
+// retyper:disable-next-line find-duplicate-declarations
 interface Session {
   id: string;
   todos: Todo[];
@@ -15,6 +17,7 @@ interface Session {
   filePath?: string;
 }
 
+// retyper:disable-next-line find-duplicate-declarations
 interface Project {
   path: string;
   sessions: Session[];

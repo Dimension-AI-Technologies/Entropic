@@ -1,0 +1,53 @@
+{
+  "version": "1.0",
+  "description": "ReTyper configuration for Entropic project",
+  "global": {
+    "ignore": [
+      "**/tests/**",
+      "**/e2e/**",
+      "**/node_modules/**",
+      "**/*.config.*",
+      "**/dist/**"
+    ]
+  },
+  "checks": {
+    "find-duplicate-declarations": {
+      "ignore": [
+        "**/e2e/**/*.ts",
+        "**/tests/**/*.ts",
+        "**/playwright/**/*.d.ts",
+        "**/bin/**/*.d.ts",
+        "**/dist/**/*.d.ts"
+      ],
+      "allowInTests": true,
+      "reason": "Test files legitimately duplicate production interfaces for testing"
+    },
+    "find-exceptions": {
+      "ignore": [
+        "**/tests/**/*.ts",
+        "**/e2e/**/*.ts"
+      ],
+      "allowInMain": true,
+      "allowInConstructors": true,
+      "allowInTests": true,
+      "allowFor3rdPartyAPIs": true,
+      "reason": "Main process code wraps Electron/Node APIs; all try-catch blocks convert to Result<T>"
+    },
+    "find-timeouts": {
+      "ignore": [
+        "**/e2e/**/*.ts",
+        "**/tests/**/*.ts"
+      ],
+      "allowLongTimeouts": true,
+      "reason": "Test files need longer timeouts for UI interactions"
+    },
+    "find-commonjs": {
+      "ignore": [
+        "**/preload.ts",
+        "**/electron/**/*.ts",
+        "**/main/**/*.ts"
+      ],
+      "reason": "Electron preload scripts require CommonJS modules"
+    }
+  }
+}

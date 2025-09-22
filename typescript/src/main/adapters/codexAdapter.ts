@@ -1,6 +1,8 @@
 import type { ProviderPort } from '../core/ports';
 import type { Project, Session, Todo } from '../core/domain';
 import { Ok, Err, type AsyncResult, type Result } from '../../utils/Result.js';
+import { parseJsonSafe } from '../../utils/JsonUtils.js';
+import { listJsonlFiles, signatureForJsonlFiles, normalizeStatus, numberSafe } from '../../utils/FileSystemUtils.js';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
@@ -26,7 +28,7 @@ export class CodexAdapter implements ProviderPort {
     try {
       // Read from ~/.codex/sessions/**/rollout-*.jsonl
       const sessionsRoot = path.join(os.homedir(), '.codex', 'sessions');
-      const sig = await signatureForCodexSessions(sessionsRoot);
+      const sig = await signatureForJsonlFiles(sessionsRoot);
       if (this._cache && this._cache.sig === sig) return Ok(this._cache.value);
       const files = await listJsonlFiles(sessionsRoot);
       const byProject = new Map<string, { projectPath: string; sessions: Session[]; mostRecent?: number }>();
@@ -99,46 +101,6 @@ export class CodexAdapter implements ProviderPort {
   }
 }
 
-function numberSafe(v?: number): number {
-  return typeof v === 'number' && isFinite(v) ? v : 0;
-}
-
-async function listJsonlFiles(root: string): Promise<string[]> { // EXEMPTION: utility function with error recovery
-  const out: string[] = [];
-  async function walk(dir: string, depth: number) {
-    if (depth > 6) return;
-    let entries: string[] = [];
-    try { entries = await fs.readdir(dir); } catch { return; } // EXEMPTION: simple error recovery for missing dirs
-    for (const name of entries) {
-      const p = path.join(dir, name);
-      let stat: any; try { stat = await fs.stat(p); } catch { continue; } // EXEMPTION: simple error recovery for file stats
-      if (stat.isDirectory()) await walk(p, depth + 1);
-      else if (name.endsWith('.jsonl')) out.push(p);
-    }
-  }
-  await walk(root, 0);
-  return out;
-}
-
-async function signatureForCodexSessions(root: string): Promise<string> { // EXEMPTION: utility function with error recovery
-  try {
-    let count = 0;
-    let mtime = 0;
-    async function walk(dir: string, depth: number) {
-      if (depth > 6) return;
-      let entries: string[] = [];
-      try { entries = await fs.readdir(dir); } catch { return; } // EXEMPTION: simple error recovery for missing dirs
-      for (const name of entries) {
-        const p = path.join(dir, name);
-        let stat: any; try { stat = await fs.stat(p); } catch { continue; } // EXEMPTION: simple error recovery for file stats // EXEMPTION: simple error recovery for file stats
-        if (stat.isDirectory()) await walk(p, depth + 1);
-        else if (name.endsWith('.jsonl')) { count++; mtime = Math.max(mtime, +stat.mtime || 0); }
-      }
-    }
-    await walk(root, 0);
-    return `c:${count}|m:${mtime}`;
-  } catch { return 'c:0|m:0'; } // EXEMPTION: simple error recovery for signature computation
-}
 
 async function parseCodexSessionJsonl(file: string): AsyncResult<{ sessionId: string; updatedAt?: number; repoSlug?: string; todos: Todo[] } | null> {
   try {
@@ -205,20 +167,4 @@ async function parseCodexSessionJsonl(file: string): AsyncResult<{ sessionId: st
   }
 }
 
-function parseJsonSafe(json: string): Result<any> {
-  if (!json.trim()) return Err('Empty JSON string');
 
-  try {
-    const parsed = JSON.parse(json);
-    return Ok(parsed);
-  } catch (error: any) { // EXEMPTION: converting JSON.parse exception to Result<T>
-    return Err('Invalid JSON', error);
-  }
-}
-
-function normalizeStatus(s: string): 'pending'|'in_progress'|'completed' {
-  const v = String(s || '').toLowerCase();
-  if (v.startsWith('in')) return 'in_progress';
-  if (v.startsWith('comp')) return 'completed';
-  return 'pending';
-}

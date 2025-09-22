@@ -1,0 +1,53 @@
+{
+  "version": "1.0",
+  "name": "Entropic Code Quality Checks",
+  "description": "ReTyper code quality manifest for Entropic TypeScript project",
+  "checkers": [
+    {
+      "id": "find-duplicate-declarations",
+      "name": "Find Duplicate Declarations",
+      "description": "Finds duplicate TypeScript interface, class, and method declarations",
+      "executable": "C:\\Users\\mathew.burkitt\\Source\\repos\\DT\\ReTyper\\src\\code-quality\\Find-Duplicate-Declarations\\bin\\Release\\net8.0\\Find-Duplicate-Declarations.exe",
+      "tags": ["typescript", "duplicates", "declarations"],
+      "inputs": ["**/*.ts", "**/*.tsx"],
+      "timeout": 120000
+    },
+    {
+      "id": "find-exceptions",
+      "name": "Find Exception Handling Issues",
+      "description": "Finds problematic exception handling patterns",
+      "executable": "C:\\Users\\mathew.burkitt\\Source\\repos\\DT\\ReTyper\\src\\code-quality\\Find-Exceptions\\bin\\Release\\net8.0\\Find-Exceptions.exe",
+      "tags": ["exceptions", "error-handling"],
+      "inputs": ["**/*.ts", "**/*.tsx", "**/*.cs"],
+      "timeout": 120000
+    },
+    {
+      "id": "find-timeouts",
+      "name": "Find Problematic Timeouts",
+      "description": "Finds timeout values that may be problematic",
+      "executable": "C:\\Users\\mathew.burkitt\\Source\\repos\\DT\\ReTyper\\src\\code-quality\\Find-Timeouts\\bin\\Release\\net8.0\\Find-Timeouts.exe",
+      "tags": ["timeouts", "performance"],
+      "inputs": ["**/*.ts", "**/*.tsx", "**/*.js"],
+      "timeout": 120000
+    },
+    {
+      "id": "find-long-files",
+      "name": "Find Long Files",
+      "description": "Finds files that exceed recommended length limits",
+      "executable": "C:\\Users\\mathew.burkitt\\Source\\repos\\DT\\ReTyper\\src\\code-quality\\Find-LongFiles-TypeScript\\bin\\Release\\net8.0\\Find-LongFiles-TypeScript.exe",
+      "tags": ["length", "maintainability"],
+      "inputs": ["**/*.ts", "**/*.tsx"],
+      "timeout": 60000
+    },
+    {
+      "id": "find-commonjs",
+      "name": "Find CommonJS Usage",
+      "description": "Finds usage of CommonJS modules in TypeScript projects",
+      "executable": "pwsh",
+      "args": ["-File", "scripts/code-quality/Find-CommonJS.ps1"],
+      "tags": ["modules", "commonjs", "typescript"],
+      "inputs": ["**/*.ts", "**/*.tsx", "**/*.js"],
+      "timeout": 60000
+    }
+  ]
+}

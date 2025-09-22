@@ -1,0 +1,39 @@
+# ReTyper ignore patterns
+# Global patterns for files/directories to skip in all checks
+
+# Generated and build artifacts
+**/dist/**
+**/build/**
+**/node_modules/**
+**/.git/**
+**/.vs/**
+**/bin/**
+**/obj/**
+**/coverage/**
+**/lcov-report/**
+**/.nyc_output/**
+
+# Test infrastructure and generated files
+**/e2e/**
+**/playwright/**
+**/.playwright/**
+**/tests/**/__mocks__/**
+**/*.d.ts
+
+# Generated files
+**/*.generated.*
+**/*.Designer.*
+**/webpack.config.*
+**/jest.config.*
+**/playwright.config.*
+
+# Temporary and cache files
+**/.cache/**
+**/tmp/**
+**/temp/**
+
+# Coverage and reporting files
+**/prettify.js
+**/sorter.js
+**/*.min.js
+**/vendor/**

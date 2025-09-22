@@ -41,6 +41,7 @@ declare global {
       takeScreenshot?: () => Promise<{ success: boolean; value?: { path: string } } | { success: false; error: string }>;
       onScreenshotTaken?: (callback: (event: any, data: { path: string }) => void) => () => void;
       onTodoFilesChanged?: (callback: (event: any, data: any) => void) => () => void;
+      onSwitchView?: (callback: (event: any, data: { mode: string; subview?: string }) => void) => () => void;
       getGitStatus?: (baseDir?: string) => Promise<any>;
       getGitCommits?: (options?: { baseDir?: string; limit?: number }) => Promise<any>;
       getProjects?: () => Promise<any>;
