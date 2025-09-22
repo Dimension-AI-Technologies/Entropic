@@ -160,6 +160,13 @@ export function PromptView({ selectedProject, spacingMode = 'compact' }: PromptV
   }
 
   const flatPath = getFlattenedProjectPath(selectedProject.path);
+  const homeDir = typeof process !== 'undefined' ? (process.env?.HOME || process.env?.USERPROFILE || '') : '';
+  const displayPath = selectedProject.path
+    ? (homeDir && selectedProject.path.startsWith(homeDir)
+        ? selectedProject.path.replace(homeDir, '~')
+        : selectedProject.path)
+    : flatPath;
+  const copyFullPath = selectedProject.path || flatPath;
   return (
     <div className="prompt-history-view" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {/* Controls row: left = flattened path, right = sort toggle */}
@@ -167,11 +174,11 @@ export function PromptView({ selectedProject, spacingMode = 'compact' }: PromptV
         {/* Left: flattened path */}
         <div
           style={{ flex: 1, color: '#b9bbbe', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
-          title="Click or right-click to copy flattened path"
-          onClick={() => { try { navigator.clipboard.writeText(flatPath); (window as any).__addToast?.('Copied flattened path'); } catch {} }}
+          title="Click to copy project path; right-click to copy flattened path"
+          onClick={() => { try { navigator.clipboard.writeText(copyFullPath); (window as any).__addToast?.('Copied project path'); } catch {} }}
           onContextMenu={(e) => { e.preventDefault(); try { navigator.clipboard.writeText(flatPath); (window as any).__addToast?.('Copied flattened path'); } catch {} }}
         >
-          {flatPath}
+          {displayPath}
         </div>
         {/* Right: sort order + loading */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -204,7 +211,12 @@ export function PromptView({ selectedProject, spacingMode = 'compact' }: PromptV
       )}
 
       <div className="prompts-list" style={{ overflowY: 'auto', padding: 12 }}>
-        {prompts.map((prompt, index) => (
+        {loading ? (
+          <div className="prompts-loading" role="status" style={{ color: '#b9bbbe', textAlign: 'center', padding: '32px 0' }}>
+            Loading chat history…
+          </div>
+        ) : (
+          prompts.map((prompt, index) => (
           <div
             key={prompt.uuid || `prompt-${index}`}
             className={`prompt-entry ${prompt.message.role}`}
@@ -224,7 +236,8 @@ export function PromptView({ selectedProject, spacingMode = 'compact' }: PromptV
               {formatPromptContent(prompt.message.content)}
             </div>
           </div>
-        ))}
+          ))
+        )}
       </div>
 
       {menuState.visible && (

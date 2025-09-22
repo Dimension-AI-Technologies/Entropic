@@ -82,3 +82,4 @@
 ## Previous Updates
 (Add previous history entries here)| 2025-09-21 18:29:09 | doowell2 | refactor: enhance UI with splash screen and improve error handling |
 | 2025-09-22 09:12:33 | doowell2 | refactor: simplify splash screen and improve app initialization |
+| 2025-09-22 17:57:57 | doowell2 | fix: improve loading states and path display in UI |

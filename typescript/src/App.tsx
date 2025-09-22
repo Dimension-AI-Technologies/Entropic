@@ -11,6 +11,8 @@ import { BoidSystem } from './components/BoidSystem';
 import { DIContainer, setProviderAllow } from './services/DIContainer';
 
 
+const DEFAULT_PROVIDER_FILTER = { claude: true, codex: true, gemini: true } as const;
+
 function App() {
   const DEBUG = (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production');
   const dlog = (...args: any[]) => { if (DEBUG) console.log(...args); };
@@ -29,10 +31,18 @@ function App() {
       const raw = localStorage.getItem('ui.providerFilter');
       if (raw) {
         const p = JSON.parse(raw);
-        return { claude: p.claude !== false, codex: p.codex !== false, gemini: p.gemini !== false };
+        const sanitized = {
+          claude: p?.claude !== false,
+          codex: p?.codex !== false,
+          gemini: p?.gemini !== false,
+        };
+        if (!sanitized.claude && !sanitized.codex && !sanitized.gemini) {
+          return { ...DEFAULT_PROVIDER_FILTER };
+        }
+        return sanitized;
       }
     } catch {}
-    return { claude: true, codex: true, gemini: true };
+    return { ...DEFAULT_PROVIDER_FILTER };
   });
   
   const [viewMode, setViewMode] = useState<'project' | 'global' | 'git' | 'commit'>('project');
@@ -279,10 +289,10 @@ function App() {
 
   useEffect(() => {
     if (viewMode === 'git') {
-      loadGitStatus();
+      loadGitStatus({ force: true });
     }
     if (viewMode === 'commit') {
-      loadCommitHistory();
+      loadCommitHistory({ force: true });
     }
   }, [viewMode, loadGitStatus, loadCommitHistory]);
 

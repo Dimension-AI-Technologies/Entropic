@@ -138,7 +138,11 @@ export function CommitView({ spacingMode, repos, loading, error, onRefresh }: Co
         <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 12, color: '#a2a7ad' }}>Repositories</div>
           <div className="commit-repo-list" style={{ flex: 1, overflow: 'auto', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)', background: 'rgba(17,20,24,0.55)' }}>
-            {repos.length === 0 && !loading ? (
+            {loading ? (
+              <div style={{ padding: 16, color: '#b9bbbe', fontSize: 13, textAlign: 'center' }} role="status">
+                Loading repositories…
+              </div>
+            ) : repos.length === 0 ? (
               <div style={{ padding: 16, color: '#9ba0a7', fontSize: 13 }}>
                 {error ? 'Unable to load repositories.' : 'No repositories detected.'}
               </div>
@@ -183,7 +187,13 @@ export function CommitView({ spacingMode, repos, loading, error, onRefresh }: Co
                 </tr>
               </thead>
               <tbody>
-                {sortedCommits.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: 24, color: '#b9bbbe' }} role="status">
+                      Loading commit history…
+                    </td>
+                  </tr>
+                ) : sortedCommits.length === 0 ? (
                   <tr>
                     <td colSpan={8} style={{ textAlign: 'center', padding: 24, color: '#9ba0a7' }}>No commits found.</td>
                   </tr>
