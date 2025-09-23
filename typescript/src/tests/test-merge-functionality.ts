@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - test utility functions don't need Result<T>
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -71,7 +72,7 @@ function simulateMerge(sourceSession: Session, targetSession: Session): Todo[] {
 }
 
 // Load test sessions
-async function loadTestSessions(): Promise<Session[]> {
+async function loadTestSessions(): Promise<Session[]> { // EXEMPTION: test utility factory
   const sessions: Session[] = [];
   
   try {

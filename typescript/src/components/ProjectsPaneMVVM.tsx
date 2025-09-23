@@ -79,11 +79,10 @@ export function ProjectsPaneMVVM({
       setProjects(viewModel.getProjects());
     };
     
-    viewModel.onChange(handleChange);
-    
+    const unsubscribe = viewModel.onChange(handleChange);
     // Cleanup
     return () => {
-      viewModel.offChange(handleChange);
+      try { typeof unsubscribe === 'function' ? unsubscribe() : viewModel.offChange?.(handleChange); } catch {}
     };
   }, [viewModel]);
 

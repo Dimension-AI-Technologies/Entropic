@@ -106,6 +106,30 @@ body {
 
 /* Global view container fills available space so rows can scroll */
 .global-view { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.git-view .git-table { width: 100%; border-collapse: separate; border-spacing: 0; color: #eaecef; font-size: 13px; }
+.git-view .git-table thead tr { background: rgba(255,255,255,0.05); text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px; color: #9aa0a6; }
+.git-view .git-table th { text-align: left; padding: 12px 16px; position: sticky; top: 0; backdrop-filter: blur(12px); background: rgba(18,21,25,0.85); z-index: 1; }
+.git-view .git-table td { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.04); vertical-align: top; }
+.git-view .git-table tbody tr:hover { background: rgba(255,255,255,0.04); }
+.git-view .git-row-path { font-family: var(--font-mono, 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace); font-size: 12px; color: #c7ccd4; }
+.git-view .git-row-remote { color: #8ea9ff; word-break: break-all; }
+.git-view .git-count-positive { color: #8be9a3; font-weight: 600; }
+.git-view .git-count-negative { color: #ff8970; font-weight: 600; }
+.commit-view { gap: 12px; }
+.commit-repo-list { display: flex; flex-direction: column; gap: 4px; padding: 8px; }
+.commit-repo-item { width: 100%; text-align: left; padding: 10px; border-radius: 6px; background: transparent; border: none; color: #e3e6eb; cursor: pointer; transition: background 0.15s ease; }
+.commit-repo-item .commit-repo-name { font-weight: 600; font-size: 13px; color: #f0f3f8; }
+.commit-repo-item .commit-repo-path { font-size: 11px; color: #9ba0a7; font-family: var(--font-mono, 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace); margin-top: 2px; }
+.commit-repo-item .commit-repo-meta { font-size: 10px; margin-top: 4px; color: #7f868d; text-transform: uppercase; letter-spacing: 0.05em; }
+.commit-repo-item:hover { background: rgba(255,255,255,0.08); }
+.commit-repo-item.active { background: rgba(255,255,255,0.12); box-shadow: 0 0 0 1px rgba(255,255,255,0.08); }
+.commit-table { width: 100%; border-collapse: separate; border-spacing: 0; color: #eaecef; font-size: 13px; }
+.commit-table thead tr { background: rgba(255,255,255,0.05); text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px; color: #9aa0a6; }
+.commit-table th { text-align: left; padding: 12px 16px; position: sticky; top: 0; backdrop-filter: blur(12px); background: rgba(18,21,25,0.85); z-index: 1; white-space: nowrap; }
+.commit-table td { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.04); vertical-align: top; }
+.commit-table td:nth-child(3) { white-space: normal; }
+.commit-table tbody tr:hover { background: rgba(255,255,255,0.04); }
+.commit-table .commit-hash { font-family: var(--font-mono, 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace); color: #8ea9ff; }
 
 /* Splash screen */
 .splash-screen {
@@ -3169,7 +3193,7 @@ body {
 
 .global-header {
   display: grid;
-  grid-template-columns: 2fr var(--date-col) 4fr 4fr; /* PROJECT, DATE, CURRENT, NEXT */
+  grid-template-columns: 100px 2fr var(--date-col) 4fr 4fr; /* MODEL, PROJECT, DATE, CURRENT, NEXT */
   padding: 10px 14px;
   background: #2a2d33;
   color: #bfc3c8;
@@ -3180,7 +3204,7 @@ body {
 .global-rows { overflow-y: auto; }
 .global-row {
   display: grid;
-  grid-template-columns: 2fr var(--date-col) 4fr 4fr; /* PROJECT, DATE, CURRENT, NEXT */
+  grid-template-columns: 100px 2fr var(--date-col) 4fr 4fr; /* MODEL, PROJECT, DATE, CURRENT, NEXT */
   border-top: 1px solid #30343a;
   align-items: center;
   background: #23262b;

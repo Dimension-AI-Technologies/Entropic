@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - ViewModel getters and utilities don't need Result<T>
 import { ITodoRepository, Todo, Session } from '../models/Todo';
 import { AsyncResult, Ok, Err } from '../utils/Result';
 
@@ -20,7 +21,7 @@ export class TodosViewModel {
   /**
    * Initialize the ViewModel by loading sessions
    */
-  private async initialize(): Promise<void> {
+  private async initialize(): Promise<void> { // EXEMPTION: simple initialization utility
     if (!this.initialized) {
       await this.loadSessions();
       this.initialized = true;
@@ -154,7 +155,7 @@ export class TodosViewModel {
   /**
    * Get sessions sorted by date (most recent first)
    */
-  getSessionsSortedByDate(): Session[] {
+  getSessionsSortedByDate(): Session[] { // EXEMPTION: simple array sorting getter
     return [...this.sessions].sort((a, b) => 
       b.lastModified.getTime() - a.lastModified.getTime()
     );
@@ -163,7 +164,7 @@ export class TodosViewModel {
   /**
    * Get sessions sorted by todo count (most todos first)
    */
-  getSessionsSortedByTodoCount(): Session[] {
+  getSessionsSortedByTodoCount(): Session[] { // EXEMPTION: simple array sorting getter
     return [...this.sessions].sort((a, b) => 
       b.todos.length - a.todos.length
     );

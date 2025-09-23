@@ -421,7 +421,7 @@ describe('TodoManager E2E Test Suite', () => {
       const result = await todoManager.readTodos();
       expect(ResultUtils.isFailure(result)).toBe(true);
       if (ResultUtils.isFailure(result)) {
-        expect(result.error).toContain('Failed to read todos');
+        expect(result.error).toContain('Failed to parse JSON');
       }
     });
 

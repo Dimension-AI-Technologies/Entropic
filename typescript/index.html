@@ -5,9 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Looser CSP for Electron: allow file:, blob:, and dev server connections -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: filesystem: file:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: filesystem: file:; style-src 'self' 'unsafe-inline' blob:; img-src * data: blob: filesystem: file:; font-src 'self' data: blob:; connect-src * ws: http: https: file:; media-src * blob: file:; object-src 'none'; base-uri 'self'; frame-ancestors 'none';" />
-    <title>Claude Todo Monitor</title>
+    <title>Entropic - Coding Agent & Git Monitor</title>
+    <style>
+      body {
+        margin: 0;
+        background: #0f1115;
+        color: #e3e7ef;
+      }
+
+      #initial-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 17, 21, 0.95);
+        z-index: 9999;
+        transition: opacity 200ms ease;
+      }
+
+      #initial-splash.is-hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .initial-splash-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 28px 34px;
+        border-radius: 14px;
+        background: rgba(28, 32, 40, 0.85);
+        border: 1px solid rgba(150, 170, 210, 0.12);
+        min-width: 240px;
+      }
+
+      .initial-splash-title {
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .initial-splash-spinner {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 3px solid rgba(212, 127, 96, 0.18);
+        border-top-color: rgba(212, 127, 96, 0.85);
+        animation: initial-spin 900ms linear infinite;
+      }
+
+      .initial-splash-status {
+        font-size: 13px;
+        color: #c7cedd;
+        text-align: center;
+      }
+
+      @keyframes initial-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    </style>
   </head>
   <body>
+    <div id="initial-splash">
+      <div class="initial-splash-card">
+        <div class="initial-splash-title">Entropic</div>
+        <div class="initial-splash-spinner" aria-hidden="true"></div>
+        <div id="initial-splash-status" class="initial-splash-status">Launching renderer...</div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

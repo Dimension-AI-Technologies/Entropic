@@ -2,6 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useDismissableMenu } from './components/hooks/useDismissableMenu';
 import './App.css';
 import { PaneHeader, PaneControls } from './components/PaneLayout';
+import { Result, Ok, Err } from './utils/Result';
+
+// Safe localStorage wrapper
+function getLocalStorageItem(key: string): Result<string | null> {
+  try {
+    if (typeof localStorage === 'undefined') {
+      return Ok(null);
+    }
+    const value = localStorage.getItem(key);
+    return Ok(value);
+  } catch (error: any) {
+    return Err(`Failed to read localStorage key '${key}'`, error);
+  }
+}
 
 interface Todo {
   content: string;
@@ -62,7 +76,8 @@ interface ProjectsPaneProps {
 
 export function ProjectsPane({ projects, selectedProject, onSelectProject, onProjectContextMenu, onRefresh, activityMode, setActivityMode, deletedProjects, emptyMode, onEmptyModeChange }: ProjectsPaneProps) {
   const [sortMethod, setSortMethod] = useState<SortMethod>(() => {
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.sortMethod') : null;
+    const savedResult = getLocalStorageItem('ui.sortMethod');
+    const saved = savedResult.success ? savedResult.value : null;
     return saved === '0' || saved === '1' || saved === '2' ? (Number(saved) as SortMethod) : 1;
   }); // recent
   const [showFailedReconstructions, setShowFailedReconstructions] = useState(false); // hide failed path reconstructions by default

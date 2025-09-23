@@ -1,16 +1,159 @@
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { TodosViewModel } from '../viewmodels/TodosViewModel';
-import { MockTodoRepository } from '../repositories/MockTodoRepository';
-import { Todo, Session } from '../models/Todo';
+import { Todo, Session, ITodoRepository } from '../models/Todo';
+import { AsyncResult, Ok, Err } from '../utils/Result';
+
+// Simple in-memory todo repository for testing
+class InMemoryTodoRepository implements ITodoRepository {
+  private sessions: Session[] = [];
+
+  constructor(initialSessions: Session[] = []) {
+    this.sessions = [...initialSessions];
+  }
+
+  async getAllSessions(): AsyncResult<Session[]> {
+    return Ok([...this.sessions]);
+  }
+
+  async getSession(sessionId: string): AsyncResult<Session | null> {
+    const session = this.sessions.find(s => s.id === sessionId);
+    return Ok(session || null);
+  }
+
+  async getSessionsForProject(projectPath: string): AsyncResult<Session[]> {
+    const projectSessions = this.sessions.filter(s => s.projectPath === projectPath);
+    return Ok([...projectSessions]);
+  }
+
+  async getAllTodos(): AsyncResult<Todo[]> {
+    const allTodos = this.sessions.flatMap(s => s.todos);
+    return Ok([...allTodos]);
+  }
+
+  async getTodosForSession(sessionId: string): AsyncResult<Todo[]> {
+    const session = this.sessions.find(s => s.id === sessionId);
+    return Ok(session ? [...session.todos] : []);
+  }
+
+  async saveTodosForSession(sessionId: string, todos: Todo[]): AsyncResult<void> {
+    const session = this.sessions.find(s => s.id === sessionId);
+    if (session) {
+      session.todos = [...todos];
+      session.lastModified = new Date();
+    } else {
+      // Create new session if it doesn't exist
+      this.sessions.push({
+        id: sessionId,
+        todos: [...todos],
+        lastModified: new Date(),
+        created: new Date(),
+        filePath: `${sessionId}.json`
+      });
+    }
+    return Ok(undefined);
+  }
+
+  async sessionExists(sessionId: string): AsyncResult<boolean> {
+    const exists = this.sessions.some(s => s.id === sessionId);
+    return Ok(exists);
+  }
+
+  getTodosDirectoryPath(): string {
+    return '/tmp/test-todos';
+  }
+
+  // Test helper methods
+  addSession(session: Session): void {
+    this.sessions.push(session);
+  }
+
+  clear(): void {
+    this.sessions = [];
+  }
+
+  static createSampleSessions(): Session[] { // EXEMPTION: test utility factory
+    return [
+      {
+        id: 'current-session-123',
+        todos: [
+          {
+            content: 'Implement MVVM architecture for todo management',
+            status: 'in_progress',
+            priority: 'high'
+          },
+          {
+            content: 'Add comprehensive unit tests for ViewModels',
+            status: 'pending',
+            priority: 'medium'
+          },
+          {
+            content: 'Set up dependency injection container',
+            status: 'completed',
+            priority: 'high'
+          }
+        ],
+        lastModified: new Date('2024-01-15T10:30:00Z'),
+        created: new Date('2024-01-15T09:00:00Z'),
+        filePath: 'current-session-123-agent-current-session-123.json',
+        projectPath: '/Users/doowell2/Source/repos/DT/Entropic'
+      },
+      {
+        id: 'previous-session-456',
+        todos: [
+          {
+            content: 'Refactor existing todo management code',
+            status: 'completed',
+            priority: 'medium'
+          },
+          {
+            content: 'Design project data models',
+            status: 'completed',
+            priority: 'high'
+          }
+        ],
+        lastModified: new Date('2024-01-14T15:45:00Z'),
+        created: new Date('2024-01-14T14:00:00Z'),
+        filePath: 'previous-session-456-agent-previous-session-456.json',
+        projectPath: '/Users/doowell2/Source/repos/DT/Entropic'
+      },
+      {
+        id: 'empty-session-000',
+        todos: [],
+        lastModified: new Date('2024-01-13T16:00:00Z'),
+        created: new Date('2024-01-13T16:00:00Z'),
+        filePath: 'empty-session-000-agent-empty-session-000.json'
+      },
+      {
+        id: 'macron-session-789',
+        todos: [
+          {
+            content: 'Implement GARCH model estimation',
+            status: 'in_progress',
+            priority: 'high'
+          },
+          {
+            content: 'Add F# interop for statistical functions',
+            status: 'pending',
+            priority: 'low'
+          }
+        ],
+        lastModified: new Date('2024-01-12T11:20:00Z'),
+        created: new Date('2024-01-12T10:00:00Z'),
+        filePath: 'macron-session-789-agent-macron-session-789.json',
+        projectPath: '/Users/doowell2/Source/repos/DT/MacroN'
+      }
+    ];
+  }
+}
 
 describe('TodosViewModel', () => {
   let viewModel: TodosViewModel;
-  let mockRepository: MockTodoRepository;
+  let mockRepository: InMemoryTodoRepository;
   let sampleSessions: Session[];
 
   beforeEach(() => {
-    sampleSessions = MockTodoRepository.createSampleSessions();
-    mockRepository = new MockTodoRepository(sampleSessions);
+    sampleSessions = InMemoryTodoRepository.createSampleSessions();
+    mockRepository = new InMemoryTodoRepository(sampleSessions);
     viewModel = new TodosViewModel(mockRepository);
   });
 
@@ -27,15 +170,15 @@ describe('TodosViewModel', () => {
 
     it('should handle repository errors gracefully', async () => {
       // Create a repository that will fail
-      const failingRepository = new MockTodoRepository([]);
+      const failingRepository = new InMemoryTodoRepository([]);
       failingRepository.getAllSessions = async () => ({
         success: false,
         error: 'Repository connection failed'
       });
-      
+
       const failingViewModel = new TodosViewModel(failingRepository);
       const result = await failingViewModel.loadSessions();
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBe('Repository connection failed');
       expect(failingViewModel.hasError()).toBe(true);
@@ -261,15 +404,15 @@ describe('TodosViewModel', () => {
 
     it('should handle save errors gracefully', async () => {
       // Create a repository that will fail on save
-      const failingRepository = new MockTodoRepository([]);
+      const failingRepository = new InMemoryTodoRepository([]);
       failingRepository.saveTodosForSession = async () => ({
         success: false,
         error: 'Save operation failed'
       });
-      
+
       const failingViewModel = new TodosViewModel(failingRepository);
       const result = await failingViewModel.saveTodosForSession('test', []);
-      
+
       expect(result.success).toBe(false);
       expect(result.error).toBe('Save operation failed');
     });
@@ -281,12 +424,12 @@ describe('TodosViewModel', () => {
       expect(viewModel.getError()).toBe(null);
       
       // Force an error
-      const failingRepository = new MockTodoRepository([]);
+      const failingRepository = new InMemoryTodoRepository([]);
       failingRepository.getAllSessions = async () => ({
         success: false,
         error: 'Test error'
       });
-      
+
       const failingViewModel = new TodosViewModel(failingRepository);
       await failingViewModel.loadSessions();
       
@@ -322,11 +465,11 @@ describe('TodosViewModel', () => {
 
   describe('edge cases', () => {
     it('should handle empty repository', async () => {
-      const emptyRepository = new MockTodoRepository([]);
+      const emptyRepository = new InMemoryTodoRepository([]);
       const emptyViewModel = new TodosViewModel(emptyRepository);
-      
+
       const result = await emptyViewModel.loadSessions();
-      
+
       expect(result.success).toBe(true);
       expect(emptyViewModel.getSessionCount()).toBe(0);
       expect(emptyViewModel.getAllTodos()).toHaveLength(0);
@@ -351,7 +494,7 @@ describe('TodosViewModel', () => {
         }
       ];
       
-      const sameTimeRepository = new MockTodoRepository(sessions);
+      const sameTimeRepository = new InMemoryTodoRepository(sessions);
       const sameTimeViewModel = new TodosViewModel(sameTimeRepository);
       
       await sameTimeViewModel.loadSessions();

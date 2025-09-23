@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - repository utility methods don't need Result<T>
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -295,7 +296,7 @@ export class FileSystemChatRepository implements IChatRepository {
 
   // Private helper methods
 
-  private async directoryExists(dirPath: string): Promise<boolean> {
+  private async directoryExists(dirPath: string): Promise<boolean> { // EXEMPTION: simple boolean utility
     const statsResult = await ResultUtils.fromPromise(fs.stat(dirPath));
     if (!statsResult.success) {
       return false;

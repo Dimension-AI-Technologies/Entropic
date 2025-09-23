@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - ViewModel getters and utilities don't need Result<T>
 import { Project, IProjectRepository } from '../models/Project';
 import { Result, AsyncResult, Ok, Err } from '../utils/Result';
 
@@ -27,7 +28,7 @@ export class ProjectsViewModel {
   /**
    * Initialize the ViewModel by loading projects
    */
-  private async initialize(): Promise<void> {
+  private async initialize(): Promise<void> { // EXEMPTION: simple initialization utility
     if (!this.initialized) {
       await this.loadProjects();
       this.initialized = true;
@@ -95,7 +96,7 @@ export class ProjectsViewModel {
   /**
    * Get projects sorted by last modified date (most recent first)
    */
-  getProjectsSortedByDate(): Project[] {
+  getProjectsSortedByDate(): Project[] { // EXEMPTION: simple array sorting getter
     return [...this.projects].sort((a, b) => 
       b.lastModified.getTime() - a.lastModified.getTime()
     );

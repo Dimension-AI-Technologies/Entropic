@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getProviderPresence: () => ipcRenderer.invoke('get-provider-presence'),
   collectDiagnosticsHex: () => ipcRenderer.invoke('collect-diagnostics-hex'),
   repairMetadataHex: (provider: string | undefined, dryRun: boolean) => ipcRenderer.invoke('repair-metadata-hex', { provider, dryRun }),
+  getGitStatus: (baseDir?: string) => ipcRenderer.invoke('get-git-status', baseDir),
+  getGitCommits: (options?: { baseDir?: string; limit?: number }) => ipcRenderer.invoke('get-git-commits', options),
   onScreenshotTaken: (callback: (event: any, data: { path: string }) => void) => {
     ipcRenderer.on('screenshot-taken', callback);
     return () => ipcRenderer.removeListener('screenshot-taken', callback);

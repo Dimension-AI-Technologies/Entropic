@@ -3,6 +3,20 @@ import './App.css';
 import { DIContainer } from './services/DIContainer';
 import { Project as MVVMProject } from './models/Project';
 import { useDismissableMenu } from './components/hooks/useDismissableMenu';
+import { Result, Ok, Err } from './utils/Result';
+
+// Safe localStorage wrapper
+function getLocalStorageItem(key: string): Result<string | null> {
+  try {
+    if (typeof localStorage === 'undefined') {
+      return Ok(null);
+    }
+    const value = localStorage.getItem(key);
+    return Ok(value);
+  } catch (error: any) {
+    return Err(`Failed to read localStorage key '${key}'`, error);
+  }
+}
 
 interface GlobalViewProps {
   spacingMode?: 'wide' | 'normal' | 'compact';
@@ -14,7 +28,8 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   const [version, setVersion] = useState(0);
   const [diag, setDiag] = useState<{ total: number; per: Record<string, number> }>({ total: 0, per: {} });
   const [activeOnly, setActiveOnly] = useState<boolean>(() => {
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ui.globalActiveOnly') : null;
+    const savedResult = getLocalStorageItem('ui.globalActiveOnly');
+    const saved = savedResult.success ? savedResult.value : null;
     return saved === '1';
   });
 
@@ -55,7 +70,27 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
     const p = proj || ({ id: ((s as any).projectPath || '').replace(/[\\/:]/g, '-'), path: (s as any).projectPath || '', flattenedDir: '', pathExists: true, lastModified: s.lastModified } as any);
     return { p, s };
   }).sort((a, b) => b.s.lastModified.getTime() - a.s.lastModified.getTime());
+  // Apply provider filter using persisted setting (kept in sync by App TitleBar toggles)
+  const providerAllow = (() => {
+    const rawResult = getLocalStorageItem('ui.providerFilter');
+    if (rawResult.success && rawResult.value) {
+      try {
+        const p = JSON.parse(rawResult.value);
+        return {
+          claude: p.claude !== false,
+          codex: p.codex !== false,
+          gemini: p.gemini !== false,
+        } as Record<string, boolean>;
+      } catch {
+        // Fall through to default
+      }
+    }
+    return { claude: true, codex: true, gemini: true } as Record<string, boolean>;
+  })();
+
   const rows = allRows.filter(({ s }) => {
+    const prov = String(((s as any)?.provider) || 'claude').toLowerCase();
+    if (providerAllow[prov] === false) return false;
     if (!activeOnly) return true;
     const hasActive = (s.todos || []).some((t: any) => t.status !== 'completed');
     return hasActive;
@@ -147,16 +182,6 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
       <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <span>{filteredProjects} Projects • {filteredSessions} Sessions • {filteredTodos} ToDos</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="filter-toggles" title="Filter by provider">
-            <button
-              className={`filter-toggle ${providerFilter.claude ? 'active' : ''}`}
-              onClick={() => setProviderFilter(f => ({ ...f, claude: !f.claude }))}
-            >Claude</button>
-            <button
-              className={`filter-toggle ${providerFilter.codex ? 'active' : ''}`}
-              onClick={() => setProviderFilter(f => ({ ...f, codex: !f.codex }))}
-            >Codex</button>
-          </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }} title="Hide sessions with only completed items">
             <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
             <span>Active only</span>
@@ -196,6 +221,7 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <div className={`global-table ${spacingMode}`} style={{ height: '100%' }}>
           <div className="global-header">
+          <div style={{ width: '100px' }}>Model</div>
           <div>Project</div>
           <div className="global-cell date" style={{ textAlign: 'left' }}>Date</div>
           <div>Current</div>
@@ -230,8 +256,19 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
             })();
             const shortId = s.id.substring(0,6);
             const goto = (todo: any) => { const idx = (s.todos || []).indexOf(todo); (window as any).__navigateToProjectSession?.((s as any).projectPath || p.path, s.id, idx >= 0 ? idx : undefined); };
+            const providerName = (() => {
+              const pl = String(((s as any)?.provider) || 'Claude').toLowerCase();
+              if (pl === 'codex') return 'Codex';
+              if (pl === 'gemini') return 'Gemini';
+              return 'Claude';
+            })();
             return (
               <div key={`${p.id}-${s.id}`} className={`global-row pad-${spacingMode}`}>
+                <div className="global-cell" style={{ width: '100px' }}>
+                  <span className={`provider-badge provider-${providerName.toLowerCase()}`} title={`Provider: ${providerName}`}>
+                    {providerName}
+                  </span>
+                </div>
                 <div
                   className="global-cell global-project"
                   onContextMenu={(e) => { e.preventDefault(); setProjMenu({ visible: true, x: e.clientX, y: e.clientY, row: { p, s } }); }}
@@ -241,11 +278,6 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
                   <div className="name">
                     {projName}
                     <span className="sid">({shortId})</span>
-                    {(() => { const pl = String(((s as any)?.provider) || 'Claude').toLowerCase(); return (
-                      <span className={`provider-badge provider-${pl}`} title={`Provider: ${((s as any)?.provider) || 'Claude'}`}>
-                        {pl === 'codex' ? 'Codex' : 'Claude'}
-                      </span>
-                    ); })()}
                   </div>
                 </div>
                 <div className="global-cell date">{formatDate(s.lastModified)}</div>

@@ -1,31 +1,75 @@
-# Entropic - Multi-provider Session Monitor
+# Entropic - AI Coding Agent TODO, History and Git live status monitor GUI + CLI tools
+
+<!-- Project badges -->
+<div align="center">
 
 [![GitHub Stars](https://img.shields.io/github/stars/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/stargazers)
 [![Forks](https://img.shields.io/github/forks/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/network/members)
 [![Watchers](https://img.shields.io/github/watchers/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/watchers)
+![Clones](https://img.shields.io/badge/clones-154/14days-success?logo=git)
+
 [![Open Issues](https://img.shields.io/github/issues/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic/issues)
 [![Pull Requests](https://img.shields.io/github/issues-pr/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic/pulls)
 [![Last Commit](https://img.shields.io/github/last-commit/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic/commits)
+
 [![License](https://img.shields.io/github/license/dimension-zero/Entropic)](#license)
 [![Code Size](https://img.shields.io/github/languages/code-size/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic)
 [![Top Language](https://img.shields.io/github/languages/top/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic)
 
 Entropic is a desktop companion for AI coding agents (Claude Code, OpenAI Codex, Google Gemini). The TypeScript/Electron app ingests the session and history folders created in `~/.claude`, `~/.codex`, and `~/.gemini`, merges them into a provider-aware data model, and renders a real-time dashboard with project activity, session diagnostics, prompt history, and maintenance tooling. The repository still ships the original PowerShell and Bash monitors for terminal-first workflows.
 
-![Project view](ProjectView.png)
-![Global view](GlobalView.png)
+</div>
+
+**Entropic** provides comprehensive monitoring for AI coding assistants, allowing you to track Project TODO lists and Project chat history in real-time. It offers a Global Git view showing status across all projects, plus a single-Project commit view to examine the detailed history of commits. Monitor your development workflow across **Claude Code**, **OpenAI Codex**, and **Google Gemini** from a unified interface.
+
+**Multi-Agent Monitoring:**
+
+Three monitoring modes provide complete visibility:
+- 📋 **Per-Project TODO Lists** - Live updates of TODO items as they're created, modified, and completed
+- 💬 **Per-Project User-Prompt History** - Amalgamated history of all user prompts to review project evolution
+- 🌐 **Global View** - Shows current and next TODOs across all projects simultaneously
+
+Key capabilities:
+- **Live Updates** - Project TODO view and Global TODO view update in real-time
+- **History Tracking** - Project History view amalgamates all user-prompts per project for comprehensive review
+- **Multi-CLI Support** - Supports Claude Code, OpenAI Codex, and Google Gemini CLI tools
+
+**Git Integration:**
+- 📊 **Repository Status** - Real-time monitoring of Git repositories under ~/source directory on Windows, macOS and Linux
+- 📝 **Commit History** - Detailed commit tracking with stats and co-authors
+- 🔄 **Live Updates** - Automatic refresh of repository states
+
+**Available as:**
+- Cross-platform Electron/TypeScript GUI
+- Cross-platform CLI / PowerShell version
+- Original Bash version by [@JamesonNyp](@JamesonNyp)
 
 ## Overview
 
-- Multi-provider aggregator with debounced file watching, caching, and metadata repair
-- Rich React UI with project and global dashboards, provider filters, spacing presets, and activity overlays
-- Session utilities including multi-select merge previews, empty-session cleanup, and prompt history inspection
-- Maintenance surface that runs diagnostics and metadata repair (dry-run or live) across Claude, Codex, and Gemini datasets
-- Extensive Jest suite plus CLI monitors so you can pick the interface that fits your environment
+This project provides comprehensive monitoring for multiple AI coding assistants and Git repositories. It integrates with hook systems from Claude Code, OpenAI Codex, and Google Gemini to capture and display todo updates, project history, and Git status in real-time. When any supported AI tool modifies todos or project state, Entropic provides a unified live monitoring dashboard.
 
 ## TypeScript / Electron application
 
-### Highlights
+**Multi Coding Agent Integration:**
+- 🤖 **Claude Code**: Full TodoWrite tool integration with real-time updates
+- 🔧 **OpenAI Codex**: Session and project tracking with metadata support
+- 💎 **Google Gemini**: Complete workflow monitoring and history
+- 🔄 **Agent Filtering**: Toggle between agents or view all simultaneously
+
+**Git Repository Monitoring:**
+- 📊 **Repository Status**: Real-time tracking of all Git repositories in your workspace
+- 📝 **Commit History**: Detailed commit logs with statistics and co-author information
+- 🔍 **Language Detection**: Automatic identification of programming languages per repository
+- 🌐 **Remote Tracking**: Monitor ahead/behind status with remote repositories
+
+**Visual Interface:**
+- 🎨 **Color-Coded Status**: Visual indicators for different todo states
+  - ✅ Green for completed items
+  - ▶️ Blue for active/in-progress items
+  - ○ Default for pending items
+- 📊 **Session Tracking**: Displays session ID and working directory
+- ⚡ **Efficient Monitoring**: Uses native file watching for minimal resource usage
+- 🌍 **Cross-Platform**: Available in TypeScript/Electron GUI, PowerShell, and Bash implementations
 
 - **Project view**: Auto-selects recent projects, restores last selection, filters todos by status, supports tab multi-select with merge previews, and provides delete/cleanup actions for session files.
 - **Global view**: Summarises provider activity, shows unknown-session diagnostics, and exposes repair buttons that call `repairMetadataHex` with dry-run or live modes.
@@ -33,21 +77,52 @@ Entropic is a desktop companion for AI coding agents (Claude Code, OpenAI Codex,
 - **Prompt history**: Loads JSONL transcripts through `getProjectPrompts`, supports chronological toggling, and offers context menus for quick actions.
 - **Visual polish**: Animated background, boids simulation, and toast notifications (`__addToast`) keep long-running monitors informative without overwhelming the data.
 
-### Architecture
+**Multi Coding Agent Data Collection:**
+1. **Claude Code Integration**: Intercepts PostToolUse events for TodoWrite
+   - Captures todo data from Claude Code sessions
+   - Extracts relevant information (todos, session, directory)
+   - Saves formatted JSON to `~/.claude/logs/current_todos.json`
 
-- `src/main/main.ts` orchestrates Electron startup, single-instance locking, provider detection, and throttled file watching via `watchers/fileWatchers.ts`.
-- Provider adapters in `src/main/adapters` (Claude, Codex, Gemini) transform on-disk todos and history into provider-neutral `Project` and `Session` models, expose diagnostics, and share repair helpers.
-- The `Aggregator` (`src/main/core/aggregator.ts`) merges provider results, dedupes sessions, emits `data-changed`, and powers the `get-projects` IPC handler.
-- IPC modules (`src/main/ipc/*.ts`) expose data (`get-projects`, `get-todos`), maintenance (`collect-diagnostics`, `repair-metadata`, `*-hex` variants), provider presence, and file management endpoints.
-- `src/main/preload.ts` bridges those IPC endpoints into `window.electronAPI`, keeping the renderer sandboxed while still allowing data refresh, metadata repair, screenshot capture, and session deletion.
-- The renderer relies on `src/services/DIContainer.ts` for a lightweight MVVM layer that wraps `electronAPI`, honours provider allow-lists, and feeds the React components in `src/App.*.tsx` and `src/components`.
-- Shared utilities (`src/utils`) provide result combinators, path reconstruction (`PathUtils`), and todo helpers that are reused in both the main process and renderer and covered by Jest tests.
+2. **OpenAI Codex Monitoring**: Watches Codex session files and project directories
+   - Monitors `~/.codex/todos/` for todo updates
+   - Tracks `~/.codex/projects/` for project history
+   - Associates sessions with projects via metadata files
+   - Maintains real-time synchronization with Codex CLI state
+
+3. **Google Gemini Monitoring**: Watches Gemini session directories
+   - Monitors `~/.gemini/sessions/` for session updates
+   - Tracks todo state changes and project associations
+   - Processes session metadata for project linkage
+   - Provides unified view with other AI providers
+
+**Git Repository Tracking:**
+4. **Repository Discovery**: Automatically finds all Git repositories in your workspace
+   - Scans for `.git` directories recursively
+   - Identifies programming languages used in each repository
+   - Tracks remote repository URLs and status
+
+5. **Live Monitoring**: Provides real-time updates across all data sources
+   - Watches files for changes using native OS mechanisms
+   - Parses and displays data with color coding and filtering
+   - Updates display automatically with minimal resource usage
 
 ### Data sources and file watching
 
-- Watches `~/.claude/projects`, `~/.claude/todos`, and `~/.claude/logs` by default; automatically adds Codex (`~/.codex/...`) and Gemini (`~/.gemini/sessions`) when present.
-- Debounced watchers emit a provider-agnostic `data-changed` event so the renderer refreshes without entering high-frequency loops.
-- `loaders/projects.ts` reconstructs real paths from flattened directory names, hydrates metadata, and writes `typescript/project.load.log` with each ingest cycle for troubleshooting.
+### TypeScript/Electron GUI Version (`typescript/`) - Cross-Platform Desktop Application
+- **Modern Desktop GUI**: Slack-like interface with dark theme
+- **Cross-platform**: Runs as a native desktop app on Windows, macOS, and Linux
+- **Multi Coding Agent Support**: Unified interface for Claude Code, OpenAI Codex, and Google Gemini
+- **Git Integration**: Built-in Git status monitoring and commit history viewer
+- **Advanced Features**:
+  - Real-time monitoring of all AI agent sessions across projects
+  - Agent filtering with toggle controls (Claude/Codex/Gemini)
+  - Multiple view modes: Project Todos, Project History, Global View, Git Status, Commit History
+  - Tri-state toggle controls for sorting and spacing customization
+  - Session tabs with automatic deduplication
+  - Auto-refresh every 5 seconds
+  - Visual status indicators and progress tracking
+- **Easy Installation**: `npm install` and `npm start` to run
+- See [typescript/README.md](typescript/README.md) for setup instructions
 
 ### Maintenance and diagnostics
 
@@ -55,19 +130,25 @@ Entropic is a desktop companion for AI coding agents (Claude Code, OpenAI Codex,
 - Repairs backfill `metadata.json` files to make future path reconstruction deterministic and report unknown sessions per provider.
 - UI actions let you delete empty session files, purge obsolete tabs, and trigger screenshots (`take-screenshot`) for documentation or regression capture.
 
-## Getting started (TypeScript/Electron)
+![Claude Code Todo Tracker Live Monitor](Todo%20Tracker.png)
 
-### Requirements
+## Project Structure
 
-- Node.js 20 or newer, npm 10+, and the Electron 36 runtime.
-- Claude, Codex, or Gemini session directories under your home folder (the app will still run without them, but the dashboards will be empty).
+See [Structure.md](Structure.md) for detailed project structure.
 
-### Install and run
-
-```bash
-cd typescript
-npm install
-npm run dev        # watch Electron main + Vite renderer with hot reload
+```
+Entropic/
+├── README.md           # Main documentation
+├── Structure.md        # Detailed project structure
+├── bash/               # Bash terminal implementation
+├── powershell7/        # PowerShell implementation
+└── typescript/         # Electron GUI implementation
+    ├── src/            # Source code
+    │   ├── main/       # Electron main process
+    │   ├── preload/    # Preload scripts
+    │   ├── services/   # Business logic (MVVM)
+    │   └── tests/      # Test suite
+    └── dist/           # Build output
 ```
 
 After building, launch the production bundle with `npm start`.
@@ -80,7 +161,7 @@ npm start          # run the compiled output inside Electron
 npm run dist       # create platform-specific installers (AppImage, macOS dir, Windows portable)
 ```
 
-`npm run dist:portable` emits a single-file Windows executable.
+## Codex Agent Hooks (optional but recommended)
 
 ### Testing
 
@@ -141,6 +222,8 @@ Issues and pull requests are welcome. Please run the Jest suite before submittin
 
 ## Authors
 
-- TypeScript/Electron application: Dimension Zero (@dimension-zero)
-- PowerShell implementation: Dimension Zero (@dimension-zero)
-- Original Bash hooks: Jameson Nyp (@JamesonNyp)
+* TypeScript/Electron GUI by Dimension Zero ([@dimension-zero](https://github.com/dimension-zero))
+* PowerShell implementation by Dimension Zero ([@dimension-zero](https://github.com/dimension-zero))
+* Original Bash CLI version created by Jameson Nyp ([@JamesonNyp](https://github.com/JamesonNyp)) [cc-todo-hook-tracker](https://github.com/JamesonNyp/cc-todo-hook-tracker)
+
+Entropic has been created by Dimension Technologies (www.ditech.ai) for the open-source community.

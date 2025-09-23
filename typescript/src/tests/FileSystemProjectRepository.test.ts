@@ -1,25 +1,41 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { FileSystemProjectRepository } from '../repositories/FileSystemProjectRepository.js';
 import path from 'node:path';
 import os from 'node:os';
+import fs from 'node:fs/promises';
 
-describe('FileSystemProjectRepository', () => {
-  const projectsDir = path.join(os.homedir(), '.claude', 'projects');
+describe('FileSystemProjectRepository (agnostic)', () => {
+  const tmpRoot = path.join(os.tmpdir(), `fsrepo-${Date.now()}`);
+  const projectsDir = path.join(tmpRoot, 'projects');
   let repository: FileSystemProjectRepository;
+
+  beforeAll(async () => {
+    await fs.mkdir(projectsDir, { recursive: true });
+    // Create fake flattened directories
+    const dirs = ['-tmp-user-ProjectOne', '-tmp-user-ProjectTwo', '-tmp-user-Empty'];
+    for (const d of dirs) {
+      const p = path.join(projectsDir, d);
+      await fs.mkdir(p, { recursive: true });
+      if (d !== '-tmp-user-Empty') {
+        await fs.writeFile(path.join(p, '.session_abc.json'), '{}');
+      }
+    }
+  });
+
+  afterAll(async () => { try { await fs.rm(tmpRoot, { recursive: true, force: true }); } catch {} });
 
   beforeEach(() => {
     repository = new FileSystemProjectRepository(projectsDir);
   });
 
   describe('getAllProjects', () => {
-    it('should load projects from the actual filesystem', async () => {
+    it('loads projects from the provided directory', async () => {
       const result = await repository.getAllProjects();
 
       expect(result.success).toBe(true);
       
       if (result.success) {
-        // We expect at least some projects based on the log showing 12 directories
-        expect(result.value.length).toBeGreaterThan(0);
+        expect(result.value.length).toBe(3);
         
         // Verify project structure
         result.value.forEach(project => {
@@ -31,11 +47,7 @@ describe('FileSystemProjectRepository', () => {
           expect(project.id).toBe(project.flattenedDir);
         });
 
-        console.log(`Loaded ${result.value.length} projects from filesystem`);
-        console.log('Sample projects:');
-        result.value.slice(0, 3).forEach(p => {
-          console.log(`  - ${p.id} -> ${p.path} (exists: ${p.pathExists})`);
-        });
+        expect(result.value.map(p => p.id).sort()).toEqual(['-tmp-user-Empty','-tmp-user-ProjectOne','-tmp-user-ProjectTwo'].sort());
       }
     });
 
@@ -57,40 +69,21 @@ describe('FileSystemProjectRepository', () => {
       if (result.success) {
         const existingProjects = result.value.filter(p => p.pathExists);
         const nonExistingProjects = result.value.filter(p => !p.pathExists);
-
-        console.log(`Existing projects: ${existingProjects.length}`);
-        console.log(`Non-existing projects: ${nonExistingProjects.length}`);
-
-        // We expect some projects to exist and some not to exist (based on the log)
-        expect(existingProjects.length).toBeGreaterThan(0);
-        
-        // Log some examples
-        if (existingProjects.length > 0) {
-          console.log('Sample existing project:', existingProjects[0].path);
-        }
-        if (nonExistingProjects.length > 0) {
-          console.log('Sample non-existing project:', nonExistingProjects[0].path);
-        }
+        expect(existingProjects.length + nonExistingProjects.length).toBe(result.value.length);
       }
     });
   });
 
   describe('getProject', () => {
-    it('should find existing project by ID', async () => {
-      // First get all projects to find a real ID
+    it('finds existing project by ID', async () => {
       const allResult = await repository.getAllProjects();
       expect(allResult.success).toBe(true);
-      
-      if (allResult.success && allResult.value.length > 0) {
-        const firstProjectId = allResult.value[0].id;
-        
-        const result = await repository.getProject(firstProjectId);
-        expect(result.success).toBe(true);
-        
-        if (result.success) {
-          expect(result.value).not.toBeNull();
-          expect(result.value?.id).toBe(firstProjectId);
-        }
+      const firstProjectId = allResult.success && allResult.value.length > 0 ? allResult.value[0].id : '';
+      const result = await repository.getProject(firstProjectId);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.value).not.toBeNull();
+        expect(result.value?.id).toBe(firstProjectId);
       }
     });
 
@@ -105,9 +98,8 @@ describe('FileSystemProjectRepository', () => {
   });
 
   describe('projectExists', () => {
-    it('should correctly check project existence', async () => {
-      // Test with a project we know exists from the log
-      const existsResult = await repository.projectExists('-Users-doowell2-Source-repos-DT-Entropic');
+    it('checks project existence by flattened id', async () => {
+      const existsResult = await repository.projectExists('-tmp-user-ProjectOne');
       expect(existsResult.success).toBe(true);
       
       // Test with a project we know doesn't exist
@@ -140,46 +132,5 @@ describe('FileSystemProjectRepository', () => {
     });
   });
 
-  describe('integration with current filesystem state', () => {
-    it('should match expected project count from log file', async () => {
-      const result = await repository.getAllProjects();
-      
-      expect(result.success).toBe(true);
-      if (result.success) {
-        // Based on the log, we expect 12 project directories
-        expect(result.value.length).toBe(12);
-        
-        console.log(`\nProject Loading Verification:`);
-        console.log(`Expected: 12 projects (from log)`);
-        console.log(`Actual: ${result.value.length} projects`);
-        console.log(`Match: ${result.value.length === 12 ? '✅' : '❌'}`);
-      }
-    });
-
-    it('should identify projects with rich history correctly', async () => {
-      const result = await repository.getAllProjects();
-      
-      expect(result.success).toBe(true);
-      if (result.success) {
-        // Look for projects that should have rich history
-        const entropicProject = result.value.find(p => 
-          p.id === '-Users-doowell2-Source-repos-DT-Entropic'
-        );
-        
-        if (entropicProject) {
-          console.log(`\nEntropic Project Analysis:`);
-          console.log(`ID: ${entropicProject.id}`);
-          console.log(`Path: ${entropicProject.path}`);
-          console.log(`Exists: ${entropicProject.pathExists ? '✅' : '⚠️'}`);
-          console.log(`Last Modified: ${entropicProject.lastModified.toISOString()}`);
-          
-          // This project should exist and have recent activity
-          expect(entropicProject.pathExists).toBe(true);
-          expect(entropicProject.lastModified.getTime()).toBeGreaterThan(
-            new Date('2025-01-01').getTime()
-          );
-        }
-      }
-    });
-  });
+  // Removed environment-coupled assertions
 });

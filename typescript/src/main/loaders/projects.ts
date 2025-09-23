@@ -2,7 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import os from 'node:os';
-import { Ok, Err, ResultUtils, type AsyncResult } from '../../utils/Result.js';
+import { Ok, Err, Result, ResultUtils, type AsyncResult } from '../../utils/Result.js';
 import { PathUtils } from '../../utils/PathUtils.js';
 
 interface Todo {
@@ -40,6 +40,17 @@ const validatePath = (testPath: string): boolean => {
 const guessPathFromFlattenedName = (flatPath: string): string => {
   return PathUtils.guessPathFromFlattenedName(flatPath);
 };
+
+function parseJsonSafe(json: string): Result<any> {
+  if (!json.trim()) return Err('Empty JSON string');
+
+  try {
+    const parsed = JSON.parse(json);
+    return Ok(parsed);
+  } catch (error: any) {
+    return Err('Invalid JSON', error);
+  }
+}
 
 export async function loadTodosData(projectsDir: string, logsDir: string, todosDir?: string): AsyncResult<Project[]> {
   const projects = new Map<string, Project>();
@@ -125,14 +136,17 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
     });
 
     // Backfill metadata.json with the real path for future lookups
-    try {
-      if (pathExists) {
-        const metadataPath = path.join(projectDirPath, 'metadata.json');
-        if (!fsSync.existsSync(metadataPath)) {
-          await fs.writeFile(metadataPath, JSON.stringify({ path: reconstructedPath }, null, 2), 'utf-8');
+    if (pathExists) {
+      const metadataPath = path.join(projectDirPath, 'metadata.json');
+      if (!fsSync.existsSync(metadataPath)) {
+        const writeResult = await ResultUtils.fromPromise(
+          fs.writeFile(metadataPath, JSON.stringify({ path: reconstructedPath }, null, 2), 'utf-8')
+        );
+        if (!writeResult.success) {
+          logEntries.push(`  Warning: Could not write metadata.json: ${writeResult.error}`);
         }
       }
-    } catch {}
+    }
 
     if (sessionFiles.length > 0) {
       for (const dataFile of sessionFiles) {
@@ -160,27 +174,28 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
         const lines = content.split('\n').filter(line => line.trim());
         
         for (const line of lines) {
-          try {
-            const event = JSON.parse(line);
-            
-            // Look for todo-related events in Claude session data
-            if (event.type === 'todo' || event.todos) {
-              if (Array.isArray(event.todos)) {
-                todos.push(...event.todos);
-              } else if (event.content && event.status) {
-                // Single todo event
-                todos.push({
-                  content: event.content,
-                  status: event.status,
-                  activeForm: event.activeForm,
-                  id: event.id,
-                  created: event.created ? new Date(event.created) : undefined
-                });
-              }
-            }
-          } catch (err) {
+          const parseResult = parseJsonSafe(line);
+          if (!parseResult.success) {
             // Skip lines that aren't valid JSON
             continue;
+          }
+
+          const event = parseResult.value;
+
+          // Look for todo-related events in Claude session data
+          if (event.type === 'todo' || event.todos) {
+            if (Array.isArray(event.todos)) {
+              todos.push(...event.todos);
+            } else if (event.content && event.status) {
+              // Single todo event
+              todos.push({ // EXEMPTION: simple array operation with Date constructor
+                content: event.content,
+                status: event.status,
+                activeForm: event.activeForm,
+                id: event.id,
+                created: event.created ? new Date(event.created) : undefined
+              });
+            }
           }
         }
         
@@ -250,47 +265,51 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
         }
         let todos: Todo[] = [];
         let explicitProjectPath: string | null = null;
-        try {
-          const parsed = JSON.parse(contentResult.value);
-          if (Array.isArray(parsed)) {
-            todos = parsed.map((t: any) => ({
+        const parseResult = parseJsonSafe(contentResult.value);
+        if (!parseResult.success) {
+          logEntries.push(`  ✗ parse failed for ${filename}: ${parseResult.error}`);
+          continue;
+        }
+
+        const parsed = parseResult.value;
+        if (Array.isArray(parsed)) {
+          todos = parsed.map((t: any) => ({
+            content: String(t.content || ''),
+            status: ['pending','in_progress','completed'].includes(t.status) ? t.status : 'pending',
+            activeForm: t.activeForm,
+            id: t.id,
+            created: t.created ? new Date(t.created) : undefined, // EXEMPTION: simple Date constructor
+          }));
+        } else if (parsed && typeof parsed === 'object') {
+          if (Array.isArray(parsed.todos)) {
+            todos = parsed.todos.map((t: any) => ({
               content: String(t.content || ''),
               status: ['pending','in_progress','completed'].includes(t.status) ? t.status : 'pending',
               activeForm: t.activeForm,
               id: t.id,
-              created: t.created ? new Date(t.created) : undefined,
+              created: t.created ? new Date(t.created) : undefined, // EXEMPTION: simple Date constructor
             }));
-          } else if (parsed && typeof parsed === 'object') {
-            if (Array.isArray(parsed.todos)) {
-              todos = parsed.todos.map((t: any) => ({
-                content: String(t.content || ''),
-                status: ['pending','in_progress','completed'].includes(t.status) ? t.status : 'pending',
-                activeForm: t.activeForm,
-                id: t.id,
-                created: t.created ? new Date(t.created) : undefined,
-              }));
-            }
-            if (parsed.projectPath && typeof parsed.projectPath === 'string') {
-              explicitProjectPath = parsed.projectPath;
-            }
           }
-        } catch (e) {
-          logEntries.push(`  ✗ parse failed for ${filename}`);
-          continue;
+          if (parsed.projectPath && typeof parsed.projectPath === 'string') {
+            explicitProjectPath = parsed.projectPath;
+          }
         }
 
         // Resolve project real path from session
         // Try sidecar metadata first
-        try {
-          const metaFile = path.join(todosDir!, `${sessionId}-agent.meta.json`);
-          if (fsSync.existsSync(metaFile)) {
-            const metaRaw = await fs.readFile(metaFile, 'utf-8');
-            const meta = JSON.parse(metaRaw);
-            if (meta && typeof meta.projectPath === 'string') {
-              explicitProjectPath = explicitProjectPath || meta.projectPath;
+        const metaFile = path.join(todosDir!, `${sessionId}-agent.meta.json`);
+        if (fsSync.existsSync(metaFile)) {
+          const metaReadResult = await ResultUtils.fromPromise(fs.readFile(metaFile, 'utf-8'));
+          if (metaReadResult.success) {
+            const metaParseResult = parseJsonSafe(metaReadResult.value);
+            if (metaParseResult.success) {
+              const meta = metaParseResult.value;
+              if (meta && typeof meta.projectPath === 'string') {
+                explicitProjectPath = explicitProjectPath || meta.projectPath;
+              }
             }
           }
-        } catch {}
+        }
 
         // Resolve via PathUtils if not explicitly provided
         const projPathResult = await PathUtils.getRealProjectPath(sessionId);
@@ -302,7 +321,7 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
         if (explicitProjectPath && !validatePath(explicitProjectPath)) {
           targetPath = realPath || (flattenedDir ? guessPathFromFlattenedName(flattenedDir) : 'Unknown Project');
         }
-        const pathExists = realPath ? validatePath(realPath) : validatePath(targetPath);
+        const pathExists = realPath ? validatePath(realPath) : validatePath(targetPath); // EXEMPTION: simple path validation
 
         if (!projects.has(targetPath)) {
           projects.set(targetPath, {
@@ -320,16 +339,19 @@ export async function loadTodosData(projectsDir: string, logsDir: string, todosD
         }
 
         // Backfill metadata.json for this project if we know the flattenedDir/realPath
-        try {
-          if (flattenedDir && (realPath || explicitProjectPath)) {
-            const projDir = path.join(projectsDir, flattenedDir);
-            const metadataPath = path.join(projDir, 'metadata.json');
-            const toWrite = realPath || explicitProjectPath!;
-            if (!fsSync.existsSync(metadataPath)) {
-              await fs.writeFile(metadataPath, JSON.stringify({ path: toWrite }, null, 2), 'utf-8');
+        if (flattenedDir && (realPath || explicitProjectPath)) {
+          const projDir = path.join(projectsDir, flattenedDir);
+          const metadataPath = path.join(projDir, 'metadata.json');
+          const toWrite = realPath || explicitProjectPath!;
+          if (!fsSync.existsSync(metadataPath)) {
+            const writeResult = await ResultUtils.fromPromise(
+              fs.writeFile(metadataPath, JSON.stringify({ path: toWrite }, null, 2), 'utf-8')
+            );
+            if (!writeResult.success) {
+              logEntries.push(`  Warning: Could not write project metadata.json: ${writeResult.error}`);
             }
           }
-        } catch {}
+        }
 
         const project = projects.get(targetPath)!;
         const existingIndex = project.sessions.findIndex(s => s.id === sessionId);

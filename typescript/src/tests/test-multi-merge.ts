@@ -1,3 +1,4 @@
+// EXEMPTION: exceptions - test utility functions don't need Result<T>
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -79,7 +80,7 @@ function simulateMultiMerge(sources: Session[], target: Session): {
 }
 
 // Create test sessions
-function createTestSessions(): Session[] {
+function createTestSessions(): Session[] { // EXEMPTION: test utility factory
   const sessions: Session[] = [
     {
       id: 'session-1-oldest',

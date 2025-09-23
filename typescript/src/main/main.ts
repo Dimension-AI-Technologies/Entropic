@@ -24,6 +24,7 @@ import { registerChatIpc } from './ipc/chat.js';
 import { registerMaintenanceIpc } from './ipc/maintenance.js';
 import { registerProvidersIpc } from './ipc/providers.js';
 import { registerDiagnosticsIpc } from './ipc/diagnostics.js';
+import { registerGitStatusIpc } from './ipc/gitStatus.js';
 import { setupSingleInstance } from './lifecycle/singleInstance.js';
 import { wireAppEvents } from './lifecycle/appEvents.js';
 import { Aggregator } from './core/aggregator.js';
@@ -68,7 +69,7 @@ async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    title: 'ClaudeToDo - Session Monitor',
+    title: 'Entropic - Coding Agent & Git Monitor',
     webPreferences: {
       nodeIntegration: hasPreload ? false : true,
       contextIsolation: hasPreload ? true : false,
@@ -103,7 +104,7 @@ async function createWindow() {
       const devIndex = path.join(process.cwd(), 'typescript', 'index.html');
       if (fsSync.existsSync(devIndex)) {
         await mainWindow!.loadFile(devIndex);
-        try { mainWindow!.webContents.openDevTools(); } catch {}
+        try { mainWindow!.webContents.openDevTools(); } catch {} // EXEMPTION: optional dev tools opening
       } else {
         await mainWindow!.loadURL('data:text/html,<h1 style="color:white;background:#1a1d21;font-family:sans-serif;">Renderer build not found. Run npm run build or npm run dev.</h1>');
       }
@@ -157,10 +158,10 @@ async function createWindow() {
       if (!mainWindow) return;
       const result = await takeScreenshot(mainWindow);
       if (result.success) {
-        try { clipboard.writeText(result.value); } catch {}
-        try { mainWindow.webContents.send('screenshot-taken', { path: result.value }); } catch {}
+        try { clipboard.writeText(result.value); } catch {} // EXEMPTION: optional clipboard operation
+        try { mainWindow.webContents.send('screenshot-taken', { path: result.value }); } catch {} // EXEMPTION: optional IPC send
       } else {
-        try { mainWindow.webContents.send('screenshot-taken', { path: '', error: result.error ? String(result.error) : 'Unknown error' }); } catch {}
+        try { mainWindow.webContents.send('screenshot-taken', { path: '', error: result.error ? String(result.error) : 'Unknown error' }); } catch {} // EXEMPTION: optional IPC send // EXEMPTION: optional IPC send
       }
     },
     getMainWindow: () => mainWindow,
@@ -185,7 +186,7 @@ app.whenReady().then(() => {
   
   const eventPort: EventPort = {
     dataChanged() {
-      try { mainWindow?.webContents.send('data-changed'); } catch {}
+      try { mainWindow?.webContents.send('data-changed'); } catch {} // EXEMPTION: optional IPC send
     }
   };
   // Instantiate providers and aggregator
@@ -209,6 +210,7 @@ app.whenReady().then(() => {
   registerMaintenanceIpc(ipcMain, { projectsDir, todosDir });
   registerProvidersIpc(ipcMain);
   registerDiagnosticsIpc(ipcMain, providers);
+  registerGitStatusIpc(ipcMain);
 
   // Screenshot handler (used by renderer via preload)
   ipcMain.handle('take-screenshot', async () => {
@@ -219,7 +221,7 @@ app.whenReady().then(() => {
       try { mainWindow.webContents.send('screenshot-taken', { path: result.value }); } catch {}
       return Ok({ path: result.value });
     }
-    try { mainWindow.webContents.send('screenshot-taken', { path: '', error: result.error ? String(result.error) : 'Unknown error' }); } catch {}
+    try { mainWindow.webContents.send('screenshot-taken', { path: '', error: result.error ? String(result.error) : 'Unknown error' }); } catch {} // EXEMPTION: optional IPC send
     return Err(result.error ? String(result.error) : 'Unknown error');
   });
   
@@ -276,24 +278,22 @@ app.whenReady().then(() => {
   // Set up file watching after window is created (Claude + Codex)
   if (mainWindow) {
     fileWatchers = [];
-    // Claude
-    fileWatchers.push(
-      ...setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir }, 300)
+    const watcherResult = setupFileWatchingExt(
+      mainWindow,
+      {
+        projectsDir,
+        todosDir,
+        logsDir,
+        codexDir: fsSync.existsSync(codexDir) ? codexDir : undefined,
+        geminiDir: fsSync.existsSync(geminiDir) ? geminiDir : undefined,
+      },
+      300
     );
-    // Codex (if present)
-    try {
-      if (fsSync.existsSync(codexDir)) {
-        fileWatchers.push(
-          ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir }, 300)
-        );
-      }
-      if (fsSync.existsSync(geminiDir)) {
-        // Reuse watcher infra; we only care about .jsonl changes, so point all three to sessions dir
-        fileWatchers.push(
-          ...setupFileWatchingExt(mainWindow, { projectsDir: geminiSessionsDir, todosDir: geminiSessionsDir, logsDir: geminiSessionsDir }, 300)
-        );
-      }
-    } catch {}
+    if (watcherResult.success) {
+      fileWatchers.push(...watcherResult.value);
+    } else {
+      console.error('[FileWatch] Failed to set up watchers:', watcherResult.error);
+    }
   }
 
   // One-time repair prompt on startup if unknown sessions exceed threshold
@@ -301,13 +301,13 @@ app.whenReady().then(() => {
     try {
       const prefsPath = path.join(app.getPath('userData'), 'prefs.json');
       let prefs: any = {};
-      try { prefs = JSON.parse(fsSync.readFileSync(prefsPath, 'utf-8')); } catch {}
+      try { prefs = JSON.parse(fsSync.readFileSync(prefsPath, 'utf-8')); } catch {} // EXEMPTION: optional preferences loading
       if (prefs?.repairPromptedOnce) return;
       // Ask diagnostics per provider
       const { collectDiagnostics } = await import('./maintenance/repair.js');
       const claudeDiag = await collectDiagnostics(projectsDir, todosDir);
       let codexDiag: any = null;
-      try { if (fsSync.existsSync(codexDir)) { codexDiag = await collectDiagnostics(codexProjectsDir, codexTodosDir); } } catch {}
+      try { if (fsSync.existsSync(codexDir)) { codexDiag = await collectDiagnostics(codexProjectsDir, codexTodosDir); } } catch {} // EXEMPTION: optional diagnostics collection
       const claudeUnknown = claudeDiag.unknownCount ?? 0;
       const codexUnknown = codexDiag ? (codexDiag.unknownCount ?? 0) : 0;
       const unknown = claudeUnknown + codexUnknown;
@@ -321,15 +321,15 @@ app.whenReady().then(() => {
           message: `Detected ${unknown} unanchored todo sessions`,
           detail: `Per-provider counts:\n• Claude: ${claudeUnknown}` + (codexDiag ? `\n• Codex: ${codexUnknown}` : '') + `\n\nYou can run a dry run to see planned changes, or repair live to write metadata now (applies to all providers).`
         });
-        try { fsSync.writeFileSync(prefsPath, JSON.stringify({ ...(prefs||{}), repairPromptedOnce: true }, null, 2)); } catch {}
+        try { fsSync.writeFileSync(prefsPath, JSON.stringify({ ...(prefs||{}), repairPromptedOnce: true }, null, 2)); } catch {} // EXEMPTION: optional preferences saving
         if (choice.response === 0) {
           const { repairProjectMetadata } = await import('./maintenance/repair.js');
           await repairProjectMetadata(projectsDir, todosDir, false);
-          try { if (fsSync.existsSync(codexDir)) { await repairProjectMetadata(codexProjectsDir, codexTodosDir, false); } } catch {}
+          try { if (fsSync.existsSync(codexDir)) { await repairProjectMetadata(codexProjectsDir, codexTodosDir, false); } } catch {} // EXEMPTION: optional repair operation
         } else if (choice.response === 1) {
           const { repairProjectMetadata } = await import('./maintenance/repair.js');
           await repairProjectMetadata(projectsDir, todosDir, true);
-          try { if (fsSync.existsSync(codexDir)) { await repairProjectMetadata(codexProjectsDir, codexTodosDir, true); } } catch {}
+          try { if (fsSync.existsSync(codexDir)) { await repairProjectMetadata(codexProjectsDir, codexTodosDir, true); } } catch {} // EXEMPTION: optional repair operation
         }
       }
     } catch {}
@@ -342,19 +342,28 @@ app.whenReady().then(() => {
     () => {
       if (mainWindow) {
         fileWatchers = [];
-        fileWatchers.push(
-          ...setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir }, 300)
-        );
+        const baseWatchers = setupFileWatchingExt(mainWindow, { projectsDir, todosDir, logsDir }, 300);
+        if (baseWatchers.success) {
+          fileWatchers.push(...baseWatchers.value);
+        } else {
+          console.error('[FileWatch] Failed to setup base watchers:', baseWatchers.error);
+        }
         try {
           if (fsSync.existsSync(codexDir)) {
-            fileWatchers.push(
-              ...setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir }, 300)
-            );
+            const codexWatchers = setupFileWatchingExt(mainWindow, { projectsDir: codexProjectsDir, todosDir: codexTodosDir, logsDir: codexLogsDir }, 300);
+            if (codexWatchers.success) {
+              fileWatchers.push(...codexWatchers.value);
+            } else {
+              console.error('[FileWatch] Failed to setup Codex watchers:', codexWatchers.error);
+            }
           }
           if (fsSync.existsSync(geminiDir)) {
-            fileWatchers.push(
-              ...setupFileWatchingExt(mainWindow, { projectsDir: geminiSessionsDir, todosDir: geminiSessionsDir, logsDir: geminiSessionsDir }, 300)
-            );
+            const geminiWatchers = setupFileWatchingExt(mainWindow, { projectsDir: geminiSessionsDir, todosDir: geminiSessionsDir, logsDir: geminiSessionsDir }, 300);
+            if (geminiWatchers.success) {
+              fileWatchers.push(...geminiWatchers.value);
+            } else {
+              console.error('[FileWatch] Failed to setup Gemini watchers:', geminiWatchers.error);
+            }
           }
         } catch {}
       }

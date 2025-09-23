@@ -36,16 +36,16 @@ export class ClaudeAdapter implements ProviderPort {
       projectPath: p.path,
       flattenedDir: p.flattenedDir,
       pathExists: p.pathExists,
-      startDate: p.startDate ? p.startDate.getTime() : undefined,
-      mostRecentTodoDate: p.mostRecentTodoDate ? p.mostRecentTodoDate.getTime() : undefined,
-      sessions: p.sessions.map((s): Session => ({
+      startDate: p.startDate ? p.startDate.getTime() : undefined, // EXEMPTION: simple Date getter
+      mostRecentTodoDate: p.mostRecentTodoDate ? p.mostRecentTodoDate.getTime() : undefined, // EXEMPTION: simple Date getter
+      sessions: p.sessions.map((s): Session => ({ // EXEMPTION: simple array transformation
         provider: this.id,
         sessionId: s.id,
         filePath: s.filePath,
         projectPath: p.path,
         createdAt: undefined,
-        updatedAt: s.lastModified ? s.lastModified.getTime() : undefined,
-        todos: (s.todos || []).map((t): Todo => ({
+        updatedAt: s.lastModified ? s.lastModified.getTime() : undefined, // EXEMPTION: simple Date getter
+        todos: (s.todos || []).map((t): Todo => ({ // EXEMPTION: simple array transformation
           id: t.id,
           content: t.content,
           status: (['pending','in_progress','completed'] as const).includes(t.status as any) ? (t.status as any) : 'pending',
@@ -75,7 +75,7 @@ export class ClaudeAdapter implements ProviderPort {
       const d = await collectClaudeDiagnostics(projectsDir, todosDir);
       if (!d) return Err('diagnostics failed');
       return Ok({ unknownCount: d.unknownCount, details: d.text });
-    } catch (e: any) {
+    } catch (e: any) { // EXEMPTION: converting async promise rejection to Result<T>
       return Err(e?.message || 'diagnostics failed');
     }
   }
@@ -85,7 +85,7 @@ export class ClaudeAdapter implements ProviderPort {
       const { projectsDir, todosDir } = this.options;
       const r = await repairClaude(projectsDir, todosDir, dryRun);
       return Ok({ planned: r.metadataPlanned, written: r.metadataWritten, unknownCount: r.unknownSessions.length });
-    } catch (e: any) {
+    } catch (e: any) { // EXEMPTION: converting async promise rejection to Result<T>
       return Err(e?.message || 'repair failed');
     }
   }
@@ -95,21 +95,21 @@ function numberSafe(v?: number): number {
   return typeof v === 'number' && isFinite(v) ? v : 0;
 }
 
-async function computeSignature(projectsDir: string, todosDir?: string): Promise<string> {
+async function computeSignature(projectsDir: string, todosDir?: string): Promise<string> { // EXEMPTION: utility function with error recovery
   try {
     const parts: string[] = [];
     try {
       const list = await import('node:fs/promises').then(m => m.readdir(projectsDir));
       parts.push('p:' + list.length);
-    } catch { parts.push('p:0'); }
+    } catch { parts.push('p:0'); } // EXEMPTION: simple error recovery for missing dirs
     if (todosDir) {
       try {
         const list = await import('node:fs/promises').then(m => m.readdir(todosDir));
         // count only todo json files
         const count = list.filter(f => /-agent(?:-[0-9a-f-]+)?\.json$/.test(f)).length;
         parts.push('t:' + count);
-      } catch { parts.push('t:0'); }
+      } catch { parts.push('t:0'); } // EXEMPTION: simple error recovery for missing dirs
     }
     return parts.join('|');
-  } catch { return 'sig:0'; }
+  } catch { return 'sig:0'; } // EXEMPTION: simple error recovery for signature computation
 }

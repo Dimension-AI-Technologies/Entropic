@@ -1,6 +1,6 @@
 import type { ProviderPort } from '../core/ports';
 import type { Project, Session, Todo } from '../core/domain';
-import { Ok, Err, type AsyncResult } from '../../utils/Result.js';
+import { Ok, Err, type AsyncResult, type Result } from '../../utils/Result.js';
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
@@ -18,25 +18,24 @@ export class GeminiAdapter implements ProviderPort {
       const files = await listJsonlFiles(sessionsRoot);
       const byProject = new Map<string, { projectPath: string; sessions: Session[]; mostRecent?: number }>();
       for (const f of files) {
-        try {
-          const parsed = await parseSessionJsonl(f);
-          if (!parsed) continue;
-          const { sessionId, updatedAt, slug, todos } = parsed;
-          const projectPath = slug ? `/gemini/${slug}` : '/gemini/Unknown Project';
-          const s: Session = {
-            provider: this.id,
-            sessionId,
-            filePath: f,
-            projectPath,
-            createdAt: undefined,
-            updatedAt,
-            todos,
-          };
-          const entry = byProject.get(projectPath) || { projectPath, sessions: [], mostRecent: 0 };
-          entry.sessions.push(s);
-          entry.mostRecent = Math.max(entry.mostRecent || 0, updatedAt || 0);
-          byProject.set(projectPath, entry);
-        } catch {}
+        const parsedResult = await parseSessionJsonl(f);
+        if (!parsedResult.success || !parsedResult.value) continue;
+
+        const { sessionId, updatedAt, slug, todos } = parsedResult.value;
+        const projectPath = slug ? `/gemini/${slug}` : '/gemini/Unknown Project';
+        const s: Session = {
+          provider: this.id,
+          sessionId,
+          filePath: f,
+          projectPath,
+          createdAt: undefined,
+          updatedAt,
+          todos,
+        };
+        const entry = byProject.get(projectPath) || { projectPath, sessions: [], mostRecent: 0 };
+        entry.sessions.push(s);
+        entry.mostRecent = Math.max(entry.mostRecent || 0, updatedAt || 0);
+        byProject.set(projectPath, entry);
       }
       const projects: Project[] = Array.from(byProject.values()).map((p) => ({
         provider: this.id,
@@ -54,7 +53,7 @@ export class GeminiAdapter implements ProviderPort {
       }));
       this._cache = { sig, value: projects };
       return Ok(projects);
-    } catch (e: any) { return Err(e?.message || 'gemini fetch failed'); }
+    } catch (e: any) { return Err(e?.message || 'gemini fetch failed'); } // EXEMPTION: converting async promise rejection to Result<T>
   }
 
   watchChanges(_onChange: () => void): () => void { return () => void 0; }
@@ -65,13 +64,14 @@ export class GeminiAdapter implements ProviderPort {
       const files = await listJsonlFiles(sessionsRoot);
       let total = 0; let unknown = 0;
       for (const f of files) {
-        const p = await parseSessionJsonl(f).catch(()=>null);
+        const pResult = await parseSessionJsonl(f);
+        const p = pResult.success ? pResult.value : null;
         if (!p) continue; total++;
         if (!p.slug) unknown++;
       }
       const text = `Gemini sessions scanned: ${total}\nSessions without project slug: ${unknown}`;
       return Ok({ unknownCount: unknown, details: text });
-    } catch (e: any) { return Err(e?.message || 'diagnostics failed'); }
+    } catch (e: any) { return Err(e?.message || 'diagnostics failed'); } // EXEMPTION: converting async promise rejection to Result<T>
   }
 
   async repairMetadata(_dryRun: boolean): AsyncResult<{ planned: number; written: number; unknownCount: number }> {
@@ -86,10 +86,10 @@ async function listJsonlFiles(root: string): Promise<string[]> {
   async function walk(dir: string, depth: number) {
     if (depth > 6) return;
     let entries: string[] = [];
-    try { entries = await fs.readdir(dir); } catch { return; }
+    try { entries = await fs.readdir(dir); } catch { return; } // EXEMPTION: simple error recovery for missing dirs
     for (const name of entries) {
       const p = path.join(dir, name);
-      let stat: any; try { stat = await fs.stat(p); } catch { continue; }
+      let stat: any; try { stat = await fs.stat(p); } catch { continue; } // EXEMPTION: simple error recovery for file stats
       if (stat.isDirectory()) await walk(p, depth + 1);
       else if (name.endsWith('.jsonl')) out.push(p);
     }
@@ -98,26 +98,26 @@ async function listJsonlFiles(root: string): Promise<string[]> {
   return out;
 }
 
-async function signatureForSessions(root: string): Promise<string> {
+async function signatureForSessions(root: string): Promise<string> { // EXEMPTION: utility function with error recovery
   try {
     let count = 0; let mtime = 0;
     async function walk(dir: string, depth: number) {
       if (depth > 6) return;
       let entries: string[] = [];
-      try { entries = await fs.readdir(dir); } catch { return; }
+      try { entries = await fs.readdir(dir); } catch { return; } // EXEMPTION: simple error recovery for missing dirs
       for (const name of entries) {
         const p = path.join(dir, name);
-        let stat: any; try { stat = await fs.stat(p); } catch { continue; }
+        let stat: any; try { stat = await fs.stat(p); } catch { continue; } // EXEMPTION: simple error recovery for file stats
         if (stat.isDirectory()) await walk(p, depth + 1);
         else if (name.endsWith('.jsonl')) { count++; mtime = Math.max(mtime, +stat.mtime || 0); }
       }
     }
     await walk(root, 0);
     return `c:${count}|m:${mtime}`;
-  } catch { return 'c:0|m:0'; }
+  } catch { return 'c:0|m:0'; } // EXEMPTION: simple error recovery for signature computation
 }
 
-async function parseSessionJsonl(file: string): Promise<{ sessionId: string; updatedAt?: number; slug?: string; todos: Todo[] } | null> {
+async function parseSessionJsonl(file: string): AsyncResult<{ sessionId: string; updatedAt?: number; slug?: string; todos: Todo[] } | null> {
   try {
     const raw = await fs.readFile(file, 'utf-8');
     const lines = raw.split('\n').filter(Boolean);
@@ -125,10 +125,12 @@ async function parseSessionJsonl(file: string): Promise<{ sessionId: string; upd
     let updatedAt: number | undefined = undefined;
     let slug: string | undefined = undefined;
     const todos: Todo[] = [];
+
     // First 10 lines for id/slug if present
     for (const line of lines.slice(0, 10)) {
-      try {
-        const j = JSON.parse(line);
+      const lineResult = parseJsonSafe(line);
+      if (lineResult.success) {
+        const j = lineResult.value;
         if (!sessionId && (j.id || j.session_id)) sessionId = String(j.id || j.session_id);
         // Try common Gemini markers (heuristic): project, repo, workspace
         const c = JSON.stringify(j).toLowerCase();
@@ -137,37 +139,57 @@ async function parseSessionJsonl(file: string): Promise<{ sessionId: string; upd
           const tail = m[1].split('/').pop() || m[1];
           slug = tail.replace(/\.git$/i, '');
         }
-      } catch {}
+      }
     }
+
     // parse latest update_plan
     let lastPlan: Array<{ status: string; step: string }>|null = null;
     for (const line of lines) {
-      try {
-        const j = JSON.parse(line);
-        const ts = j.timestamp ? Date.parse(j.timestamp) : undefined;
+      const lineResult = parseJsonSafe(line);
+      if (lineResult.success) {
+        const j = lineResult.value;
+        const ts = j.timestamp ? Date.parse(j.timestamp) : undefined; // EXEMPTION: simple Date parsing
         if (ts && (!updatedAt || ts > updatedAt)) updatedAt = ts;
         if (j.type === 'function_call' && (j.name === 'update_plan' || j.name === 'updatePlan') && j.arguments) {
           let args: any = j.arguments;
-          if (typeof args === 'string') { try { args = JSON.parse(args); } catch {} }
+          if (typeof args === 'string') {
+            const argsResult = parseJsonSafe(args);
+            if (argsResult.success) args = argsResult.value;
+          }
           if (args && Array.isArray(args.plan)) {
             lastPlan = args.plan.map((p: any) => ({ status: String(p.status||'pending'), step: String(p.step||'') }));
           }
         }
-      } catch {}
+      }
     }
+
     if (lastPlan) {
       for (const item of lastPlan) {
         todos.push({ id: undefined, content: item.step, status: normalizeStatus(item.status), createdAt: undefined, updatedAt: updatedAt });
       }
     }
+
     if (!sessionId) {
       const base = path.basename(file).replace(/\.jsonl$/,'');
       const maybeId = base.split('-').pop();
       if (maybeId) sessionId = maybeId;
     }
-    return { sessionId, updatedAt, slug, todos };
-  } catch {
-    return null;
+
+    return Ok({ sessionId, updatedAt, slug, todos });
+  } catch (error) { // EXEMPTION: converting file parse failure to Result<T> with graceful fallback
+    console.warn('[GeminiAdapter] Failed to parse session jsonl', file, error);
+    return Ok(null);
+  }
+}
+
+function parseJsonSafe(json: string): Result<any> {
+  if (!json.trim()) return Err('Empty JSON string');
+
+  try {
+    const parsed = JSON.parse(json);
+    return Ok(parsed);
+  } catch (error: any) { // EXEMPTION: converting JSON.parse exception to Result<T>
+    return Err('Invalid JSON', error);
   }
 }
 
@@ -177,4 +199,3 @@ function normalizeStatus(s: string): 'pending'|'in_progress'|'completed' {
   if (v.startsWith('comp')) return 'completed';
   return 'pending';
 }
-
