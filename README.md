@@ -1,4 +1,4 @@
-# Entropic - AI Coding Agent TODO and History live status monitor GUI
+# Entropic - AI Coding Agent TODO, History and Git live status monitor GUI + CLI tools
 
 <!-- Project badges -->
 <div align="center">
