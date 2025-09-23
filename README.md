@@ -1,6 +1,5 @@
-# Entropic - a Claude Code Todo GUI and Project History viewer
+# Entropic - Multi-provider Session Monitor
 
-<!-- Project badges -->
 [![GitHub Stars](https://img.shields.io/github/stars/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/stargazers)
 [![Forks](https://img.shields.io/github/forks/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/network/members)
 [![Watchers](https://img.shields.io/github/watchers/dimension-zero/Entropic?style=social)](https://github.com/dimension-zero/Entropic/watchers)
@@ -11,144 +10,137 @@
 [![Code Size](https://img.shields.io/github/languages/code-size/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic)
 [![Top Language](https://img.shields.io/github/languages/top/dimension-zero/Entropic)](https://github.com/dimension-zero/Entropic)
 
-![Platforms](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-2ea44f)
-![Electron](https://img.shields.io/badge/Electron-36.x-47848F?logo=electron&logoColor=white)
-![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
+Entropic is a desktop companion for AI coding agents (Claude Code, OpenAI Codex, Google Gemini). The TypeScript/Electron app ingests the session and history folders created in `~/.claude`, `~/.codex`, and `~/.gemini`, merges them into a provider-aware data model, and renders a real-time dashboard with project activity, session diagnostics, prompt history, and maintenance tooling. The repository still ships the original PowerShell and Bash monitors for terminal-first workflows.
 
-A real-time ToDo monitoring system for Claude Code that displays live updates of Todo items as they are created, modified, and completed.
-This tool provides a visual dashboard in your terminal or as a GUI that automatically updates whenever Claude Code uses the TodoWrite tool.
-GUI versuib is in cross-platform TypeScript / Electron.
-Terminal version is in cross-platform PowerShell by [dimension-zero](@dimension-zero) and original Bash by [@JamesonNyp](@JamesonNyp).
-
-![Claude Code Todo Tracker Live Monitor](Todo%20Tracker.png)
+![Project view](ProjectView.png)
+![Global view](GlobalView.png)
 
 ## Overview
 
-This project provides scripts that integrate with Claude Code's hook system to capture and display todo updates in real-time. When Claude Code uses its TodoWrite tool, these scripts intercept the data and provide a live monitoring dashboard showing the current state of all todos.
+- Multi-provider aggregator with debounced file watching, caching, and metadata repair
+- Rich React UI with project and global dashboards, provider filters, spacing presets, and activity overlays
+- Session utilities including multi-select merge previews, empty-session cleanup, and prompt history inspection
+- Maintenance surface that runs diagnostics and metadata repair (dry-run or live) across Claude, Codex, and Gemini datasets
+- Extensive Jest suite plus CLI monitors so you can pick the interface that fits your environment
 
-## Features
+## TypeScript / Electron application
 
-- 🔄 **Live Updates**: Automatically refreshes when Claude Code modifies todos
-- 🎨 **Color-Coded Status**: Visual indicators for different todo states
-  - ✅ Green for completed items
-  - ▶️ Blue for active/in-progress items  
-  - ○ Default for pending items
-- 📊 **Session Tracking**: Displays session ID and working directory
-- ⚡ **Efficient Monitoring**: Uses native file watching for minimal resource usage
-- 🌍 **Cross-Platform**: Available in both Bash and PowerShell implementations
+### Highlights
 
-## How It Works
+- **Project view**: Auto-selects recent projects, restores last selection, filters todos by status, supports tab multi-select with merge previews, and provides delete/cleanup actions for session files.
+- **Global view**: Summarises provider activity, shows unknown-session diagnostics, and exposes repair buttons that call `repairMetadataHex` with dry-run or live modes.
+- **Unified title bar**: Toggles between project and global layouts, adjusts spacing density, runs manual refresh, and lets you enable/disable providers via a persistent allow-list.
+- **Prompt history**: Loads JSONL transcripts through `getProjectPrompts`, supports chronological toggling, and offers context menus for quick actions.
+- **Visual polish**: Animated background, boids simulation, and toast notifications (`__addToast`) keep long-running monitors informative without overwhelming the data.
 
-1. **Hook Script**: Intercepts PostToolUse events for TodoWrite
-   - Captures todo data from Claude Code
-   - Extracts relevant information (todos, session, directory)
-   - Saves formatted JSON to `~/.claude/logs/current_todos.json`
+### Architecture
 
-2. **Monitor Script**: Displays live todo updates
-   - Watches the JSON file for changes
-   - Parses and displays todos with color coding
-   - Updates display in real-time
-   - Uses efficient file watching mechanisms
+- `src/main/main.ts` orchestrates Electron startup, single-instance locking, provider detection, and throttled file watching via `watchers/fileWatchers.ts`.
+- Provider adapters in `src/main/adapters` (Claude, Codex, Gemini) transform on-disk todos and history into provider-neutral `Project` and `Session` models, expose diagnostics, and share repair helpers.
+- The `Aggregator` (`src/main/core/aggregator.ts`) merges provider results, dedupes sessions, emits `data-changed`, and powers the `get-projects` IPC handler.
+- IPC modules (`src/main/ipc/*.ts`) expose data (`get-projects`, `get-todos`), maintenance (`collect-diagnostics`, `repair-metadata`, `*-hex` variants), provider presence, and file management endpoints.
+- `src/main/preload.ts` bridges those IPC endpoints into `window.electronAPI`, keeping the renderer sandboxed while still allowing data refresh, metadata repair, screenshot capture, and session deletion.
+- The renderer relies on `src/services/DIContainer.ts` for a lightweight MVVM layer that wraps `electronAPI`, honours provider allow-lists, and feeds the React components in `src/App.*.tsx` and `src/components`.
+- Shared utilities (`src/utils`) provide result combinators, path reconstruction (`PathUtils`), and todo helpers that are reused in both the main process and renderer and covered by Jest tests.
 
-## Available Implementations
+### Data sources and file watching
 
-### TypeScript/Electron GUI Version (`typescript/`) - Cross-Platform Desktop Application
-- **Modern Desktop GUI**: Slack-like interface with dark theme
-- **Cross-platform**: Runs as a native desktop app on Windows, macOS, and Linux
-- **Advanced Features**:
-  - Real-time monitoring of all Claude Code sessions across projects
-  - Tri-state toggle controls for sorting and spacing customization
-  - Session tabs with automatic deduplication
-  - Auto-refresh every 5 seconds
-  - Visual status indicators and progress tracking
-- **Easy Installation**: `npm install` and `npm start` to run
-- See [typescript/README.md](typescript/README.md) for setup instructions
+- Watches `~/.claude/projects`, `~/.claude/todos`, and `~/.claude/logs` by default; automatically adds Codex (`~/.codex/...`) and Gemini (`~/.gemini/sessions`) when present.
+- Debounced watchers emit a provider-agnostic `data-changed` event so the renderer refreshes without entering high-frequency loops.
+- `loaders/projects.ts` reconstructs real paths from flattened directory names, hydrates metadata, and writes `typescript/project.load.log` with each ingest cycle for troubleshooting.
 
-### PowerShell 7 Version (`powershell7/`) - Recommended for Cross-Platform Use
-- **Truly cross-platform**: Runs natively on Windows, macOS, and Linux
-- No external dependencies required
-- Built-in JSON parsing and file watching
-- While PowerShell may seem unfamiliar to Unix users, it solves many traditional shell scripting limitations:
-  - Consistent behavior across all platforms
-  - Structured data handling (objects vs text streams)
-  - No need for external tools like `jq`, `sed`, or `awk`
-  - Robust error handling and debugging
-- See [README-ps.md](README-ps.md) for setup instructions
+### Maintenance and diagnostics
 
-### Bash Version (`bash/`) - For macOS and Linux
-- Works on Linux, macOS, and WSL2 (not native Windows)
-- Requires `jq` for JSON parsing
-- Optionally uses `inotifywait` (Linux) or `fswatch` (macOS) for file monitoring
-- See [README-sh.md](README-sh.md) for setup instructions
+- Adapters expose `collectDiagnostics`/`repairMetadata`; the global view drives them through `collectDiagnosticsHex` and `repairMetadataHex` IPC calls.
+- Repairs backfill `metadata.json` files to make future path reconstruction deterministic and report unknown sessions per provider.
+- UI actions let you delete empty session files, purge obsolete tabs, and trigger screenshots (`take-screenshot`) for documentation or regression capture.
 
-## Project Structure
+## Getting started (TypeScript/Electron)
 
-```
-cc-todo-hook-tracker/
-├── README.md           # This file
-├── README-sh.md        # Bash setup guide
-├── README-ps.md        # PowerShell setup guide
-├── TESTING-ps.md       # PowerShell testing guide
-├── Todo Tracker.png    # Screenshot of the monitor
-├── bash/               # Bash implementation
-│   ├── todo_hook_post_tool.sh
-│   └── todo_live_monitor.sh
-├── powershell7/        # PowerShell 7 implementation
-│   ├── todo_hook_post_tool.ps1
-│   ├── todo_live_monitor.ps1
-│   └── tests/          # Test scripts
-└── typescript/         # Electron GUI implementation
-    ├── src/            # React/TypeScript source
-    ├── package.json    # Node dependencies
-    └── README.md       # GUI setup guide
+### Requirements
+
+- Node.js 20 or newer, npm 10+, and the Electron 36 runtime.
+- Claude, Codex, or Gemini session directories under your home folder (the app will still run without them, but the dashboards will be empty).
+
+### Install and run
+
+```bash
+cd typescript
+npm install
+npm run dev        # watch Electron main + Vite renderer with hot reload
 ```
 
-## Quick Start
+After building, launch the production bundle with `npm start`.
 
-1. Choose your preferred implementation:
-   - **Desktop GUI (Electron)**: Follow [typescript/README.md](typescript/README.md)
-   - **Terminal (PowerShell 7)**: Follow [README-ps.md](README-ps.md)
-   - **Terminal (Bash)**: Follow [README-sh.md](README-sh.md)
+### Build and package
 
-2. Configure Claude Code hooks to use the appropriate script; the GUI is triggered by hooks
-
-3. Start the monitor:
-   - GUI version: from typescript directory, run `npm run build` and `npm start` to launch the Electron app
-   - Terminal versions: Run monitor script in a separate terminal
-
-4. Use Claude Code normally - todos will appear automatically!
-
-## File Storage
-
-All implementations use the same file structure:
-```
-~/.claude/
-├── settings.json               # Claude Code configuration
-├── logs/
-│   └── current_todos.json      # Current todo state data
-└── scripts/                    # (Optional) Script installation location
+```bash
+npm run build      # compile main, preload, and renderer bundles
+npm start          # run the compiled output inside Electron
+npm run dist       # create platform-specific installers (AppImage, macOS dir, Windows portable)
 ```
 
-## Codex Provider Hooks (optional but recommended)
+`npm run dist:portable` emits a single-file Windows executable.
 
-To help Entropic reliably associate Codex sessions with projects, write a sidecar metadata file next to each Codex todo file:
+### Testing
 
-- Path: `~/.codex/todos/{sessionId}-agent.meta.json`
-- Content: `{ "projectPath": "/absolute/path/to/your/project" }`
+```bash
+npm test           # Jest unit/integration suite (aggregator, repositories, view models, UI)
+npm test:watch
+npm test:coverage
+```
 
-Example scripts and details are in `HOOKS-codex.md`.
+Browser-oriented tests use `jest-environment-jsdom`; helper mocks live in `src/tests/__mocks__`.
+
+### Automation and debugging
+
+- `npm run verify:screenshot` enables `ENTROPIC_AUTOSNAP=1` and grabs renderer snapshots via `scripts/launch-autosnap.mjs`.
+- `typescript/project.load.log` captures every ingest attempt, including path reconstruction decisions and session counts.
+
+## Repository layout
+
+```
+.
++-- README.md                  # This file
++-- TODO.md, Hexagon.md        # Planning and design notes
++-- typescript/                # Electron/React implementation
+|   +-- src/
+|   |   +-- main/              # Electron main process, adapters, IPC, watchers
+|   |   +-- components/        # Renderer UI (title bar, panes, menus, boids, merge helpers)
+|   |   +-- utils/             # Shared Result/Path/Todo helpers
+|   |   +-- viewmodels/        # Legacy MVVM layer maintained for tests
+|   |   +-- tests/             # Jest specs and integration harnesses
+|   +-- assets/                # Logos and imagery used in the UI
+|   +-- scripts/               # Build helpers, autosnap, update-to-latest
++-- powershell7/               # Cross-platform terminal monitor (PowerShell)
++-- bash/                      # Minimal Bash monitor
++-- GlobalView.png, ProjectView.png, Todo Tracker.png
+```
+
+## Other implementations
+
+PowerShell and Bash monitors remain available for headless or remote workflows. See `README-ps.md` and `README-sh.md` for setup instructions and command examples.
+
+## Codex provider metadata
+
+To help the Codex adapter associate todos with real project paths, create sidecar files at `~/.codex/todos/{sessionId}-agent.meta.json` containing:
+
+```json
+{ "projectPath": "/absolute/path/to/project" }
+```
+
+Automation hooks in `HOOKS-codex.md` show how to emit these files from tool events.
 
 ## License
 
-MIT License - Feel free to modify and distribute
+MIT License - feel free to modify and redistribute.
 
 ## Contributing
 
-Contributions are welcome. Please feel free to submit pull requests or open issues for bugs and feature requests.
+Issues and pull requests are welcome. Please run the Jest suite before submitting patches.
 
-## Author
+## Authors
 
-* TypeScript/Electron GUI by Dimension Zero (@dimension-zero)
-* PowerShell implementation by Dimension Zero (@dimension-zero)
-* Original Bash CLI version created by Jameson Nyp (@JamesonNyp) [cc-todo-hook-tracker](https://github.com/JamesonNyp/cc-todo-hook-tracker)
+- TypeScript/Electron application: Dimension Zero (@dimension-zero)
+- PowerShell implementation: Dimension Zero (@dimension-zero)
+- Original Bash hooks: Jameson Nyp (@JamesonNyp)
