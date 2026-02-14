@@ -1,0 +1,15 @@
+{
+  "project": {
+    "name": "entropic"
+  },
+  "build": {
+    "languages": {
+      "javascript": {
+        "enabled": true
+      },
+      "typescript": {
+        "enabled": true
+      }
+    }
+  }
+}
