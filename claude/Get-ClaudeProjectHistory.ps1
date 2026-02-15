@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 <#
 .SYNOPSIS
     Extracts Claude project history from JSONL files and creates a chronological markdown document.

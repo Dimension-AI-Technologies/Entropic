@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Simplified script that uses PowerShell's ConvertFrom-Json
 # instead of Newtonsoft.Json to avoid complexity
 

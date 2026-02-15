@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.0
+
 # Debug PowerShell framework issue
 
 . ../powershell/polyscript.ps1

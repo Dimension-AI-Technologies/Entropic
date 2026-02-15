@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 <#
 .SYNOPSIS
     [DEPRECATED] Use Fix-ClaudeCode-Universal.ps1 or Fix-ClaudeCode-Universal-Spectre.ps1 instead

@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 Add-Type -Path ".\Newtonsoft.Json.dll"
 
 $jsonFile = "C:\Users\mathew.burkitt\.claude\projects\C--Users-mathew-burkitt-source-repos-scripts-dev-claude\e0933133-769e-45ba-abbb-a318871320b1.jsonl"

@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.0
+
 # Simple test of PowerShell framework
 
 . ../powershell/polyscript.ps1

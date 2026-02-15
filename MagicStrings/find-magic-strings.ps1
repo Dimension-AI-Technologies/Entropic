@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # PowerShell script to find and count magic strings in the codebase
 
 param(

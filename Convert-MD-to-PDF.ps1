@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.0
+
 <#
 .SYNOPSIS
     Converts Markdown files to PDF using pandoc with optimized formatting

@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Find-EnvironmentVariables.ps1
 # Scans source files for OS environment variable usage across various programming languages
 # Detects patterns like $env:VAR (PowerShell), process.env (Node.js), os.environ (Python), etc.

@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Debug-Context7-MCP.ps1
 # Comprehensive Context7 MCP Server Diagnostic Script
 # Performs systematic root-cause analysis for Context7 MCP connection issues

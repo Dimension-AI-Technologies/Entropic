@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Find-TODOs.ps1
 # Scans source files for TODO, FIXME, HACK and other markers
 # Outputs a formatted table with counts per file

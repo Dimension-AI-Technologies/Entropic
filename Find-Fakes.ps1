@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Find-Fakes.ps1
 # Comprehensive script to find mock, fake, simulation code, magic strings, and magic numbers
 # Merged from CJCHercules and TubeNotes versions for maximum coverage

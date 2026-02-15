@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # PowerShell script to replace magic strings with centralized configuration
 
 param(

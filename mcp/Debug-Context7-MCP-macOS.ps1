@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Debug-Context7-MCP-macOS.ps1
 # Comprehensive Context7 MCP Server Diagnostic Script for macOS/Linux
 # Performs systematic root-cause analysis for Context7 MCP connection issues
