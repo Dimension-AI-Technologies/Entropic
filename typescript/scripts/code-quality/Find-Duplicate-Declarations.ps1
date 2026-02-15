@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Find-Duplicate-Declarations.ps1
 # Scans TypeScript codebase for duplicate class and method declarations across different files
 # Only checks top-level and class-level declarations, not code inside method bodies

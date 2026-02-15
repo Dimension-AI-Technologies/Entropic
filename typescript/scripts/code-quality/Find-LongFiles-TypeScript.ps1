@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Find-LongFiles-TypeScript.ps1
 # Finds TypeScript files exceeding a minimum line count and lists them in descending order
 # Helps identify files that may need refactoring or breaking into smaller modules

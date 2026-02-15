@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.0
+
 
 # Test script to update todos and test the monitor
 Write-Host "Testing todo monitor with dynamic updates" -ForegroundColor Cyan

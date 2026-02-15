@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Run-CodeQualityScripts.ps1
 # Runs all other PowerShell scripts in this directory alphabetically and outputs their results
 

@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Build-ClaudeToDo.ps1
 # Builds standalone ClaudeToDo executables for Windows, macOS, and Linux
 

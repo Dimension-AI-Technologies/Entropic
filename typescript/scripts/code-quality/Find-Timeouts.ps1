@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 <#
 .SYNOPSIS
     Finds all timeout-related code in TypeScript files to ensure proper dynamic calculation for LLM calls.

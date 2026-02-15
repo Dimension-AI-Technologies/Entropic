@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Find-Fakes.ps1
 # Searches for test doubles, mock objects, magic values, and hardcoded test data
 # Supports TypeScript patterns with advanced detection

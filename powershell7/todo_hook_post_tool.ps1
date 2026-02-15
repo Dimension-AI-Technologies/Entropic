@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.0
+
 
 # PostToolUse hook for TodoWrite tool
 # Captures todo data and writes to a JSON file for monitoring
