@@ -36,4 +36,4 @@ test2.txt
 *.test
 
 # Screenshots  
-screenshot*.png
+screenshot*.png.recode/
