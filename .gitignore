@@ -37,3 +37,18 @@ test2.txt
 
 # Screenshots  
 screenshot*.png
+
+# javascript
+node_modules/
+dist/
+.bun/
+.deno/
+coverage/
+*.tsbuildinfo
+
+# typescript
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
