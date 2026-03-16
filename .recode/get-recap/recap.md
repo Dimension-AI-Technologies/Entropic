@@ -61,3 +61,11 @@ dist, coverage, and tsbuildinfo to .gitignore for TypeScript builds.
 - docs: add dated recap entry
   Author: Mathew Burkitt
 
+
+---
+
+## Commit: 2026-03-16 10:46
+
+- docs: add dated recap entry
+  Author: Mathew Burkitt
+
