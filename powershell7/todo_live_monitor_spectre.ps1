@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.0
+
 
 # Live Todo Monitor with Spectre.Console - Beautiful terminal UI for todos
 # Run this in a separate terminal window for real-time updates

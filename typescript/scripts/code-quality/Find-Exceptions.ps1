@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Find-Exceptions.ps1
 # Data-driven script to find exception usage across multiple programming languages
 # and suggest Result<T> pattern conversions (excluding constructors which cannot return Result<T>)

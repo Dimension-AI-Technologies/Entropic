@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Find-CommonJS.ps1
 # Traverses the codebase to find files using CommonJS instead of ES Modules
 # and provides instructions for converting to ES Modules

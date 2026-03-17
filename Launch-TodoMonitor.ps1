@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Cross-platform launcher for Claude Todo Monitor
 # Works on Windows PowerShell and PowerShell Core (macOS/Linux)
 

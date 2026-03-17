@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.0
+
 
 # Live Todo Monitor - Displays current todos with color coding
 # Run this in a separate terminal window for real-time updates

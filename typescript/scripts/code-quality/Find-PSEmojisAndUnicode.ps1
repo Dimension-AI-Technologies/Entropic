@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 # Find-PSEmojisAndUnicode.ps1
 # Searches all PowerShell scripts for emojis and Unicode characters
 # Helps identify files that may have encoding issues

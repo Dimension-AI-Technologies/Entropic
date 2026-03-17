@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.0
+
 
 # Test script for todo_hook_post_tool.ps1
 Write-Host "Testing todo_hook_post_tool.ps1" -ForegroundColor Cyan
