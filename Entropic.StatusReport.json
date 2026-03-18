@@ -1,0 +1,1565 @@
+{
+  "violations": [],
+  "verified": [
+    {
+      "target": {
+        "type_full_name": "TodosViewModel",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-002"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodosViewModel",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-003"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodosViewModel",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-004"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodoManager E2E Test Suite",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-005"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodosViewModel",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-006"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "ProjectsPaneMVVM (direct facade)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-007"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodosViewModel",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-008"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodosViewModel",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-009"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodoManager E2E Test Suite",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-010"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodosViewModel",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-011"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodosViewModel",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-001"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "FileSystemProjectRepository (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PRV-001"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "FileSystemProjectRepository (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PRV-002"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "FileSystemProjectRepository (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PRV-003"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "DI provider filter",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PRV-004"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "ProjectsPaneMVVM (direct facade)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PRV-005"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "ProjectsViewModel (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PRV-006"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "DI provider filter",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PRV-007"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "Aggregator",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PRV-008"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "ProjectsViewModel (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-SES-001"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "UI Interaction Tests",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-SES-002"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "ProjectsViewModel (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-SES-003"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "PathUtils",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-SES-004"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "PathUtils",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-SES-005"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "Todo Merge Functionality",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-SES-006"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "Todo Merge Functionality",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-SES-007"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "ChatHistoryViewModel",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-SES-008"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodosViewModel",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-SES-009"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "git status collectors",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GIT-001"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "GitView",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GIT-002"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "git status collectors",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GIT-003"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "git status collectors",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GIT-004"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "CommitView",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GIT-005"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "GitView",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GIT-006"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GIT-007"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "FileSystemProjectRepository (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-DGN-001"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-DGN-002"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "FileSystemProjectRepository (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-DGN-003"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "FileSystemProjectRepository (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-DGN-004"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "FileSystemProjectRepository (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-DGN-005"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "FileSystemProjectRepository (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-DGN-006"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "FileSystemProjectRepository (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-DGN-007"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodoManager E2E Test Suite",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-HOK-001"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodoManager E2E Test Suite",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-HOK-002"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodoManager E2E Test Suite",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-HOK-003"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodoManager E2E Test Suite",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-HOK-004"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodoManager E2E Test Suite",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-HOK-005"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodoManager E2E Test Suite",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-HOK-006"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-001"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "UI Interaction Tests",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-002"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "ProjectsPaneMVVM (direct facade)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-003"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "Todo Merge Functionality",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-004"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-005"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-006"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-007"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-008"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-009"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-010"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-011"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-012"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-013"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-014"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-015"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "DI provider filter",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-CLI-001"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "DI provider filter",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-CLI-002"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "DI provider filter",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-CLI-003"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "DI provider filter",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-CLI-004"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "DI provider filter",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-CLI-005"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "DI provider filter",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-CLI-006"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "Aggregator",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-BLD-001"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "Aggregator",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-BLD-002"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "Aggregator",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-BLD-003"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "Aggregator",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-BLD-004"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "Aggregator",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-BLD-005"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodoManager E2E Test Suite",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-BLD-006"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PLT-001"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "DI provider filter",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PLT-002"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "FileSystemProjectRepository (agnostic)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PLT-003"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PLT-004"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PLT-005"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-PLT-006"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "Aggregator",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-ARC-001"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodoManager E2E Test Suite",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-ARC-002"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "DI provider filter",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-ARC-003"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-ARC-004"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "Aggregator",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-ARC-005"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "TodosViewModel",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-ARC-006"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "DI provider filter",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-ARC-007"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-ARC-008"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "UI Interaction Tests",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-TOD-012"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-016"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "ProjectsPaneMVVM (direct facade)",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-017"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-018"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-019"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-020"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-SES-010"
+        ]
+      },
+      "matches": []
+    },
+    {
+      "target": {
+        "type_full_name": "App",
+        "member_name": null,
+        "must_be_tested": true,
+        "min_cover": 0,
+        "only_when": 0,
+        "unless": 0,
+        "reason": null,
+        "kind": "Class",
+        "implements": [
+          "REQ-GUI-021"
+        ]
+      },
+      "matches": []
+    }
+  ],
+  "skipped": [],
+  "warnings": [],
+  "total_targets": 97,
+  "is_compliant": true,
+  "statistics": {
+    "by_kind": {}
+  },
+  "summary": "97 targets \u2014 97 verified, 0 skipped, 0 violations"
+}

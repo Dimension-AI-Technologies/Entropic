@@ -1,0 +1,46 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Entropic.GUI.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
+        x:Class="Entropic.GUI.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Entropic"
+        Width="1400" Height="900"
+        Background="#1a1d21">
+    <!-- @must_test(REQ-GUI-014) Window defaults 1400x900 -->
+    <!-- @must_test(REQ-GUI-001) Tabbed navigation -->
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <DockPanel>
+        <!-- Status Bar -->
+        <Border DockPanel.Dock="Bottom" Background="#12141a" Padding="12,4">
+            <TextBlock Text="{Binding StatusText}" Foreground="#a2a7ad" FontSize="12" />
+        </Border>
+
+        <!-- Tab Navigation -->
+        <TabControl Margin="0" Padding="0" SelectedIndex="{Binding SelectedTabIndex}">
+            <TabItem Header="Project View">
+                <TextBlock Text="Project View — coming in Phase 4"
+                           Foreground="#a2a7ad" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </TabItem>
+            <TabItem Header="Global View">
+                <TextBlock Text="Global View — coming in Phase 4"
+                           Foreground="#a2a7ad" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </TabItem>
+            <TabItem Header="Git View">
+                <TextBlock Text="Git View — coming in Phase 4"
+                           Foreground="#a2a7ad" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </TabItem>
+            <TabItem Header="Commit View">
+                <TextBlock Text="Commit View — coming in Phase 4"
+                           Foreground="#a2a7ad" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+
+</Window>

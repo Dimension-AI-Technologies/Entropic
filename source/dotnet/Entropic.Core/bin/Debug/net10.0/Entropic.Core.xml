@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<doc>
+<assembly><name>Entropic.Core</name></assembly>
+<members>
+<member name="T:Entropic.Core.TodoStatus">
+<summary>
+ Provider-agnostic domain types.
+ Identity rules:
+   Project identity = (Provider, ProjectPath)
+   Session identity = (Provider, SessionId)
+</summary>
+</member>
+<member name="T:Entropic.Core.IProviderPort">
+<summary>
+ Hexagonal architecture port interfaces.
+ Core domain depends on these abstractions; adapters implement them.
+</summary>
+</member>
+<member name="T:Entropic.Core.Aggregator">
+<summary>
+ Merges data from multiple providers, deduplicating projects
+ by (provider, projectPath) and sessions by (provider, sessionId).
+</summary>
+</member>
+<member name="M:Entropic.Core.PathUtils.validatePath(System.String)">
+<summary>
+ Validate whether a path exists on the filesystem.
+</summary>
+</member>
+<member name="M:Entropic.Core.PathUtils.reconstructPath(System.String,System.String)">
+<summary>
+ Reconstruct a real filesystem path from a flattened directory name.
+ Checks metadata.json first, then uses greedy filesystem matching.
+</summary>
+</member>
+<member name="M:Entropic.Core.PathUtils.buildAndValidatePath(Microsoft.FSharp.Collections.FSharpList{System.String},System.Boolean)">
+<summary>
+ Greedy path reconstruction: walk the filesystem trying multi-part matches.
+</summary>
+</member>
+<member name="M:Entropic.Core.PathUtils.listDirectory(System.String)">
+<summary>
+ List directory contents, returning Error if directory doesn&apos;t exist.
+</summary>
+</member>
+<member name="M:Entropic.Core.PathUtils.createFlattenedPath(System.String)">
+<summary>
+ Replace path separators and colons with hyphens.
+</summary>
+</member>
+<member name="T:Entropic.Core.PathUtils">
+<summary>
+ Flattened directory path reconstruction and creation.
+ Claude (and other providers) flatten project paths into directory names
+ by replacing path separators with hyphens.
+</summary>
+</member>
+<member name="M:Entropic.Core.TodoManager.countByStatus(Microsoft.FSharp.Collections.FSharpList{Entropic.Core.Session})">
+<summary>
+ Count todos by status across sessions.
+</summary>
+</member>
+<member name="M:Entropic.Core.TodoManager.sortSessionsByDate(Microsoft.FSharp.Collections.FSharpList{Entropic.Core.Session})">
+<summary>
+ Sort sessions by last modification time, most recent first.
+</summary>
+</member>
+<member name="M:Entropic.Core.TodoManager.displayText(Entropic.Core.Todo)">
+<summary>
+ Get display text for a todo: uses ActiveForm when in-progress, else Content.
+</summary>
+</member>
+<member name="M:Entropic.Core.TodoManager.statusPriority(Entropic.Core.TodoStatus)">
+<summary>
+ Status priority for sorting: InProgress first, then Pending, then Completed.
+</summary>
+</member>
+<member name="T:Entropic.Core.TodoManager">
+<summary>
+ Sorting, filtering, and status logic for TODOs.
+</summary>
+</member>
+</members>
+</doc>

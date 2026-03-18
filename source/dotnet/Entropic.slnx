@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Entropic.Core/Entropic.Core.fsproj" />
+  <Project Path="Entropic.GUI/Entropic.GUI.csproj" />
+</Solution>

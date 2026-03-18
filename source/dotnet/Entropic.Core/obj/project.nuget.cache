@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "EeM9nyeYrKw=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\mathew.burkitt\\source\\repos\\DT\\Entropic\\source\\dotnet\\Entropic.Core\\Entropic.Core.fsproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\mathew.burkitt\\.nuget\\packages\\fsharp.core\\11.0.100\\fsharp.core.11.0.100.nupkg.sha512"
+  ],
+  "logs": []
+}

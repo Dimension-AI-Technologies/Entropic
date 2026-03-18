@@ -1,0 +1,14 @@
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\bin\Debug\net10.0\Entropic.Core.deps.json
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\bin\Debug\net10.0\Entropic.Core.dll
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\bin\Debug\net10.0\Entropic.Core.pdb
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\bin\Debug\net10.0\Entropic.Core.xml
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\obj\Debug\net10.0\Entropic.Core.fsproj.AssemblyReference.cache
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\obj\Debug\net10.0\Entropic.Core.AssemblyInfoInputs.cache
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\obj\Debug\net10.0\Entropic.Core.AssemblyInfo.fs
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\obj\Debug\net10.0\Entropic.Core.fsproj.CoreCompileInputs.cache
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\obj\Debug\net10.0\Entropic.Core.sourcelink.json
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\obj\Debug\net10.0\Entropic.Core.dll
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\obj\Debug\net10.0\refint\Entropic.Core.dll
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\obj\Debug\net10.0\Entropic.Core.xml
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\obj\Debug\net10.0\Entropic.Core.pdb
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.Core\obj\Debug\net10.0\ref\Entropic.Core.dll
