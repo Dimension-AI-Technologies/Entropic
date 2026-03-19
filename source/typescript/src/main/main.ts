@@ -1,3 +1,22 @@
+// @must_test(REQ-PLT-001)
+// @must_test(REQ-PLT-002)
+// @must_test(REQ-PLT-004)
+// @must_test(REQ-GUI-010)
+// @must_test(REQ-GUI-014)
+// @must_test(REQ-CLI-001)
+// @must_test(REQ-CLI-002)
+// @must_test(REQ-CLI-003)
+// @must_test(REQ-CLI-006)
+// @must_test(REQ-HOK-001)
+// @must_test(REQ-HOK-005)
+// @must_test(REQ-HOK-006)
+// @must_test(REQ-BLD-001)
+// @must_test(REQ-BLD-002)
+// @must_test(REQ-BLD-003)
+// @must_test(REQ-BLD-004)
+// @must_test(REQ-BLD-005)
+// @must_test(REQ-BLD-006)
+// @must_test(REQ-ARC-007)
 import electron from 'electron';
 const { app, BrowserWindow, ipcMain, dialog, clipboard } = electron;
 import path from 'node:path';

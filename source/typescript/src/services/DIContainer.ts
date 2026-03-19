@@ -1,3 +1,4 @@
+// @must_test(REQ-ARC-003)
 // EXEMPTION: exceptions - DI container getters and utilities don't need Result<T>
 // Proper MVVM dependency injection: wires IPC repositories with ViewModels.
 import { dlog } from '../utils/log';

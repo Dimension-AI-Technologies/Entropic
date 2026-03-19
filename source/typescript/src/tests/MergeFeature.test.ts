@@ -1,3 +1,5 @@
+// @covers(repair)
+// @covers(maintenance)
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { Todo, Session } from '../types';
 

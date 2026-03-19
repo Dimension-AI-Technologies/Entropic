@@ -1,3 +1,4 @@
+// @covers(gitStatus)
 import path from 'node:path';
 import os from 'node:os';
 import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';

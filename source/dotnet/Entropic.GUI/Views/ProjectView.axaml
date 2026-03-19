@@ -20,20 +20,28 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="vm:ProjectItemViewModel">
                         <StackPanel Orientation="Horizontal" Margin="4,2">
-                            <!-- Provider badge -->
+                            <!-- REQ-PRV-005: Provider badge -->
                             <Border Background="#2a2d32" CornerRadius="3" Padding="4,1" Margin="0,0,6,0">
                                 <TextBlock Text="{Binding Provider}" FontSize="10" Foreground="#7a8a9a" />
                             </Border>
                             <TextBlock Text="{Binding Name}" Foreground="#e0e0e0" />
+                            <TextBlock Text="{Binding TodoCount, StringFormat=' ({0})'}" Foreground="#666" FontSize="11" />
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
+                <!-- REQ-GUI-004: Context menu on projects -->
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Copy Path" Command="{Binding CopyPathCommand}" />
+                        <MenuItem Header="Open in Explorer" Command="{Binding OpenInExplorerCommand}" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
             </ListBox>
         </DockPanel>
 
         <GridSplitter Grid.Column="1" Width="4" Background="#2a2d32" />
 
-        <!-- Middle pane: Session tabs + content -->
+        <!-- Middle pane: Session tabs + todo list for selected session -->
         <DockPanel Grid.Column="2">
             <TabControl DockPanel.Dock="Top" ItemsSource="{Binding SelectedProject.Sessions}"
                         SelectedIndex="{Binding SelectedSessionIndex}">
@@ -42,15 +50,66 @@
                         <TextBlock Text="{Binding SessionId}" />
                     </DataTemplate>
                 </TabControl.ItemTemplate>
+                <TabControl.ContentTemplate>
+                    <DataTemplate DataType="vm:SessionItemViewModel">
+                        <ListBox ItemsSource="{Binding Todos}" Margin="4">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="vm:TodoItemViewModel">
+                                    <Grid ColumnDefinitions="30,*,Auto" Margin="2">
+                                        <TextBlock Grid.Column="0" Text="{Binding StatusIcon}"
+                                                   Foreground="{Binding StatusColor}"
+                                                   VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding DisplayText}"
+                                                   Foreground="#e0e0e0" VerticalAlignment="Center"
+                                                   TextWrapping="Wrap" Margin="4,0" />
+                                        <Button Grid.Column="2" Content="Toggle"
+                                                Command="{Binding ToggleStatusCommand}"
+                                                FontSize="10" Padding="6,2" Margin="4,0"
+                                                Background="#2a2d32" Foreground="#a2a7ad" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                            <!-- REQ-GUI-004: Context menu on todos -->
+                            <ListBox.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Toggle Status" />
+                                    <MenuItem Header="Edit" />
+                                    <Separator />
+                                    <MenuItem Header="Delete" />
+                                </ContextMenu>
+                            </ListBox.ContextMenu>
+                        </ListBox>
+                    </DataTemplate>
+                </TabControl.ContentTemplate>
             </TabControl>
         </DockPanel>
 
         <GridSplitter Grid.Column="3" Width="4" Background="#2a2d32" />
 
-        <!-- Right pane: TODO list -->
+        <!-- Right pane: Summary for selected project -->
         <DockPanel Grid.Column="4">
-            <TextBlock DockPanel.Dock="Top" Text="TODOs" Foreground="#a2a7ad" Margin="8,4" FontWeight="Bold" />
-            <TextBlock Text="Select a session to view TODOs" Foreground="#666" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock DockPanel.Dock="Top" Text="Summary" Foreground="#a2a7ad" Margin="8,4" FontWeight="Bold" />
+            <StackPanel Margin="8,4" IsVisible="{Binding SelectedProject, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Foreground="#e0e0e0" Margin="0,2">
+                    <Run Text="Path: " Foreground="#a2a7ad" />
+                    <Run Text="{Binding SelectedProject.Path}" />
+                </TextBlock>
+                <TextBlock Foreground="#e0e0e0" Margin="0,2">
+                    <Run Text="Provider: " Foreground="#a2a7ad" />
+                    <Run Text="{Binding SelectedProject.Provider}" />
+                </TextBlock>
+                <TextBlock Foreground="#e0e0e0" Margin="0,2">
+                    <Run Text="Sessions: " Foreground="#a2a7ad" />
+                    <Run Text="{Binding SelectedProject.SessionCount}" />
+                </TextBlock>
+                <TextBlock Foreground="#e0e0e0" Margin="0,2">
+                    <Run Text="TODOs: " Foreground="#a2a7ad" />
+                    <Run Text="{Binding SelectedProject.TodoCount}" />
+                </TextBlock>
+            </StackPanel>
+            <TextBlock Text="Select a project" Foreground="#666"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                       IsVisible="{Binding SelectedProject, Converter={x:Static ObjectConverters.IsNull}}" />
         </DockPanel>
     </Grid>
 </UserControl>

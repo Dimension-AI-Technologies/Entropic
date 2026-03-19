@@ -175,3 +175,11 @@ dist, coverage, and tsbuildinfo to .gitignore for TypeScript builds.
 - chore: add test infrastructure and adapters
   Author: Mathew Burkitt
 
+
+---
+
+## Commit: 2026-03-19 20:39
+
+- feat: add commit view and test infrastructure
+  Author: Mathew Burkitt
+

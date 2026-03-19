@@ -1,3 +1,6 @@
+// @covers(providers)
+// @covers(codexAdapter)
+// @covers(geminiAdapter)
 import { DIContainer, setProviderAllow as setAllow } from '../services/DIContainer';
 import { Ok } from '../utils/Result';
 

@@ -1,3 +1,4 @@
+// @covers(chat)
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { ChatHistoryViewModel } from '../viewmodels/ChatHistoryViewModel';
 import { IChatRepository, PromptEntry, Conversation, ChatStatistics } from '../models/Chat';

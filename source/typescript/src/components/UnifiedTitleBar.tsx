@@ -1,3 +1,6 @@
+// @must_test(REQ-PRV-004)
+// @must_test(REQ-GUI-001)
+// @must_test(REQ-GUI-005)
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useDismissableMenu } from './hooks/useDismissableMenu';
 import ClaudeLogo from '../../assets/ClaudeLogo.png';

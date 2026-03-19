@@ -1,3 +1,4 @@
+// @must_test(REQ-SES-005)
 import path from 'node:path';
 import fsSync from 'node:fs';
 import { listDirectoryImpl, validatePathImpl } from './validate.js';

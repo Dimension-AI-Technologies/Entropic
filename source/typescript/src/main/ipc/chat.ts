@@ -1,3 +1,4 @@
+// @must_test(REQ-SES-008)
 import type { IpcMain } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs/promises';

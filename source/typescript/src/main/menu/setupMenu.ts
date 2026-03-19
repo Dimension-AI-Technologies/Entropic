@@ -1,3 +1,4 @@
+// @must_test(REQ-GUI-013)
 // EXEMPTION: exceptions - menu utilities and getters don't need Result<T>
 import { app, Menu, clipboard } from 'electron';
 import fs from 'node:fs';

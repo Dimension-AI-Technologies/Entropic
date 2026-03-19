@@ -1,3 +1,4 @@
+// @must_test(REQ-GUI-021)
 import React from 'react';
 import ClaudeLogo from '../../assets/ClaudeLogo.png';
 

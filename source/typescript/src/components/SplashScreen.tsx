@@ -1,3 +1,4 @@
+// @must_test(REQ-GUI-007)
 import React, { useEffect, useState, useRef } from 'react';
 import ClaudeLogo from '../../assets/ClaudeLogo.png';
 import OpenAILogo from '../../assets/OpenAI_Logo.svg';

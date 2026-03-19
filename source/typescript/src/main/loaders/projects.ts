@@ -1,3 +1,5 @@
+// @must_test(REQ-TOD-010)
+// @must_test(REQ-HOK-002)
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';

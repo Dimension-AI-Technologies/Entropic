@@ -26,6 +26,9 @@ build_property.EnableCodeStyleSeverity =
 [C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/App.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
 
+[C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/Views/CommitView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
 [C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/Views/GitView.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
 

@@ -1,3 +1,4 @@
+// @must_test(REQ-GUI-012)
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import ClaudeLogo from '../../assets/ClaudeLogo.png';
 

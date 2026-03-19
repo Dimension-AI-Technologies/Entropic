@@ -1,3 +1,4 @@
+// @must_test(REQ-GUI-004)
 import React, { forwardRef } from 'react';
 import type { Project } from '../models/Project';
 

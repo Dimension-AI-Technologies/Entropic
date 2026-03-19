@@ -1,3 +1,4 @@
+// @must_test(REQ-ARC-002)
 // Result<T> pattern for better error handling
 export type Result<T> = Success<T> | Failure;
 export type AsyncResult<T> = Promise<Result<T>>;

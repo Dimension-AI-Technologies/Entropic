@@ -1,3 +1,5 @@
+// @must_test(REQ-PRV-008)
+// @must_test(REQ-ARC-008)
 import type { ProviderPort, EventPort } from './ports';
 import type { Project, Session } from './domain';
 import { Ok, Err, type AsyncResult } from '../../utils/Result.js';

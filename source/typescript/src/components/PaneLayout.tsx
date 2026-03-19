@@ -1,3 +1,4 @@
+// @must_test(REQ-GUI-002)
 import React from 'react';
 
 /**

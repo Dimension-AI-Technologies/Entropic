@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Entropic.GUI.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Entropic.GUI.Views.CommitView"
+             x:DataType="vm:CommitViewModel">
+
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,4">
+            <TextBlock Text="Repository: " Foreground="#a2a7ad" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding RepoName}" Foreground="#e0e0e0" FontWeight="Bold" VerticalAlignment="Center" />
+            <TextBlock Text=" — " Foreground="#666" VerticalAlignment="Center"
+                       IsVisible="{Binding SelectedRepoPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{Binding Commits.Count, StringFormat='{}{0} commits'}" Foreground="#a2a7ad" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <TextBlock Text="Select a repository in Git View, then click 'View Commits'"
+                   Foreground="#666" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   IsVisible="{Binding !SelectedRepoPath, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+
+        <DataGrid ItemsSource="{Binding Commits}" AutoGenerateColumns="False" IsReadOnly="True"
+                  Background="Transparent" Foreground="#e0e0e0"
+                  IsVisible="{Binding SelectedRepoPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Hash" Binding="{Binding ShortHash}" Width="80" />
+                <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="180" />
+                <DataGridTextColumn Header="Author" Binding="{Binding AuthorName}" Width="150" />
+                <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*" />
+                <DataGridTextColumn Header="Stats" Binding="{Binding StatsText}" Width="160" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

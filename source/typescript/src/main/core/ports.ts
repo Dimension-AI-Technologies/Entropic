@@ -1,3 +1,4 @@
+// @must_test(REQ-ARC-001)
 import type { Project } from './domain';
 import type { AsyncResult } from '../../utils/Result.js';
 

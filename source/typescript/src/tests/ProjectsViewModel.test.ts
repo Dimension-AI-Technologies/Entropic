@@ -1,3 +1,4 @@
+// @covers(Result)
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import { ProjectsViewModel } from '../viewmodels/ProjectsViewModel';
 import type { IProjectRepository, Project } from '../models/Project';

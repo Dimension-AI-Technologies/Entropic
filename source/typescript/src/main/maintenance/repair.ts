@@ -1,3 +1,8 @@
+// @must_test(REQ-DGN-001)
+// @must_test(REQ-DGN-003)
+// @must_test(REQ-DGN-004)
+// @must_test(REQ-SES-004)
+// @must_test(REQ-HOK-003)
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';

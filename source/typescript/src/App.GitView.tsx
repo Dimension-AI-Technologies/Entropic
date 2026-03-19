@@ -1,3 +1,4 @@
+// @must_test(REQ-GIT-006)
 import React, { useMemo } from 'react';
 import './App.css';
 

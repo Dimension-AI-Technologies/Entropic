@@ -1,3 +1,4 @@
+// @must_test(REQ-GUI-020)
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { ProjectsPane } from './App.ProjectView.ProjectsPane';

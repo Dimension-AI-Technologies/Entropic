@@ -1,3 +1,4 @@
+// @must_test(REQ-SES-007)
 import type { IpcMain } from 'electron';
 import path from 'node:path';
 import os from 'node:os';

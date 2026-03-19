@@ -1,3 +1,6 @@
+// @must_test(REQ-PRV-005)
+// @must_test(REQ-GUI-003)
+// @must_test(REQ-GUI-017)
 import React, { useState, useEffect, useRef } from 'react';
 import { useDismissableMenu } from './components/hooks/useDismissableMenu';
 import './App.css';

@@ -11,3 +11,6 @@
 - Add test infrastructure and adapters (Mathew Burkitt)
 Condense README from verbose feature documentation... (Mathew Burkitt)
 
+### Added
+- Add commit view and test infrastructure (Mathew Burkitt)
+

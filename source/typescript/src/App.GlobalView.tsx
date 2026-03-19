@@ -1,3 +1,5 @@
+// @must_test(REQ-TOD-008)
+// @must_test(REQ-TOD-011)
 import { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { DIContainer } from './services/DIContainer';

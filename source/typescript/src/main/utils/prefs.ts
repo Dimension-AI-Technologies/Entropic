@@ -1,3 +1,6 @@
+// @must_test(REQ-PLT-006)
+// @must_test(REQ-DGN-006)
+// @must_test(REQ-DGN-007)
 import path from 'node:path';
 import fs from 'node:fs';
 import { app } from 'electron';

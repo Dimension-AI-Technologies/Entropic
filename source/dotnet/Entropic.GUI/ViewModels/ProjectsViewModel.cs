@@ -1,7 +1,13 @@
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Entropic.Core;
+using Microsoft.FSharp.Collections;
 
 namespace Entropic.GUI.ViewModels;
 
@@ -13,6 +19,8 @@ namespace Entropic.GUI.ViewModels;
 // @must_test(REQ-SES-002)
 public partial class ProjectsViewModel : ViewModelBase
 {
+    private FSharpList<Project>? _coreProjects;
+
     [ObservableProperty]
     private ObservableCollection<ProjectItemViewModel> _projects = new();
 
@@ -30,16 +38,62 @@ public partial class ProjectsViewModel : ViewModelBase
     private void SetFilter(string mode)
     {
         FilterMode = mode;
+        ApplyFilter();
+    }
+
+    // REQ-GUI-004: Context menu actions
+    [RelayCommand]
+    private void CopyPath()
+    {
+        // Avalonia clipboard requires TopLevel access; store for UI layer to pick up
+        if (SelectedProject != null)
+            _lastCopiedPath = SelectedProject.Path;
+    }
+
+    [RelayCommand]
+    private void OpenInExplorer()
+    {
+        if (SelectedProject == null || !Directory.Exists(SelectedProject.Path)) return;
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = SelectedProject.Path,
+            UseShellExecute = true
+        });
+    }
+
+    private string? _lastCopiedPath;
+    public string? LastCopiedPath => _lastCopiedPath;
+
+    public void LoadFromCore(FSharpList<Project> projects)
+    {
+        _coreProjects = projects;
+        ApplyFilter();
     }
 
     public void Refresh()
     {
-        // Will be wired to F# Aggregator.getProjects
+        // Called from MainWindowViewModel.Refresh() via LoadFromCore
+    }
+
+    private void ApplyFilter()
+    {
+        if (_coreProjects == null) return;
+
+        IEnumerable<Project> filtered = _coreProjects;
+        filtered = FilterMode switch
+        {
+            "hasSessions" => filtered.Where(p => p.Sessions.Length > 0),
+            "hasTodos" => filtered.Where(p => p.Stats != null && p.Stats.Value.Todos > 0),
+            "activeOnly" => filtered.Where(p => p.Stats != null && p.Stats.Value.Active > 0),
+            _ => filtered
+        };
+
+        Projects = new ObservableCollection<ProjectItemViewModel>(
+            filtered.Select(ConvertProject));
     }
 
     public void ApplySort(string mode)
     {
-        // Sort the projects collection based on mode
         var sorted = mode switch
         {
             "alpha" => Projects.OrderBy(p => p.Name).ToList(),
@@ -47,6 +101,57 @@ public partial class ProjectsViewModel : ViewModelBase
             _ => Projects.OrderByDescending(p => p.LastActivity).ToList()
         };
         Projects = new ObservableCollection<ProjectItemViewModel>(sorted);
+    }
+
+    public static ProjectItemViewModel ConvertProject(Project p)
+    {
+        var vm = new ProjectItemViewModel
+        {
+            Name = Path.GetFileName(p.ProjectPath.TrimEnd('/', '\\')),
+            Provider = p.Provider,
+            Path = p.ProjectPath,
+            TodoCount = p.Stats != null ? p.Stats.Value.Todos : 0,
+            SessionCount = p.Sessions.Length,
+            LastActivity = p.MostRecentTodoDate?.Value ?? 0L,
+        };
+
+        foreach (var s in p.Sessions)
+        {
+            vm.Sessions.Add(ConvertSession(s));
+        }
+        return vm;
+    }
+
+    public static SessionItemViewModel ConvertSession(Session s)
+    {
+        var vm = new SessionItemViewModel
+        {
+            SessionId = s.SessionId,
+            Provider = s.Provider,
+            UpdatedAt = s.UpdatedAt?.Value ?? 0L,
+            FilePath = s.FilePath?.Value,
+        };
+
+        foreach (var t in s.Todos)
+        {
+            var todoVm = ConvertTodo(t);
+            todoVm.OwnerSession = vm;
+            vm.Todos.Add(todoVm);
+        }
+        return vm;
+    }
+
+    public static TodoItemViewModel ConvertTodo(Todo t)
+    {
+        return new TodoItemViewModel
+        {
+            Id = t.Id?.Value,
+            Content = t.Content,
+            Status = t.Status.IsCompleted ? "completed"
+                   : t.Status.IsInProgress ? "in_progress"
+                   : "pending",
+            ActiveForm = t.ActiveForm?.Value,
+        };
     }
 }
 
@@ -86,6 +191,9 @@ public partial class SessionItemViewModel : ViewModelBase
 
     [ObservableProperty]
     private long _updatedAt;
+
+    [ObservableProperty]
+    private string? _filePath;
 
     [ObservableProperty]
     private ObservableCollection<TodoItemViewModel> _todos = new();

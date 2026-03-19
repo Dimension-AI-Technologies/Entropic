@@ -1,3 +1,5 @@
+// @covers(main)
+// @covers(prefs)
 /** @jest-environment node */
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';

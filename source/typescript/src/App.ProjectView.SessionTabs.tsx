@@ -1,3 +1,4 @@
+// @must_test(REQ-SES-002)
 import React from 'react';
 import { SessionContextMenu } from './components/SessionContextMenu';
 

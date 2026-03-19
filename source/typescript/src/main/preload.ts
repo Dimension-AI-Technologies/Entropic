@@ -1,3 +1,4 @@
+// @must_test(REQ-ARC-004)
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {

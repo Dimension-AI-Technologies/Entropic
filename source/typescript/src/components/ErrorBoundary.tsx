@@ -1,3 +1,4 @@
+// @must_test(REQ-GUI-019)
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Result, Ok, Err } from '../utils/Result';
 

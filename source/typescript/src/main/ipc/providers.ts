@@ -1,3 +1,4 @@
+// @must_test(REQ-PRV-007)
 import type { IpcMain } from 'electron';
 import fs from 'node:fs';
 import os from 'node:os';

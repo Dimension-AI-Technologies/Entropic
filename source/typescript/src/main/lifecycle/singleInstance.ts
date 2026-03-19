@@ -1,3 +1,4 @@
+// @must_test(REQ-PLT-005)
 import type { App, BrowserWindow } from 'electron';
 
 export function setupSingleInstance(app: App, getMainWindow: () => BrowserWindow | null): boolean {

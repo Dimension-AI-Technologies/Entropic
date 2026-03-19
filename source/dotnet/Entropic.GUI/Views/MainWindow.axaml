@@ -15,26 +15,63 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <DockPanel>
-        <Border DockPanel.Dock="Bottom" Background="#12141a" Padding="12,4">
-            <TextBlock Text="{Binding StatusText}" Foreground="#a2a7ad" FontSize="12" />
+    <Panel>
+        <!-- Main content -->
+        <DockPanel>
+            <Border DockPanel.Dock="Bottom" Background="#12141a" Padding="12,4">
+                <TextBlock Text="{Binding StatusText}" Foreground="#a2a7ad" FontSize="12" />
+            </Border>
+
+            <TabControl Margin="0" Padding="0" SelectedIndex="{Binding SelectedTabIndex}">
+                <TabItem Header="Project View">
+                    <v:ProjectView DataContext="{Binding Projects}" />
+                </TabItem>
+                <TabItem Header="Global View">
+                    <v:GlobalView DataContext="{Binding Global}" />
+                </TabItem>
+                <TabItem Header="Git View">
+                    <v:GitView DataContext="{Binding Git}" />
+                </TabItem>
+                <TabItem Header="Commit View">
+                    <v:CommitView DataContext="{Binding Commits}" />
+                </TabItem>
+            </TabControl>
+        </DockPanel>
+
+        <!-- Toast overlay -->
+        <Border IsVisible="{Binding IsToastVisible}"
+                Background="#333" CornerRadius="6" Padding="16,10"
+                HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Margin="0,0,0,40" Opacity="0.95">
+            <TextBlock Text="{Binding ToastMessage}" Foreground="#e0e0e0" FontSize="13" />
         </Border>
 
-        <TabControl Margin="0" Padding="0" SelectedIndex="{Binding SelectedTabIndex}">
-            <TabItem Header="Project View">
-                <v:ProjectView DataContext="{Binding Projects}" />
-            </TabItem>
-            <TabItem Header="Global View">
-                <v:GlobalView DataContext="{Binding Global}" />
-            </TabItem>
-            <TabItem Header="Git View">
-                <v:GitView DataContext="{Binding Git}" />
-            </TabItem>
-            <TabItem Header="Commit View">
-                <TextBlock Text="Commit View"
-                           Foreground="#a2a7ad" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </TabItem>
-        </TabControl>
-    </DockPanel>
+        <!-- Help overlay -->
+        <Border IsVisible="{Binding IsHelpOpen}"
+                Background="#222428" CornerRadius="8" Padding="24,20"
+                HorizontalAlignment="Center" VerticalAlignment="Center"
+                MinWidth="400" BorderBrush="#444" BorderThickness="1">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+                    <TextBlock Text="Keyboard Shortcuts" Foreground="#e0e0e0" FontSize="16" FontWeight="Bold"
+                               VerticalAlignment="Center" />
+                    <Button Content="X" Command="{Binding ToggleHelpCommand}"
+                            HorizontalAlignment="Right" Margin="120,0,0,0"
+                            Background="Transparent" Foreground="#a2a7ad" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock Text="F1 — Help" Foreground="#a2a7ad" Margin="0,2" />
+                    <TextBlock Text="F5 — Refresh data" Foreground="#a2a7ad" Margin="0,2" />
+                    <TextBlock Text="Ctrl+1..4 — Switch tabs" Foreground="#a2a7ad" Margin="0,2" />
+                    <TextBlock Text="Ctrl+F — Filter projects" Foreground="#a2a7ad" Margin="0,2" />
+                    <TextBlock Text="Ctrl+A — Toggle activity mode" Foreground="#a2a7ad" Margin="0,2" />
+                    <TextBlock Text="Delete — Delete selected item" Foreground="#a2a7ad" Margin="0,2" />
+                    <TextBlock Text="Ctrl+Arrow — Reorder TODOs" Foreground="#a2a7ad" Margin="0,2" />
+                    <TextBlock Text="{Binding Help.Version, StringFormat='Entropic v{0}'}"
+                               Foreground="#666" Margin="0,12,0,0" FontSize="11" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Panel>
 
 </Window>

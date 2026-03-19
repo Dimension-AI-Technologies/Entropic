@@ -9,12 +9,15 @@
 
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,4">
-            <TextBlock Text="Repositories: " Foreground="#a2a7ad" />
-            <TextBlock Text="{Binding TotalRepos}" Foreground="#e0e0e0" FontWeight="Bold" />
-            <TextBlock Text=" — Out of sync: " Foreground="#a2a7ad" Margin="12,0,0,0" />
-            <TextBlock Text="{Binding OutOfSync}" Foreground="#ff9800" FontWeight="Bold" />
+            <TextBlock Text="Repositories: " Foreground="#a2a7ad" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding TotalRepos}" Foreground="#e0e0e0" FontWeight="Bold" VerticalAlignment="Center" />
+            <TextBlock Text=" — Out of sync: " Foreground="#a2a7ad" Margin="12,0,0,0" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding OutOfSync}" Foreground="#ff9800" FontWeight="Bold" VerticalAlignment="Center" />
+            <Button Content="View Commits" Command="{Binding ViewCommitsCommand}" Margin="20,0,0,0"
+                    Padding="8,3" FontSize="12" />
         </StackPanel>
         <DataGrid ItemsSource="{Binding Repos}" AutoGenerateColumns="False" IsReadOnly="True"
+                  SelectedItem="{Binding SelectedRepo}"
                   Background="Transparent" Foreground="#e0e0e0">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="200" />

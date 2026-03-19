@@ -1,3 +1,9 @@
+// @must_test(REQ-DGN-002)
+// @must_test(REQ-GUI-006)
+// @must_test(REQ-GUI-008)
+// @must_test(REQ-GUI-011)
+// @must_test(REQ-GUI-015)
+// @must_test(REQ-GUI-016)
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import './App.css';
 import { SplashScreen } from './components/SplashScreen';

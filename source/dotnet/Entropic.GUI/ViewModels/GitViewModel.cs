@@ -1,13 +1,26 @@
+using System;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Entropic.Core.Git;
+using Microsoft.FSharp.Control;
 
 namespace Entropic.GUI.ViewModels;
 
 // @must_test(REQ-GUI-010)
+// @must_test(REQ-GIT-006)
 public partial class GitViewModel : ViewModelBase
 {
+    private string _rootPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    private readonly MainWindowViewModel? _parent;
+
     [ObservableProperty]
     private ObservableCollection<GitRepoItemViewModel> _repos = new();
+
+    [ObservableProperty]
+    private GitRepoItemViewModel? _selectedRepo;
 
     [ObservableProperty]
     private int _totalRepos;
@@ -15,9 +28,50 @@ public partial class GitViewModel : ViewModelBase
     [ObservableProperty]
     private int _outOfSync;
 
-    public void Refresh()
+    public GitViewModel() { }
+
+    public GitViewModel(MainWindowViewModel parent)
     {
-        // Will call GitIntegration.discoverRepos on demand
+        _parent = parent;
+    }
+
+    public void SetRootPath(string rootPath)
+    {
+        _rootPath = rootPath;
+    }
+
+    [RelayCommand]
+    private void ViewCommits()
+    {
+        if (SelectedRepo == null || _parent == null) return;
+        var fullPath = Path.Combine(_rootPath, SelectedRepo.RelativePath);
+        _parent.ShowCommitsForRepo(fullPath, SelectedRepo.Name);
+    }
+
+    public async void Refresh()
+    {
+        var result = await FSharpAsync.StartAsTask(
+            GitIntegration.discoverRepos(_rootPath), null, null);
+
+        if (result.IsOk)
+        {
+            var repos = result.ResultValue;
+            var summary = GitIntegration.summarize(repos);
+
+            TotalRepos = summary.TotalRepos;
+            OutOfSync = summary.OutOfSync;
+
+            Repos = new ObservableCollection<GitRepoItemViewModel>(
+                repos.Select(r => new GitRepoItemViewModel
+                {
+                    Name = r.Name,
+                    RelativePath = r.RelativePath,
+                    RemoteUrl = r.RemoteUrl?.Value ?? "",
+                    Ahead = r.Ahead,
+                    Behind = r.Behind,
+                    Languages = new ObservableCollection<string>(r.Languages),
+                }));
+        }
     }
 }
 

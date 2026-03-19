@@ -1,3 +1,4 @@
+// @must_test(REQ-PRV-003)
 import type { ProviderPort } from '../core/ports';
 import type { Project, Session, Todo } from '../core/domain';
 import { Ok, Err, type AsyncResult, type Result } from '../../utils/Result.js';

@@ -1,3 +1,5 @@
+// @covers(UiReferences)
+// @covers(DIContainer)
 import { describe, it, expect, beforeEach } from '@jest/globals';
 
 describe('UI Interaction Tests', () => {

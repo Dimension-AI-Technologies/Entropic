@@ -1,3 +1,4 @@
+// @must_test(REQ-SES-006)
 // React import not required with automatic JSX runtime
 import { Result, Ok, Err } from './utils/Result';
 

@@ -1,3 +1,4 @@
+// @must_test(REQ-SES-010)
 import { useState } from 'react';
 import { ProgressOverlay } from './components/ProgressOverlay';
 import { PaneHeader, PaneControls } from './components/PaneLayout';

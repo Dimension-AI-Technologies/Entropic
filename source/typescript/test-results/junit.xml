@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="217" failures="0" errors="0" time="9.592">
+  <testsuite name="TodoManager E2E Test Suite" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:39" time="2.003" tests="27">
+    <testcase classname="TodoManager E2E Test Suite 1. Create test-only Todo list should create an empty todo list file" name="TodoManager E2E Test Suite 1. Create test-only Todo list should create an empty todo list file" time="0.043">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 1. Create test-only Todo list should handle reading from non-existent file" name="TodoManager E2E Test Suite 1. Create test-only Todo list should handle reading from non-existent file" time="0.005">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 2. Add Todos should add a single todo" name="TodoManager E2E Test Suite 2. Add Todos should add a single todo" time="0.031">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 2. Add Todos should add multiple todos" name="TodoManager E2E Test Suite 2. Add Todos should add multiple todos" time="0.11">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 2. Add Todos should preserve activeForm field" name="TodoManager E2E Test Suite 2. Add Todos should preserve activeForm field" time="0.031">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 3. Reorder Todos should reorder todo from beginning to end" name="TodoManager E2E Test Suite 3. Reorder Todos should reorder todo from beginning to end" time="0.023">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 3. Reorder Todos should reorder todo from end to beginning" name="TodoManager E2E Test Suite 3. Reorder Todos should reorder todo from end to beginning" time="0.042">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 3. Reorder Todos should reorder adjacent todos" name="TodoManager E2E Test Suite 3. Reorder Todos should reorder adjacent todos" time="0.051">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 3. Reorder Todos should fail with invalid indices" name="TodoManager E2E Test Suite 3. Reorder Todos should fail with invalid indices" time="0.029">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 3. Reorder Todos should persist reordering to file" name="TodoManager E2E Test Suite 3. Reorder Todos should persist reordering to file" time="0.074">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 4. Rename Todos should rename a todo" name="TodoManager E2E Test Suite 4. Rename Todos should rename a todo" time="0.061">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 4. Rename Todos should trim whitespace from new content" name="TodoManager E2E Test Suite 4. Rename Todos should trim whitespace from new content" time="0.042">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 4. Rename Todos should fail with empty content" name="TodoManager E2E Test Suite 4. Rename Todos should fail with empty content" time="0.047">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 4. Rename Todos should fail with invalid index" name="TodoManager E2E Test Suite 4. Rename Todos should fail with invalid index" time="0.055">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 4. Rename Todos should persist renaming to file" name="TodoManager E2E Test Suite 4. Rename Todos should persist renaming to file" time="0.064">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 5. Delete Todos should delete a todo from the middle" name="TodoManager E2E Test Suite 5. Delete Todos should delete a todo from the middle" time="0.025">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 5. Delete Todos should delete the first todo" name="TodoManager E2E Test Suite 5. Delete Todos should delete the first todo" time="0.015">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 5. Delete Todos should delete the last todo" name="TodoManager E2E Test Suite 5. Delete Todos should delete the last todo" time="0.044">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 5. Delete Todos should handle deleting all todos" name="TodoManager E2E Test Suite 5. Delete Todos should handle deleting all todos" time="0.023">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 5. Delete Todos should fail with invalid index" name="TodoManager E2E Test Suite 5. Delete Todos should fail with invalid index" time="0.004">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 5. Delete Todos should persist deletion to file" name="TodoManager E2E Test Suite 5. Delete Todos should persist deletion to file" time="0.015">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 6. Delete test-only Todo list file should delete the todo file" name="TodoManager E2E Test Suite 6. Delete test-only Todo list file should delete the todo file" time="0.01">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 6. Delete test-only Todo list file should handle deleting non-existent file" name="TodoManager E2E Test Suite 6. Delete test-only Todo list file should handle deleting non-existent file" time="0.001">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 7. Complex E2E workflow should handle a complete workflow" name="TodoManager E2E Test Suite 7. Complex E2E workflow should handle a complete workflow" time="0.037">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 8. Error handling and validation should handle corrupted JSON file" name="TodoManager E2E Test Suite 8. Error handling and validation should handle corrupted JSON file" time="0.003">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 8. Error handling and validation should handle non-array JSON" name="TodoManager E2E Test Suite 8. Error handling and validation should handle non-array JSON" time="0.013">
+    </testcase>
+    <testcase classname="TodoManager E2E Test Suite 8. Error handling and validation should handle invalid todo structure" name="TodoManager E2E Test Suite 8. Error handling and validation should handle invalid todo structure" time="0.011">
+    </testcase>
+  </testsuite>
+  <testsuite name="undefined" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:39" time="4.069" tests="1">
+    <testcase classname=" title bar provider toggles affect Project and Global views" name=" title bar provider toggles affect Project and Global views" time="1.828">
+    </testcase>
+  </testsuite>
+  <testsuite name="git status collectors" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:39" time="4.052" tests="2">
+    <testcase classname="git status collectors collectGitStatus returns repository summary" name="git status collectors collectGitStatus returns repository summary" time="0.388">
+    </testcase>
+    <testcase classname="git status collectors collectCommitHistory returns commits with stats and co-authors" name="git status collectors collectCommitHistory returns commits with stats and co-authors" time="0.802">
+    </testcase>
+  </testsuite>
+  <testsuite name="CommitView" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:43" time="0.818" tests="2">
+    <testcase classname="CommitView renders provided data" name="CommitView renders provided data" time="0.163">
+    </testcase>
+    <testcase classname="CommitView allows switching repositories" name="CommitView allows switching repositories" time="0.036">
+    </testcase>
+  </testsuite>
+  <testsuite name="App" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:41" time="2.828" tests="5">
+    <testcase classname="App renders project view after splash and switches to global view when requested" name="App renders project view after splash and switches to global view when requested" time="0.354">
+    </testcase>
+    <testcase classname="App applies provider filter changes via DI container and persists preference" name="App applies provider filter changes via DI container and persists preference" time="0.124">
+    </testcase>
+    <testcase classname="App updates activity mode state when ProjectView requests a toggle" name="App updates activity mode state when ProjectView requests a toggle" time="0.11">
+    </testcase>
+    <testcase classname="App switches to git view when requested" name="App switches to git view when requested" time="0.317">
+    </testcase>
+    <testcase classname="App switches to commit view when requested" name="App switches to commit view when requested" time="0.14">
+    </testcase>
+  </testsuite>
+  <testsuite name="PathUtils" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:44" time="0.456" tests="15">
+    <testcase classname="PathUtils createFlattenedPath should flatten Unix paths correctly" name="PathUtils createFlattenedPath should flatten Unix paths correctly" time="0.001">
+    </testcase>
+    <testcase classname="PathUtils createFlattenedPath should flatten Windows paths correctly" name="PathUtils createFlattenedPath should flatten Windows paths correctly" time="0.001">
+    </testcase>
+    <testcase classname="PathUtils createFlattenedPath should handle paths with special characters" name="PathUtils createFlattenedPath should handle paths with special characters" time="0.001">
+    </testcase>
+    <testcase classname="PathUtils createFlattenedPath should handle empty and root paths" name="PathUtils createFlattenedPath should handle empty and root paths" time="0.001">
+    </testcase>
+    <testcase classname="PathUtils guessPathFromFlattenedName should unflatten Unix-ish paths permissively" name="PathUtils guessPathFromFlattenedName should unflatten Unix-ish paths permissively" time="0.005">
+    </testcase>
+    <testcase classname="PathUtils guessPathFromFlattenedName should unflatten Windows paths permissively" name="PathUtils guessPathFromFlattenedName should unflatten Windows paths permissively" time="0.005">
+    </testcase>
+    <testcase classname="PathUtils guessPathFromFlattenedName should handle empty and invalid paths" name="PathUtils guessPathFromFlattenedName should handle empty and invalid paths" time="0.001">
+    </testcase>
+    <testcase classname="PathUtils findProjectDirectory should find project directory from flattened path" name="PathUtils findProjectDirectory should find project directory from flattened path" time="0.006">
+    </testcase>
+    <testcase classname="PathUtils findProjectDirectory should find project directory from metadata" name="PathUtils findProjectDirectory should find project directory from metadata" time="0.033">
+    </testcase>
+    <testcase classname="PathUtils findProjectDirectory should find parent project for subdirectory paths" name="PathUtils findProjectDirectory should find parent project for subdirectory paths" time="0.028">
+    </testcase>
+    <testcase classname="PathUtils findProjectDirectory should return not found for non-existent project" name="PathUtils findProjectDirectory should return not found for non-existent project" time="0.026">
+    </testcase>
+    <testcase classname="PathUtils getRealProjectPath should get real project path from session (jsonl match)" name="PathUtils getRealProjectPath should get real project path from session (jsonl match)" time="0.024">
+    </testcase>
+    <testcase classname="PathUtils getRealProjectPath should return null when session not found" name="PathUtils getRealProjectPath should return null when session not found" time="0.007">
+    </testcase>
+    <testcase classname="PathUtils validatePath should validate existing paths" name="PathUtils validatePath should validate existing paths" time="0.001">
+    </testcase>
+    <testcase classname="PathUtils validatePath should return false for non-existent paths" name="PathUtils validatePath should return false for non-existent paths" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Unified project loader (projects + todos)" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:44" time="0.466" tests="1">
+    <testcase classname="Unified project loader (projects + todos) merges both sources, computes startDate and active counts (agnostic)" name="Unified project loader (projects + todos) merges both sources, computes startDate and active counts (agnostic)" time="0.196">
+    </testcase>
+  </testsuite>
+  <testsuite name="DI provider filter" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:44" time="0.85" tests="1">
+    <testcase classname="DI provider filter projects &amp; sessions reflect provider allow-list" name="DI provider filter projects &amp; sessions reflect provider allow-list" time="0.653">
+    </testcase>
+  </testsuite>
+  <testsuite name="Project Loading" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:45" time="0.324" tests="3">
+    <testcase classname="Project Loading should load the same number of projects as folders in ~/.claude/projects" name="Project Loading should load the same number of projects as folders in ~/.claude/projects" time="0.069">
+    </testcase>
+    <testcase classname="Project Loading should load projects with sessions and todos" name="Project Loading should load projects with sessions and todos" time="0.003">
+    </testcase>
+    <testcase classname="Project Loading should report detailed loading statistics" name="Project Loading should report detailed loading statistics" time="0.112">
+    </testcase>
+  </testsuite>
+  <testsuite name="ProjectsPaneMVVM (direct facade)" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:43" time="2.211" tests="11">
+    <testcase classname="ProjectsPaneMVVM (direct facade) should render projects list" name="ProjectsPaneMVVM (direct facade) should render projects list" time="0.123">
+    </testcase>
+    <testcase classname="ProjectsPaneMVVM (direct facade) should handle project selection" name="ProjectsPaneMVVM (direct facade) should handle project selection" time="0.077">
+    </testcase>
+    <testcase classname="ProjectsPaneMVVM (direct facade) should handle refresh button" name="ProjectsPaneMVVM (direct facade) should handle refresh button" time="0.13">
+    </testcase>
+    <testcase classname="ProjectsPaneMVVM (direct facade) should toggle activity mode" name="ProjectsPaneMVVM (direct facade) should toggle activity mode" time="0.092">
+    </testcase>
+    <testcase classname="ProjectsPaneMVVM (direct facade) should cycle through sort methods" name="ProjectsPaneMVVM (direct facade) should cycle through sort methods" time="0.048">
+    </testcase>
+    <testcase classname="ProjectsPaneMVVM (direct facade) should toggle filter buttons" name="ProjectsPaneMVVM (direct facade) should toggle filter buttons" time="0.044">
+    </testcase>
+    <testcase classname="ProjectsPaneMVVM (direct facade) should filter out deleted projects" name="ProjectsPaneMVVM (direct facade) should filter out deleted projects" time="0.035">
+    </testcase>
+    <testcase classname="ProjectsPaneMVVM (direct facade) should show basic controls" name="ProjectsPaneMVVM (direct facade) should show basic controls" time="0.031">
+    </testcase>
+    <testcase classname="ProjectsPaneMVVM (direct facade) should handle context menu events" name="ProjectsPaneMVVM (direct facade) should handle context menu events" time="0.039">
+    </testcase>
+    <testcase classname="ProjectsPaneMVVM (direct facade) should show project tooltips" name="ProjectsPaneMVVM (direct facade) should show project tooltips" time="0.041">
+    </testcase>
+    <testcase classname="ProjectsPaneMVVM (direct facade) should indicate unmatched projects" name="ProjectsPaneMVVM (direct facade) should indicate unmatched projects" time="0.051">
+    </testcase>
+  </testsuite>
+  <testsuite name="ProjectsViewModel (agnostic)" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:45" time="0.303" tests="23">
+    <testcase classname="ProjectsViewModel (agnostic) loadProjects should load all projects from repository" name="ProjectsViewModel (agnostic) loadProjects should load all projects from repository" time="0.017">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) loadProjects should handle repository errors gracefully" name="ProjectsViewModel (agnostic) loadProjects should handle repository errors gracefully" time="0.005">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) loadProjects should set loading state during operation" name="ProjectsViewModel (agnostic) loadProjects should set loading state during operation" time="0.005">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) loadProjects should clear errors on successful load" name="ProjectsViewModel (agnostic) loadProjects should clear errors on successful load" time="0.006">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) project access methods should return all projects" name="ProjectsViewModel (agnostic) project access methods should return all projects" time="0.006">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) project access methods should return immutable project array" name="ProjectsViewModel (agnostic) project access methods should return immutable project array" time="0.007">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) project access methods should find project by ID" name="ProjectsViewModel (agnostic) project access methods should find project by ID" time="0.007">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) project access methods should return null for non-existent project ID" name="ProjectsViewModel (agnostic) project access methods should return null for non-existent project ID" time="0.005">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) project filtering should filter existing projects" name="ProjectsViewModel (agnostic) project filtering should filter existing projects" time="0.008">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) project filtering should filter unmatched projects" name="ProjectsViewModel (agnostic) project filtering should filter unmatched projects" time="0.009">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) project filtering should sort projects by date (most recent first)" name="ProjectsViewModel (agnostic) project filtering should sort projects by date (most recent first)" time="0.008">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) project counts should count total projects" name="ProjectsViewModel (agnostic) project counts should count total projects" time="0.007">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) project counts should count existing projects" name="ProjectsViewModel (agnostic) project counts should count existing projects" time="0.008">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) project counts should count unmatched projects" name="ProjectsViewModel (agnostic) project counts should count unmatched projects" time="0.009">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) UI helper methods should generate display names for existing projects" name="ProjectsViewModel (agnostic) UI helper methods should generate display names for existing projects" time="0.004">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) UI helper methods should use flattened name for unmatched projects" name="ProjectsViewModel (agnostic) UI helper methods should use flattened name for unmatched projects" time="0.005">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) UI helper methods should generate correct status icons" name="ProjectsViewModel (agnostic) UI helper methods should generate correct status icons" time="0.006">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) UI helper methods should generate informative tooltips" name="ProjectsViewModel (agnostic) UI helper methods should generate informative tooltips" time="0.008">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) UI helper methods should generate tooltips for unmatched projects" name="ProjectsViewModel (agnostic) UI helper methods should generate tooltips for unmatched projects" time="0.006">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) error handling should track and clear errors" name="ProjectsViewModel (agnostic) error handling should track and clear errors" time="0.006">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) refresh functionality should reload projects when refreshed" name="ProjectsViewModel (agnostic) refresh functionality should reload projects when refreshed" time="0.003">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) edge cases should handle empty repository" name="ProjectsViewModel (agnostic) edge cases should handle empty repository" time="0.01">
+    </testcase>
+    <testcase classname="ProjectsViewModel (agnostic) edge cases should handle projects with same modification time" name="ProjectsViewModel (agnostic) edge cases should handle projects with same modification time" time="0.009">
+    </testcase>
+  </testsuite>
+  <testsuite name="GitView" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:45" time="0.541" tests="1">
+    <testcase classname="GitView renders provided repositories" name="GitView renders provided repositories" time="0.049">
+    </testcase>
+  </testsuite>
+  <testsuite name="FileSystemProjectRepository (agnostic)" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:45" time="0.261" tests="9">
+    <testcase classname="FileSystemProjectRepository (agnostic) getAllProjects loads projects from the provided directory" name="FileSystemProjectRepository (agnostic) getAllProjects loads projects from the provided directory" time="0.013">
+    </testcase>
+    <testcase classname="FileSystemProjectRepository (agnostic) getAllProjects should handle non-existent projects directory gracefully" name="FileSystemProjectRepository (agnostic) getAllProjects should handle non-existent projects directory gracefully" time="0">
+    </testcase>
+    <testcase classname="FileSystemProjectRepository (agnostic) getAllProjects should filter existing vs non-existing projects correctly" name="FileSystemProjectRepository (agnostic) getAllProjects should filter existing vs non-existing projects correctly" time="0.005">
+    </testcase>
+    <testcase classname="FileSystemProjectRepository (agnostic) getProject finds existing project by ID" name="FileSystemProjectRepository (agnostic) getProject finds existing project by ID" time="0.024">
+    </testcase>
+    <testcase classname="FileSystemProjectRepository (agnostic) getProject should return null for non-existent project ID" name="FileSystemProjectRepository (agnostic) getProject should return null for non-existent project ID" time="0.005">
+    </testcase>
+    <testcase classname="FileSystemProjectRepository (agnostic) projectExists checks project existence by flattened id" name="FileSystemProjectRepository (agnostic) projectExists checks project existence by flattened id" time="0.001">
+    </testcase>
+    <testcase classname="FileSystemProjectRepository (agnostic) utility methods should provide correct projects directory path" name="FileSystemProjectRepository (agnostic) utility methods should provide correct projects directory path" time="0.001">
+    </testcase>
+    <testcase classname="FileSystemProjectRepository (agnostic) utility methods should build correct project paths" name="FileSystemProjectRepository (agnostic) utility methods should build correct project paths" time="0">
+    </testcase>
+    <testcase classname="FileSystemProjectRepository (agnostic) utility methods should check accessibility" name="FileSystemProjectRepository (agnostic) utility methods should check accessibility" time="0.011">
+    </testcase>
+  </testsuite>
+  <testsuite name="ChatHistoryViewModel" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:45" time="0.141" tests="25">
+    <testcase classname="ChatHistoryViewModel loadProjectPrompts should load prompts for a specific project" name="ChatHistoryViewModel loadProjectPrompts should load prompts for a specific project" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel loadProjectPrompts should handle non-existent project gracefully" name="ChatHistoryViewModel loadProjectPrompts should handle non-existent project gracefully" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel loadProjectPrompts should handle repository errors gracefully" name="ChatHistoryViewModel loadProjectPrompts should handle repository errors gracefully" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel loadProjectPrompts should set loading state during operation" name="ChatHistoryViewModel loadProjectPrompts should set loading state during operation" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel loadProjectPrompts should clear previous prompts when loading new project" name="ChatHistoryViewModel loadProjectPrompts should clear previous prompts when loading new project" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel conversation management should get current conversation" name="ChatHistoryViewModel conversation management should get current conversation" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel conversation management should load all conversations" name="ChatHistoryViewModel conversation management should load all conversations" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel conversation management should get conversation for specific project" name="ChatHistoryViewModel conversation management should get conversation for specific project" time="0">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel prompt access methods should return immutable prompts array" name="ChatHistoryViewModel prompt access methods should return immutable prompts array" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel prompt access methods should filter prompts by role" name="ChatHistoryViewModel prompt access methods should filter prompts by role" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel prompt access methods should filter prompts by session" name="ChatHistoryViewModel prompt access methods should filter prompts by session" time="0">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel prompt access methods should get prompts sorted by date" name="ChatHistoryViewModel prompt access methods should get prompts sorted by date" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel search functionality should search prompts by content" name="ChatHistoryViewModel search functionality should search prompts by content" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel search functionality should search within specific project" name="ChatHistoryViewModel search functionality should search within specific project" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel search functionality should handle empty search results" name="ChatHistoryViewModel search functionality should handle empty search results" time="0">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel statistics should calculate chat statistics" name="ChatHistoryViewModel statistics should calculate chat statistics" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel statistics should return empty statistics for project without prompts" name="ChatHistoryViewModel statistics should return empty statistics for project without prompts" time="0">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel statistics should count unique sessions" name="ChatHistoryViewModel statistics should count unique sessions" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel statistics should get prompt count" name="ChatHistoryViewModel statistics should get prompt count" time="0">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel sorting and filtering should set and get sort order" name="ChatHistoryViewModel sorting and filtering should set and get sort order" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel sorting and filtering should check if project has prompts" name="ChatHistoryViewModel sorting and filtering should check if project has prompts" time="0">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel error handling should track and clear errors" name="ChatHistoryViewModel error handling should track and clear errors" time="0.003">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel refresh functionality should reload current project prompts" name="ChatHistoryViewModel refresh functionality should reload current project prompts" time="0">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel edge cases should handle empty repository" name="ChatHistoryViewModel edge cases should handle empty repository" time="0.001">
+    </testcase>
+    <testcase classname="ChatHistoryViewModel edge cases should handle prompts with same timestamp" name="ChatHistoryViewModel edge cases should handle prompts with same timestamp" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="Real Provider Filtering (No Mocks)" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:45" time="0.169" tests="3">
+    <testcase classname="Real Provider Filtering (No Mocks) Provider filtering actually works with real file system" name="Real Provider Filtering (No Mocks) Provider filtering actually works with real file system" time="0.017">
+    </testcase>
+    <testcase classname="Real Provider Filtering (No Mocks) View models notify listeners on real data changes" name="Real Provider Filtering (No Mocks) View models notify listeners on real data changes" time="0.001">
+    </testcase>
+    <testcase classname="Real Provider Filtering (No Mocks) Filter state persists through view changes" name="Real Provider Filtering (No Mocks) Filter state persists through view changes" time="0.009">
+    </testcase>
+  </testsuite>
+  <testsuite name="Project-Todo MVVM Integration" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:45" time="0.234" tests="9">
+    <testcase classname="Project-Todo MVVM Integration ViewModels integration should load projects and sessions independently" name="Project-Todo MVVM Integration ViewModels integration should load projects and sessions independently" time="0.028">
+    </testcase>
+    <testcase classname="Project-Todo MVVM Integration ViewModels integration should filter sessions by project path" name="Project-Todo MVVM Integration ViewModels integration should filter sessions by project path" time="0.009">
+    </testcase>
+    <testcase classname="Project-Todo MVVM Integration ViewModels integration should provide project and session statistics" name="Project-Todo MVVM Integration ViewModels integration should provide project and session statistics" time="0.017">
+    </testcase>
+    <testcase classname="Project-Todo MVVM Integration ViewModels integration should handle error states gracefully" name="Project-Todo MVVM Integration ViewModels integration should handle error states gracefully" time="0.025">
+    </testcase>
+    <testcase classname="Project-Todo MVVM Integration ViewModels integration should maintain independent loading states" name="Project-Todo MVVM Integration ViewModels integration should maintain independent loading states" time="0.009">
+    </testcase>
+    <testcase classname="Project-Todo MVVM Integration Simple repository testing should create different repository instances for isolation" name="Project-Todo MVVM Integration Simple repository testing should create different repository instances for isolation" time="0.005">
+    </testcase>
+    <testcase classname="Project-Todo MVVM Integration Simple repository testing should work with different data sets" name="Project-Todo MVVM Integration Simple repository testing should work with different data sets" time="0.009">
+    </testcase>
+    <testcase classname="Project-Todo MVVM Integration Real-world workflow simulation should simulate project selection and todo viewing workflow" name="Project-Todo MVVM Integration Real-world workflow simulation should simulate project selection and todo viewing workflow" time="0.005">
+    </testcase>
+    <testcase classname="Project-Todo MVVM Integration Real-world workflow simulation should handle session-based todo management" name="Project-Todo MVVM Integration Real-world workflow simulation should handle session-based todo management" time="0.007">
+    </testcase>
+  </testsuite>
+  <testsuite name="Aggregator" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:46" time="0.163" tests="2">
+    <testcase classname="Aggregator merges provider results and dedupes sessions per provider/project" name="Aggregator merges provider results and dedupes sessions per provider/project" time="0.006">
+    </testcase>
+    <testcase classname="Aggregator reports error when every provider fails" name="Aggregator reports error when every provider fails" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="UI Interaction Tests" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:46" time="0.18" tests="21">
+    <testcase classname="UI Interaction Tests Tab Click Behaviors should handle normal click" name="UI Interaction Tests Tab Click Behaviors should handle normal click" time="0">
+    </testcase>
+    <testcase classname="UI Interaction Tests Tab Click Behaviors should handle Ctrl+Click for multi-select" name="UI Interaction Tests Tab Click Behaviors should handle Ctrl+Click for multi-select" time="0">
+    </testcase>
+    <testcase classname="UI Interaction Tests Tab Click Behaviors should handle Cmd+Click on Mac" name="UI Interaction Tests Tab Click Behaviors should handle Cmd+Click on Mac" time="0.001">
+    </testcase>
+    <testcase classname="UI Interaction Tests Right-Click Context Menu should show context menu on right-click" name="UI Interaction Tests Right-Click Context Menu should show context menu on right-click" time="0.004">
+    </testcase>
+    <testcase classname="UI Interaction Tests Right-Click Context Menu should hide context menu on click away" name="UI Interaction Tests Right-Click Context Menu should hide context menu on click away" time="0">
+    </testcase>
+    <testcase classname="UI Interaction Tests Right-Click Context Menu should hide context menu on Escape key" name="UI Interaction Tests Right-Click Context Menu should hide context menu on Escape key" time="0.001">
+    </testcase>
+    <testcase classname="UI Interaction Tests Merge Button Visibility should show merge button when 2 tabs selected" name="UI Interaction Tests Merge Button Visibility should show merge button when 2 tabs selected" time="0">
+    </testcase>
+    <testcase classname="UI Interaction Tests Merge Button Visibility should hide merge button when 1 tab selected" name="UI Interaction Tests Merge Button Visibility should hide merge button when 1 tab selected" time="0">
+    </testcase>
+    <testcase classname="UI Interaction Tests Merge Button Visibility should hide merge button when 3 tabs selected" name="UI Interaction Tests Merge Button Visibility should hide merge button when 3 tabs selected" time="0.001">
+    </testcase>
+    <testcase classname="UI Interaction Tests Merge Button Visibility should hide merge button when no tabs selected" name="UI Interaction Tests Merge Button Visibility should hide merge button when no tabs selected" time="0">
+    </testcase>
+    <testcase classname="UI Interaction Tests Todo Item Multi-Selection should select single item on click" name="UI Interaction Tests Todo Item Multi-Selection should select single item on click" time="0.003">
+    </testcase>
+    <testcase classname="UI Interaction Tests Todo Item Multi-Selection should select range on Shift+Click" name="UI Interaction Tests Todo Item Multi-Selection should select range on Shift+Click" time="0.001">
+    </testcase>
+    <testcase classname="UI Interaction Tests Todo Item Multi-Selection should toggle selection on Ctrl+Click" name="UI Interaction Tests Todo Item Multi-Selection should toggle selection on Ctrl+Click" time="0">
+    </testcase>
+    <testcase classname="UI Interaction Tests Keyboard Navigation should move selected items up with Ctrl+Up" name="UI Interaction Tests Keyboard Navigation should move selected items up with Ctrl+Up" time="0">
+    </testcase>
+    <testcase classname="UI Interaction Tests Keyboard Navigation should move selected items down with Ctrl+Down" name="UI Interaction Tests Keyboard Navigation should move selected items down with Ctrl+Down" time="0.001">
+    </testcase>
+    <testcase classname="UI Interaction Tests Keyboard Navigation should not move when at boundary" name="UI Interaction Tests Keyboard Navigation should not move when at boundary" time="0.002">
+    </testcase>
+    <testcase classname="UI Interaction Tests Keyboard Navigation should only move contiguous selections" name="UI Interaction Tests Keyboard Navigation should only move contiguous selections" time="0.001">
+    </testcase>
+    <testcase classname="UI Interaction Tests Status Bar Messages should show correct message for no selection" name="UI Interaction Tests Status Bar Messages should show correct message for no selection" time="0">
+    </testcase>
+    <testcase classname="UI Interaction Tests Status Bar Messages should show correct message for single selection" name="UI Interaction Tests Status Bar Messages should show correct message for single selection" time="0">
+    </testcase>
+    <testcase classname="UI Interaction Tests Status Bar Messages should show correct message for multiple contiguous selection" name="UI Interaction Tests Status Bar Messages should show correct message for multiple contiguous selection" time="0.001">
+    </testcase>
+    <testcase classname="UI Interaction Tests Status Bar Messages should show correct message for non-contiguous selection" name="UI Interaction Tests Status Bar Messages should show correct message for non-contiguous selection" time="0.006">
+    </testcase>
+  </testsuite>
+  <testsuite name="Todo Merge Functionality" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:46" time="0.143" tests="20">
+    <testcase classname="Todo Merge Functionality Duplicate Detection should identify exact duplicates" name="Todo Merge Functionality Duplicate Detection should identify exact duplicates" time="0.001">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Duplicate Detection should identify case-insensitive duplicates" name="Todo Merge Functionality Duplicate Detection should identify case-insensitive duplicates" time="0.003">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Duplicate Detection should not identify different todos as duplicates" name="Todo Merge Functionality Duplicate Detection should not identify different todos as duplicates" time="0">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Merge Logic should merge two todo lists removing duplicates" name="Todo Merge Functionality Merge Logic should merge two todo lists removing duplicates" time="0.002">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Merge Logic should handle empty source list" name="Todo Merge Functionality Merge Logic should handle empty source list" time="0">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Merge Logic should handle empty target list" name="Todo Merge Functionality Merge Logic should handle empty target list" time="0.001">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Merge Logic should handle all duplicates" name="Todo Merge Functionality Merge Logic should handle all duplicates" time="0.001">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Session Selection for Merge should identify older session as source" name="Todo Merge Functionality Session Selection for Merge should identify older session as source" time="0">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Session Selection for Merge should handle sessions with same date" name="Todo Merge Functionality Session Selection for Merge should handle sessions with same date" time="0.001">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Tab Multi-Selection should allow selecting exactly 2 tabs" name="Todo Merge Functionality Tab Multi-Selection should allow selecting exactly 2 tabs" time="0">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Tab Multi-Selection should not allow merge with 1 tab" name="Todo Merge Functionality Tab Multi-Selection should not allow merge with 1 tab" time="0.001">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Tab Multi-Selection should not allow merge with 3 tabs" name="Todo Merge Functionality Tab Multi-Selection should not allow merge with 3 tabs" time="0">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Tab Multi-Selection should toggle tab selection" name="Todo Merge Functionality Tab Multi-Selection should toggle tab selection" time="0">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Merge Preview Calculations should calculate correct merge statistics" name="Todo Merge Functionality Merge Preview Calculations should calculate correct merge statistics" time="0.001">
+    </testcase>
+    <testcase classname="Todo Merge Functionality Status Conflict Resolution should keep target status for duplicate todos" name="Todo Merge Functionality Status Conflict Resolution should keep target status for duplicate todos" time="0">
+    </testcase>
+    <testcase classname="Session Memory Feature should remember session selection per project" name="Session Memory Feature should remember session selection per project" time="0">
+    </testcase>
+    <testcase classname="Session Memory Feature should update session selection when changed" name="Session Memory Feature should update session selection when changed" time="0">
+    </testcase>
+    <testcase classname="Session Memory Feature should return undefined for unknown project" name="Session Memory Feature should return undefined for unknown project" time="0">
+    </testcase>
+    <testcase classname="Context Menu Actions Copy Session ID should copy session ID to clipboard" name="Context Menu Actions Copy Session ID should copy session ID to clipboard" time="0">
+    </testcase>
+    <testcase classname="Context Menu Actions Merge Mode Selection should start merge mode with one tab selected" name="Context Menu Actions Merge Mode Selection should start merge mode with one tab selected" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="TodosViewModel" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:46" time="0.132" tests="29">
+    <testcase classname="TodosViewModel loadSessions should load all sessions from repository" name="TodosViewModel loadSessions should load all sessions from repository" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel loadSessions should handle repository errors gracefully" name="TodosViewModel loadSessions should handle repository errors gracefully" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel loadSessions should set loading state during operation" name="TodosViewModel loadSessions should set loading state during operation" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel loadSessions should clear errors on successful load" name="TodosViewModel loadSessions should clear errors on successful load" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel session access methods should return all sessions" name="TodosViewModel session access methods should return all sessions" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel session access methods should return immutable session array" name="TodosViewModel session access methods should return immutable session array" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel session access methods should find session by ID" name="TodosViewModel session access methods should find session by ID" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel session access methods should return null for non-existent session ID" name="TodosViewModel session access methods should return null for non-existent session ID" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel project filtering should filter sessions by project path" name="TodosViewModel project filtering should filter sessions by project path" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel project filtering should return empty array for project with no sessions" name="TodosViewModel project filtering should return empty array for project with no sessions" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel project filtering should handle sessions without project paths" name="TodosViewModel project filtering should handle sessions without project paths" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel todo management should get all todos from all sessions" name="TodosViewModel todo management should get all todos from all sessions" time="0.003">
+    </testcase>
+    <testcase classname="TodosViewModel todo management should get todos for specific session" name="TodosViewModel todo management should get todos for specific session" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel todo management should return empty array for non-existent session" name="TodosViewModel todo management should return empty array for non-existent session" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel todo management should filter todos by status" name="TodosViewModel todo management should filter todos by status" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel todo management should filter todos by priority" name="TodosViewModel todo management should filter todos by priority" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel session statistics should count total sessions" name="TodosViewModel session statistics should count total sessions" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel session statistics should count sessions with todos" name="TodosViewModel session statistics should count sessions with todos" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel session statistics should count empty sessions" name="TodosViewModel session statistics should count empty sessions" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel session statistics should count total todos" name="TodosViewModel session statistics should count total todos" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel session statistics should count todos by status" name="TodosViewModel session statistics should count todos by status" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel session sorting should sort sessions by date (most recent first)" name="TodosViewModel session sorting should sort sessions by date (most recent first)" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel session sorting should sort sessions by todo count (most todos first)" name="TodosViewModel session sorting should sort sessions by todo count (most todos first)" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel todo mutation operations should save todos for session" name="TodosViewModel todo mutation operations should save todos for session" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel todo mutation operations should handle save errors gracefully" name="TodosViewModel todo mutation operations should handle save errors gracefully" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel error handling should track and clear errors" name="TodosViewModel error handling should track and clear errors" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel refresh functionality should reload sessions when refreshed" name="TodosViewModel refresh functionality should reload sessions when refreshed" time="0">
+    </testcase>
+    <testcase classname="TodosViewModel edge cases should handle empty repository" name="TodosViewModel edge cases should handle empty repository" time="0.001">
+    </testcase>
+    <testcase classname="TodosViewModel edge cases should handle sessions with same modification time" name="TodosViewModel edge cases should handle sessions with same modification time" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="Electron Module References" errors="0" failures="0" skipped="0" timestamp="2026-03-19T13:58:46" time="0.264" tests="7">
+    <testcase classname="Electron Module References diagnostics IPC handler exists" name="Electron Module References diagnostics IPC handler exists" time="0.002">
+    </testcase>
+    <testcase classname="Electron Module References preload script exists" name="Electron Module References preload script exists" time="0.001">
+    </testcase>
+    <testcase classname="Electron Module References screenshot utility exists" name="Electron Module References screenshot utility exists" time="0.001">
+    </testcase>
+    <testcase classname="Electron Module References setupMenu module exists" name="Electron Module References setupMenu module exists" time="0.001">
+    </testcase>
+    <testcase classname="Electron Module References showHelp module exists" name="Electron Module References showHelp module exists" time="0">
+    </testcase>
+    <testcase classname="Electron Module References fileWatchers module exists" name="Electron Module References fileWatchers module exists" time="0.001">
+    </testcase>
+    <testcase classname="Electron Module References singleInstance module exists" name="Electron Module References singleInstance module exists" time="0">
+    </testcase>
+  </testsuite>
+</testsuites>

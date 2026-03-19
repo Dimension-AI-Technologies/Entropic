@@ -1,3 +1,4 @@
+// @must_test(REQ-GIT-007)
 import type { IpcMain } from 'electron';
 import { collectGitStatus, collectCommitHistory } from '../gitStatus.js';
 

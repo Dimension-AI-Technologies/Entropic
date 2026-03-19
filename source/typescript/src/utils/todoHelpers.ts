@@ -1,3 +1,5 @@
+// @must_test(REQ-TOD-009)
+// @must_test(REQ-SES-009)
 // EXEMPTION: exceptions - utility helpers are simple getters that don't need Result<T>
 import { Session, Project } from '../types';
 

@@ -1,3 +1,8 @@
+// @must_test(REQ-TOD-002)
+// @must_test(REQ-TOD-006)
+// @must_test(REQ-PRV-006)
+// @must_test(REQ-SES-001)
+// @must_test(REQ-SES-003)
 /**
  * Entropic Domain Types (provider-agnostic)
  * Identity rules:

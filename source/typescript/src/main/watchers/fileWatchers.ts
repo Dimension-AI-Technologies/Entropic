@@ -1,3 +1,8 @@
+// @must_test(REQ-TOD-001)
+// @must_test(REQ-CLI-004)
+// @must_test(REQ-CLI-005)
+// @must_test(REQ-HOK-004)
+// @must_test(REQ-ARC-006)
 // EXEMPTION: exceptions - file watcher utilities don't need Result<T>
 import { watch } from 'node:fs';
 import fsSync from 'node:fs';

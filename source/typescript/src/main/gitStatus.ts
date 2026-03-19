@@ -1,3 +1,8 @@
+// @must_test(REQ-GIT-001)
+// @must_test(REQ-GIT-002)
+// @must_test(REQ-GIT-003)
+// @must_test(REQ-GIT-004)
+// @must_test(REQ-GIT-005)
 // EXEMPTION: exceptions - git utility functions with error recovery don't need Result<T>
 import path from 'node:path';
 import fs from 'node:fs/promises';

@@ -1,3 +1,4 @@
+// @must_test(REQ-DGN-005)
 // EXEMPTION: exceptions - IPC handlers are simple utilities
 import type { IpcMain } from 'electron';
 import type { ProviderPort } from '../core/ports';

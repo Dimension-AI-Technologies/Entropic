@@ -1,3 +1,4 @@
+// @must_test(REQ-GUI-018)
 import { dialog, type BrowserWindow } from 'electron';
 
 export function showHelp(mainWindow: BrowserWindow) {

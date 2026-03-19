@@ -1,3 +1,6 @@
+// @covers(aggregator)
+// @covers(ports)
+// @covers(domain)
 // EXEMPTION: exceptions - test utility functions don't need Result<T>
 import { Aggregator } from '../main/core/aggregator';
 import type { ProviderPort, EventPort } from '../main/core/ports';

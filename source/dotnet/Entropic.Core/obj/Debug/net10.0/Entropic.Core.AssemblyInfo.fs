@@ -10,7 +10,7 @@ open System.Reflection
 [<assembly: System.Reflection.AssemblyCompanyAttribute("Entropic.Core")>]
 [<assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")>]
 [<assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")>]
-[<assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1e78632d1a3da9fb48f5bcb3c8c8da8d53742ff1")>]
+[<assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2a1795c27defe9807d1503d5d4b4c8574ffd78ab")>]
 [<assembly: System.Reflection.AssemblyProductAttribute("Entropic.Core")>]
 [<assembly: System.Reflection.AssemblyTitleAttribute("Entropic.Core")>]
 [<assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")>]

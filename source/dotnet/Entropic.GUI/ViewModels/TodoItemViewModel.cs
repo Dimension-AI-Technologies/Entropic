@@ -1,5 +1,10 @@
+using System;
+using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Entropic.Core;
+using Microsoft.FSharp.Collections;
 
 namespace Entropic.GUI.ViewModels;
 
@@ -27,6 +32,9 @@ public partial class TodoItemViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isSelected;
+
+    /// The session that owns this todo — set by the parent session view model.
+    public SessionItemViewModel? OwnerSession { get; set; }
 
     // @must_test(REQ-TOD-003)
     public string StatusColor => Status switch
@@ -58,6 +66,10 @@ public partial class TodoItemViewModel : ViewModelBase
             "in_progress" => "completed",
             _ => "pending"
         };
+        OnPropertyChanged(nameof(StatusColor));
+        OnPropertyChanged(nameof(StatusIcon));
+        OnPropertyChanged(nameof(DisplayText));
+        PersistSession();
     }
 
     // @must_test(REQ-TOD-004)
@@ -71,8 +83,45 @@ public partial class TodoItemViewModel : ViewModelBase
     private void EndEdit()
     {
         IsEditing = false;
+        OnPropertyChanged(nameof(DisplayText));
+        PersistSession();
     }
 
     // @must_test(REQ-TOD-005)
+    [RelayCommand]
+    private void Delete()
+    {
+        if (OwnerSession == null) return;
+        OwnerSession.Todos.Remove(this);
+        PersistSession();
+    }
+
     public bool CanDelete => true;
+
+    /// Persist the owning session's todo list to disk via F# Core.
+    private void PersistSession()
+    {
+        if (OwnerSession?.FilePath == null) return;
+
+        var fsharpTodos = OwnerSession.Todos.Select(ToCoreTodo);
+        TodoManager.persistTodos(OwnerSession.FilePath, ListModule.OfSeq(fsharpTodos));
+    }
+
+    public static Todo ToCoreTodo(TodoItemViewModel t)
+    {
+        var status = t.Status switch
+        {
+            "in_progress" => TodoStatus.InProgress,
+            "completed" => TodoStatus.Completed,
+            _ => TodoStatus.Pending
+        };
+        return new Todo(
+            t.Id != null ? Microsoft.FSharp.Core.FSharpOption<string>.Some(t.Id) : Microsoft.FSharp.Core.FSharpOption<string>.None,
+            t.Content,
+            status,
+            Microsoft.FSharp.Core.FSharpOption<long>.None,
+            Microsoft.FSharp.Core.FSharpOption<long>.None,
+            t.ActiveForm != null ? Microsoft.FSharp.Core.FSharpOption<string>.Some(t.ActiveForm) : Microsoft.FSharp.Core.FSharpOption<string>.None
+        );
+    }
 }

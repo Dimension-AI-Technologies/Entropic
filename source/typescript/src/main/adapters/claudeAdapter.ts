@@ -1,3 +1,6 @@
+// @must_test(REQ-PRV-001)
+// @must_test(REQ-PLT-003)
+// @must_test(REQ-ARC-005)
 import path from 'node:path';
 import fsSync from 'node:fs';
 import type { ProviderPort } from '../core/ports';
