@@ -1,18 +1,27 @@
-﻿using Avalonia;
+using Avalonia;
 using System;
+using Entropic.GUI.Services;
 
 namespace Entropic.GUI;
 
-sealed class Program
+// @must_test(REQ-PLT-001)
+// @must_test(REQ-PLT-005)
+// @must_test(REQ-BLD-004)
+// @must_test(REQ-GUI-007)
+public sealed class Program
 {
-    // Initialization code. Don't use any Avalonia, third-party APIs or any
-    // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
-    // yet and stuff might break.
     [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp()
-        .StartWithClassicDesktopLifetime(args);
+    public static void Main(string[] args)
+    {
+        using var guard = new SingleInstanceGuard("com.claudecode.todomonitor");
+        if (!guard.IsFirstInstance)
+        {
+            Console.Error.WriteLine("Another instance is already running.");
+            return;
+        }
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
 
-    // Avalonia configuration, don't remove; also used by visual designer.
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()

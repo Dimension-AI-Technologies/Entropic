@@ -6,11 +6,26 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Domain types first (no dependencies) -->
     <Compile Include="Domain.fs" />
     <Compile Include="Ports.fs" />
+    <!-- Core logic (depends on Domain + Ports) -->
     <Compile Include="Aggregator.fs" />
     <Compile Include="PathUtils.fs" />
     <Compile Include="TodoManager.fs" />
+    <Compile Include="JsonlParser.fs" />
+    <Compile Include="FileWatcher.fs" />
+    <Compile Include="Preferences.fs" />
+    <Compile Include="ProviderDetection.fs" />
+    <Compile Include="Diagnostics.fs" />
+    <Compile Include="SessionManager.fs" />
+    <Compile Include="ScriptReferences.fs" />
+    <!-- Adapters (depend on everything above) -->
+    <Compile Include="Adapters\ClaudeAdapter.fs" />
+    <Compile Include="Adapters\CodexAdapter.fs" />
+    <Compile Include="Adapters\GeminiAdapter.fs" />
+    <!-- Git (standalone, depends only on Domain) -->
+    <Compile Include="Git\GitIntegration.fs" />
   </ItemGroup>
 
 </Project>

@@ -6,6 +6,7 @@ open System.Collections.Generic
 /// by (provider, projectPath) and sessions by (provider, sessionId).
 
 // @must_test(REQ-PRV-008)
+// @must_test(REQ-ARC-008)
 module Aggregator =
 
     let private optMax a b =

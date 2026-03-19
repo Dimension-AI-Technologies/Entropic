@@ -167,3 +167,11 @@ dist, coverage, and tsbuildinfo to .gitignore for TypeScript builds.
 - chore: reorganize project structure
   Author: Mathew Burkitt
 
+
+---
+
+## Commit: 2026-03-19 11:30
+
+- chore: add test infrastructure and adapters
+  Author: Mathew Burkitt
+

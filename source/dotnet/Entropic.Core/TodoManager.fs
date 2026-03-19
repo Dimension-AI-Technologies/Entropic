@@ -1,5 +1,9 @@
 namespace Entropic.Core
 
+open System
+open System.IO
+open System.Text.Json
+
 /// Sorting, filtering, and status logic for TODOs.
 
 module TodoManager =
@@ -37,3 +41,49 @@ module TodoManager =
         {| Pending = all |> List.filter (fun t -> t.Status = Pending) |> List.length
            InProgress = all |> List.filter (fun t -> t.Status = InProgress) |> List.length
            Completed = all |> List.filter (fun t -> t.Status = Completed) |> List.length |}
+
+    // @must_test(REQ-TOD-010)
+    /// Persist todos to a JSON file at the specified path.
+    let persistTodos (filePath: string) (todos: Todo list) : Result<unit, string> =
+        try
+            let dir = Path.GetDirectoryName(filePath)
+            if not (String.IsNullOrEmpty(dir)) && not (Directory.Exists(dir)) then
+                Directory.CreateDirectory(dir) |> ignore
+            let statusStr (s: TodoStatus) = match s with Pending -> "pending" | InProgress -> "in_progress" | Completed -> "completed"
+            let items = todos |> List.map (fun t ->
+                let obj = System.Collections.Generic.Dictionary<string, obj>()
+                obj.["content"] <- t.Content
+                obj.["status"] <- statusStr t.Status
+                t.Id |> Option.iter (fun id -> obj.["id"] <- id)
+                t.ActiveForm |> Option.iter (fun af -> obj.["activeForm"] <- af)
+                obj)
+            let json = JsonSerializer.Serialize(items, JsonSerializerOptions(WriteIndented = true))
+            File.WriteAllText(filePath, json)
+            Ok ()
+        with ex ->
+            Error (sprintf "Failed to persist todos: %s" ex.Message)
+
+    /// Load todos from a JSON file.
+    let loadTodos (filePath: string) : Result<Todo list, string> =
+        try
+            if not (File.Exists(filePath)) then Ok []
+            else
+                let json = File.ReadAllText(filePath)
+                let doc = JsonDocument.Parse(json)
+                let todos = [
+                    for el in doc.RootElement.EnumerateArray() do
+                        let content = match el.TryGetProperty("content") with true, v -> v.GetString() | _ -> ""
+                        let status = match el.TryGetProperty("status") with true, v -> v.GetString() | _ -> "pending"
+                        let id = match el.TryGetProperty("id") with true, v -> Some(v.GetString()) | _ -> None
+                        let activeForm = match el.TryGetProperty("activeForm") with true, v -> Some(v.GetString()) | _ -> None
+                        let todoStatus =
+                            let v = (status |> Option.ofObj |> Option.defaultValue "").ToLowerInvariant()
+                            if v.StartsWith("in") then InProgress
+                            elif v.StartsWith("comp") then Completed
+                            else Pending
+                        yield { Id = id; Content = content; Status = todoStatus
+                                CreatedAt = None; UpdatedAt = None; ActiveForm = activeForm }
+                ]
+                Ok todos
+        with ex ->
+            Error (sprintf "Failed to load todos: %s" ex.Message)

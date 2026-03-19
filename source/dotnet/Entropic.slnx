@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="Entropic.Core.Tests/Entropic.Core.Tests.fsproj" />
   <Project Path="Entropic.Core/Entropic.Core.fsproj" />
   <Project Path="Entropic.GUI/Entropic.GUI.csproj" />
+  <Project Path="Entropic.GUI.Tests/Entropic.GUI.Tests.csproj" />
 </Solution>

@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="Entropic.GUI.Views.SplashScreen"
+        Title="Entropic"
+        Width="400" Height="300"
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="None"
+        Background="#1a1d21">
+
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+        <TextBlock Text="Entropic" FontSize="32" FontWeight="Bold" Foreground="#e0e0e0" HorizontalAlignment="Center" />
+        <TextBlock Text="Monitoring AI Coding Agents" FontSize="14" Foreground="#7a8a9a" HorizontalAlignment="Center" />
+        <ProgressBar IsIndeterminate="True" Width="200" Margin="0,20,0,0" />
+        <TextBlock x:Name="StatusLabel" Text="Detecting providers..." FontSize="11" Foreground="#555" HorizontalAlignment="Center" />
+    </StackPanel>
+</Window>

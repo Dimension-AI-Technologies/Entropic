@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Entropic.GUI.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Entropic.GUI.Views.ProjectView"
+             x:DataType="vm:ProjectsViewModel">
+
+    <Grid ColumnDefinitions="250,Auto,*,Auto,300">
+        <!-- Left pane: Project list -->
+        <DockPanel Grid.Column="0">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4">
+                <Button Content="All" Command="{Binding SetFilterCommand}" CommandParameter="all" />
+                <Button Content="Sessions" Command="{Binding SetFilterCommand}" CommandParameter="hasSessions" Margin="4,0,0,0" />
+                <Button Content="Todos" Command="{Binding SetFilterCommand}" CommandParameter="hasTodos" Margin="4,0,0,0" />
+                <Button Content="Active" Command="{Binding SetFilterCommand}" CommandParameter="activeOnly" Margin="4,0,0,0" />
+            </StackPanel>
+            <ListBox ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="vm:ProjectItemViewModel">
+                        <StackPanel Orientation="Horizontal" Margin="4,2">
+                            <!-- Provider badge -->
+                            <Border Background="#2a2d32" CornerRadius="3" Padding="4,1" Margin="0,0,6,0">
+                                <TextBlock Text="{Binding Provider}" FontSize="10" Foreground="#7a8a9a" />
+                            </Border>
+                            <TextBlock Text="{Binding Name}" Foreground="#e0e0e0" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <GridSplitter Grid.Column="1" Width="4" Background="#2a2d32" />
+
+        <!-- Middle pane: Session tabs + content -->
+        <DockPanel Grid.Column="2">
+            <TabControl DockPanel.Dock="Top" ItemsSource="{Binding SelectedProject.Sessions}"
+                        SelectedIndex="{Binding SelectedSessionIndex}">
+                <TabControl.ItemTemplate>
+                    <DataTemplate DataType="vm:SessionItemViewModel">
+                        <TextBlock Text="{Binding SessionId}" />
+                    </DataTemplate>
+                </TabControl.ItemTemplate>
+            </TabControl>
+        </DockPanel>
+
+        <GridSplitter Grid.Column="3" Width="4" Background="#2a2d32" />
+
+        <!-- Right pane: TODO list -->
+        <DockPanel Grid.Column="4">
+            <TextBlock DockPanel.Dock="Top" Text="TODOs" Foreground="#a2a7ad" Margin="8,4" FontWeight="Bold" />
+            <TextBlock Text="Select a session to view TODOs" Foreground="#666" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </DockPanel>
+    </Grid>
+</UserControl>

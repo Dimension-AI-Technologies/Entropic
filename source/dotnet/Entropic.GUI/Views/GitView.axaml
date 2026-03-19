@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Entropic.GUI.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Entropic.GUI.Views.GitView"
+             x:DataType="vm:GitViewModel">
+
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,4">
+            <TextBlock Text="Repositories: " Foreground="#a2a7ad" />
+            <TextBlock Text="{Binding TotalRepos}" Foreground="#e0e0e0" FontWeight="Bold" />
+            <TextBlock Text=" — Out of sync: " Foreground="#a2a7ad" Margin="12,0,0,0" />
+            <TextBlock Text="{Binding OutOfSync}" Foreground="#ff9800" FontWeight="Bold" />
+        </StackPanel>
+        <DataGrid ItemsSource="{Binding Repos}" AutoGenerateColumns="False" IsReadOnly="True"
+                  Background="Transparent" Foreground="#e0e0e0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="200" />
+                <DataGridTextColumn Header="Path" Binding="{Binding RelativePath}" Width="*" />
+                <DataGridTextColumn Header="Remote" Binding="{Binding RemoteUrl}" Width="300" />
+                <DataGridTextColumn Header="Ahead" Binding="{Binding Ahead}" Width="70" />
+                <DataGridTextColumn Header="Behind" Binding="{Binding Behind}" Width="70" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

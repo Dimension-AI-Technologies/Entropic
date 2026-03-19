@@ -3,7 +3,6 @@
              x:Class="Entropic.GUI.App"
              xmlns:local="using:Entropic.GUI"
              RequestedThemeVariant="Dark">
-             <!-- @must_test(REQ-GUI-006) Dark theme -->
 
     <Application.DataTemplates>
         <local:ViewLocator/>

@@ -4,8 +4,11 @@ namespace Entropic.Core
 /// Identity rules:
 ///   Project identity = (Provider, ProjectPath)
 ///   Session identity = (Provider, SessionId)
+/// All fallible operations use Result<T,string> — no exceptions for control flow.
 
 // @must_test(REQ-TOD-002)
+// @must_test(REQ-ARC-002)
+// @must_test(REQ-PLT-004)
 type TodoStatus =
     | Pending
     | InProgress

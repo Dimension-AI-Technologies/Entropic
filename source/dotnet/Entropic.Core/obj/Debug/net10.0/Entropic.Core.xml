@@ -8,12 +8,19 @@
  Identity rules:
    Project identity = (Provider, ProjectPath)
    Session identity = (Provider, SessionId)
+ All fallible operations use Result&lt;T,string&gt; — no exceptions for control flow.
 </summary>
 </member>
 <member name="T:Entropic.Core.IProviderPort">
 <summary>
  Hexagonal architecture port interfaces.
  Core domain depends on these abstractions; adapters implement them.
+</summary>
+</member>
+<member name="T:Entropic.Core.DebouncedFileWatcher">
+<summary>
+ Debounced file system watcher.
+ Watches a directory for changes and invokes a callback with configurable debounce.
 </summary>
 </member>
 <member name="T:Entropic.Core.Aggregator">
@@ -55,6 +62,16 @@
  by replacing path separators with hyphens.
 </summary>
 </member>
+<member name="M:Entropic.Core.TodoManager.loadTodos(System.String)">
+<summary>
+ Load todos from a JSON file.
+</summary>
+</member>
+<member name="M:Entropic.Core.TodoManager.persistTodos(System.String,Microsoft.FSharp.Collections.FSharpList{Entropic.Core.Todo})">
+<summary>
+ Persist todos to a JSON file at the specified path.
+</summary>
+</member>
 <member name="M:Entropic.Core.TodoManager.countByStatus(Microsoft.FSharp.Collections.FSharpList{Entropic.Core.Session})">
 <summary>
  Count todos by status across sessions.
@@ -78,6 +95,184 @@
 <member name="T:Entropic.Core.TodoManager">
 <summary>
  Sorting, filtering, and status logic for TODOs.
+</summary>
+</member>
+<member name="M:Entropic.Core.JsonlParser.parseUpdatePlanJsonl(System.String,Microsoft.FSharp.Core.FSharpFunc{System.Text.Json.JsonElement,Microsoft.FSharp.Core.FSharpOption{System.String}})">
+<summary>
+ Parse an update_plan style JSONL file (used by Codex and Gemini).
+ Returns sessionId, updatedAt, project identifier, and todos.
+</summary>
+</member>
+<member name="M:Entropic.Core.JsonlParser.computeJsonlSignature(System.String)">
+<summary>
+ Compute a signature for a directory of JSONL files (count + max mtime).
+</summary>
+</member>
+<member name="M:Entropic.Core.JsonlParser.listJsonlFiles(System.String)">
+<summary>
+ Recursively find all .jsonl files under a directory (max depth 6).
+</summary>
+</member>
+<member name="M:Entropic.Core.JsonlParser.normalizeStatus(System.String)">
+<summary>
+ Normalize a status string to TodoStatus.
+</summary>
+</member>
+<member name="M:Entropic.Core.JsonlParser.tryParseJson(System.String)">
+<summary>
+ Safely parse a single JSON line, returning None on failure.
+</summary>
+</member>
+<member name="T:Entropic.Core.JsonlParser">
+<summary>
+ Shared JSONL parsing utilities used by Codex and Gemini adapters.
+</summary>
+</member>
+<member name="M:Entropic.Core.Preferences.getDefaultDryRun(Microsoft.FSharp.Core.FSharpOption{System.String})">
+<summary>
+ Get default dry-run setting (default: true).
+</summary>
+</member>
+<member name="M:Entropic.Core.Preferences.getRepairThreshold(Microsoft.FSharp.Core.FSharpOption{System.String})">
+<summary>
+ Get repair threshold (default: 5).
+</summary>
+</member>
+<member name="M:Entropic.Core.Preferences.getBool(System.String,System.Boolean,Microsoft.FSharp.Core.FSharpOption{System.String})">
+<summary>
+ Get a bool value from prefs.json.
+</summary>
+</member>
+<member name="M:Entropic.Core.Preferences.getInt(System.String,System.Int32,Microsoft.FSharp.Core.FSharpOption{System.String})">
+<summary>
+ Get an int value from prefs.json.
+</summary>
+</member>
+<member name="M:Entropic.Core.Preferences.getString(System.String,Microsoft.FSharp.Core.FSharpOption{System.String})">
+<summary>
+ Get a string value from prefs.json.
+</summary>
+</member>
+<member name="T:Entropic.Core.Preferences">
+<summary>
+ JSON file-based configuration persistence.
+</summary>
+</member>
+<member name="M:Entropic.Core.ProviderDetection.claudePaths">
+<summary>
+ Get standard paths for each provider.
+</summary>
+</member>
+<member name="M:Entropic.Core.ProviderDetection.detect">
+<summary>
+ Detect which provider data directories exist on the local machine.
+</summary>
+</member>
+<member name="T:Entropic.Core.ProviderDetection">
+<summary>
+ Auto-detection of installed AI coding agent data directories.
+</summary>
+</member>
+<member name="M:Entropic.Core.Diagnostics.repairAll(Microsoft.FSharp.Collections.FSharpList{Entropic.Core.IProviderPort},System.Boolean)">
+<summary>
+ Run repair across all providers (REQ-DGN-003, REQ-DGN-004).
+</summary>
+</member>
+<member name="M:Entropic.Core.Diagnostics.shouldPromptRepair(Entropic.Core.Diagnostics.DiagnosticReport,System.Int32)">
+<summary>
+ Check if startup repair prompt should be shown (REQ-DGN-002).
+</summary>
+</member>
+<member name="M:Entropic.Core.Diagnostics.collectAll(Microsoft.FSharp.Collections.FSharpList{Entropic.Core.IProviderPort})">
+<summary>
+ Collect diagnostics from all providers (REQ-DGN-001, REQ-DGN-005).
+</summary>
+</member>
+<member name="T:Entropic.Core.Diagnostics">
+<summary>
+ Diagnostics and repair orchestration across all providers.
+</summary>
+</member>
+<member name="M:Entropic.Core.SessionManager.deleteEmptySessions(Microsoft.FSharp.Collections.FSharpList{Entropic.Core.Session})">
+<summary>
+ Batch-delete all empty sessions (zero todos) from a project (REQ-SES-010).
+ Returns (successes, failures) counts.
+</summary>
+</member>
+<member name="M:Entropic.Core.SessionManager.loadHistory(System.String,System.Int32)">
+<summary>
+ Load JSONL chat history for a session (REQ-SES-008).
+ Returns (role, truncated_content) pairs.
+</summary>
+</member>
+<member name="M:Entropic.Core.SessionManager.deleteSession(Entropic.Core.Session)">
+<summary>
+ Delete a session&apos;s data file (REQ-SES-007).
+</summary>
+</member>
+<member name="M:Entropic.Core.SessionManager.mergeSessions(Entropic.Core.Session,Microsoft.FSharp.Collections.FSharpList{Entropic.Core.Session})">
+<summary>
+ Merge multiple sessions into a target session (REQ-SES-006).
+ Returns the merged session and counts of duplicate/new todos.
+</summary>
+</member>
+<member name="M:Entropic.Core.SessionManager.writeProjectMapping(System.String,System.String)">
+<summary>
+ Write session-to-project mapping to sidecar metadata file.
+</summary>
+</member>
+<member name="M:Entropic.Core.SessionManager.readProjectMapping(System.String)">
+<summary>
+ Read session-to-project mapping from sidecar metadata file (REQ-SES-004).
+</summary>
+</member>
+<member name="T:Entropic.Core.SessionManager">
+<summary>
+ Session lifecycle management: mapping, merge, deletion, history.
+</summary>
+</member>
+<member name="T:Entropic.Core.ScriptReferences">
+<summary>
+ References to functionality implemented in PowerShell/Bash/TypeScript scripts.
+ These requirements are satisfied by code outside the .NET codebase.
+</summary>
+</member>
+<member name="T:Entropic.Core.Adapters.ClaudeAdapter">
+<summary>
+ Claude Code provider adapter.
+ Reads ~/.claude/projects/ and ~/.claude/todos/ directories.
+</summary>
+</member>
+<member name="T:Entropic.Core.Adapters.CodexAdapter">
+<summary>
+ OpenAI Codex provider adapter.
+ Reads ~/.codex/sessions/ directories, parsing rollout-*.jsonl files.
+</summary>
+</member>
+<member name="T:Entropic.Core.Adapters.GeminiAdapter">
+<summary>
+ Google Gemini provider adapter.
+ Reads ~/.gemini/sessions/*.jsonl, using the slug field as project identifier.
+</summary>
+</member>
+<member name="M:Entropic.Core.Git.GitIntegration.getCommitHistory(System.String,System.Int32)">
+<summary>
+ Get commit history for discovered repos.
+</summary>
+</member>
+<member name="M:Entropic.Core.Git.GitIntegration.createOnDemandLoader(System.String)">
+<summary>
+ Lazy loader: fetches git data only when requested, not at startup.
+</summary>
+</member>
+<member name="M:Entropic.Core.Git.GitIntegration.summarize(Microsoft.FSharp.Collections.FSharpList{Entropic.Core.Git.GitRepoStatus})">
+<summary>
+ Compute aggregate statistics across all discovered repos.
+</summary>
+</member>
+<member name="M:Entropic.Core.Git.GitIntegration.discoverRepos(System.String)">
+<summary>
+ Discover git repositories under a root path.
 </summary>
 </member>
 </members>

@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Entropic.GUI.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Entropic.GUI.Views.GlobalView"
+             x:DataType="vm:GlobalViewModel">
+
+    <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,4">
+            <CheckBox Content="Active only" IsChecked="{Binding ShowActiveOnly}" Foreground="#a2a7ad" />
+        </StackPanel>
+        <DataGrid ItemsSource="{Binding AllTodos}" AutoGenerateColumns="False" IsReadOnly="True"
+                  Background="Transparent" Foreground="#e0e0e0">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Status" Binding="{Binding StatusIcon}" Width="60" />
+                <DataGridTextColumn Header="Content" Binding="{Binding DisplayText}" Width="*" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>
