@@ -183,3 +183,16 @@ dist, coverage, and tsbuildinfo to .gitignore for TypeScript builds.
 - feat: add commit view and test infrastructure
   Author: Mathew Burkitt
 
+
+---
+
+## Commit: 2026-03-19 20:45
+
+- chore: rebuild assemblies and update sourcelink
+
+- Rebuild Entropic.Core and Entropic.GUI assemblies (DLL/PDB/EXE)
+- Update AssemblyInformationalVersion to ac0a829
+- Regenerate build artifacts and caches
+- Update sourcelink.json commit references
+  Author: Mathew Burkitt
+
