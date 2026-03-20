@@ -1,3 +1,4 @@
+using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Entropic.GUI.ViewModels;
@@ -58,6 +59,30 @@ public partial class MainWindow : Window
             else if (e.Key == Key.A)
             {
                 vm.ToggleActivityModeCommand.Execute(null);
+                e.Handled = true;
+            }
+            // Ctrl+Up/Down = reorder TODOs (REQ-TOD-012)
+            else if (e.Key == Key.Up && vm.Projects.SelectedSession != null)
+            {
+                var todos = vm.Projects.SelectedSession.Todos;
+                var selected = todos.Count > 0 ? todos[0] : null; // ListBox selection would be better
+                // Use the focused todo if available
+                for (int i = 0; i < todos.Count; i++)
+                {
+                    if (todos[i].IsSelected) { selected = todos[i]; break; }
+                }
+                if (selected != null) vm.Projects.MoveTodoUpCommand.Execute(selected);
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Down && vm.Projects.SelectedSession != null)
+            {
+                var todos = vm.Projects.SelectedSession.Todos;
+                TodoItemViewModel? selected = null;
+                for (int i = 0; i < todos.Count; i++)
+                {
+                    if (todos[i].IsSelected) { selected = todos[i]; break; }
+                }
+                if (selected != null) vm.Projects.MoveTodoDownCommand.Execute(selected);
                 e.Handled = true;
             }
         }

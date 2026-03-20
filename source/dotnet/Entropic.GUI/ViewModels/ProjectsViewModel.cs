@@ -31,7 +31,44 @@ public partial class ProjectsViewModel : ViewModelBase
     private string _filterMode = "all"; // all, hasSessions, hasTodos, activeOnly
 
     [ObservableProperty]
-    private int? _selectedSessionIndex;
+    private SessionItemViewModel? _selectedSession;
+
+    // @must_test(REQ-GUI-003)
+    [RelayCommand]
+    private void SelectSession(SessionItemViewModel session)
+    {
+        SelectedSession = session;
+    }
+
+    // @must_test(REQ-TOD-012) — drag-and-drop / keyboard reorder
+    [RelayCommand]
+    private void MoveTodoUp(TodoItemViewModel todo)
+    {
+        if (SelectedSession == null) return;
+        var todos = SelectedSession.Todos;
+        var idx = todos.IndexOf(todo);
+        if (idx > 0) todos.Move(idx, idx - 1);
+        todo.PersistOwnerSession();
+    }
+
+    [RelayCommand]
+    private void MoveTodoDown(TodoItemViewModel todo)
+    {
+        if (SelectedSession == null) return;
+        var todos = SelectedSession.Todos;
+        var idx = todos.IndexOf(todo);
+        if (idx >= 0 && idx < todos.Count - 1) todos.Move(idx, idx + 1);
+        todo.PersistOwnerSession();
+    }
+
+    public void ReorderTodo(int fromIndex, int toIndex)
+    {
+        if (SelectedSession == null) return;
+        var todos = SelectedSession.Todos;
+        if (fromIndex < 0 || fromIndex >= todos.Count || toIndex < 0 || toIndex >= todos.Count) return;
+        todos.Move(fromIndex, toIndex);
+        if (todos.Count > 0) todos[0].PersistOwnerSession();
+    }
 
     // @must_test(REQ-GUI-003)
     [RelayCommand]
@@ -191,6 +228,21 @@ public partial class SessionItemViewModel : ViewModelBase
 
     [ObservableProperty]
     private long _updatedAt;
+
+    /// Short label for session tab strip: first 7 chars of session ID + date.
+    public string ShortLabel
+    {
+        get
+        {
+            var id = SessionId.Length > 7 ? SessionId[..7] : SessionId;
+            if (UpdatedAt > 0)
+            {
+                var dt = DateTimeOffset.FromUnixTimeMilliseconds(UpdatedAt);
+                return $"{id} {dt:dd-MMM HH:mm}";
+            }
+            return id;
+        }
+    }
 
     [ObservableProperty]
     private string? _filePath;

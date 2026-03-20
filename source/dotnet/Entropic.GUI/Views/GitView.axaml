@@ -16,7 +16,7 @@
             <Setter Property="HorizontalGridLinesBrush" Value="#35373b"/>
         </Style>
         <Style Selector="DataGridColumnHeader">
-            <Setter Property="Background" Value="#292b2f"/>
+            <Setter Property="Background" Value="#e6292b2f"/>
             <Setter Property="Foreground" Value="#8e9297"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -28,6 +28,13 @@
             <Setter Property="Foreground" Value="#dcddde"/>
             <Setter Property="FontSize" Value="13"/>
         </Style>
+        <Style Selector="DataGridRow /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Fill" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
         <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
             <Setter Property="Fill" Value="#42464d"/>
         </Style>
@@ -36,9 +43,9 @@
         </Style>
     </UserControl.Styles>
 
-    <DockPanel Background="#36393f">
+    <DockPanel Background="#d936393f">
         <!-- Summary bar -->
-        <Border DockPanel.Dock="Top" Background="#292b2f"
+        <Border DockPanel.Dock="Top" Background="#e6292b2f"
                 BorderBrush="#35373b" BorderThickness="0,0,0,1"
                 Padding="12,8">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -56,7 +63,13 @@
                 <Button Content="View Commits" Command="{Binding ViewCommitsCommand}"
                         Padding="10,4" FontSize="12"
                         Background="#5865f2" Foreground="#ffffff"
-                        BorderThickness="0" CornerRadius="3" Cursor="Hand"/>
+                        BorderThickness="0" CornerRadius="3" Cursor="Hand">
+                    <Button.Transitions>
+                        <Transitions>
+                            <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                        </Transitions>
+                    </Button.Transitions>
+                </Button>
             </StackPanel>
         </Border>
         <DataGrid ItemsSource="{Binding Repos}" AutoGenerateColumns="False" IsReadOnly="True"

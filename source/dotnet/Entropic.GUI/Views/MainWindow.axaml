@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Entropic.GUI.ViewModels"
         xmlns:v="using:Entropic.GUI.Views"
+        xmlns:ctrl="using:Entropic.GUI.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
@@ -28,6 +29,12 @@
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Margin" Value="3,0"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.viewToggle:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#3a3d42"/>
@@ -66,6 +73,11 @@
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="FontSize" Value="16"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.toolbarIcon:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="rgba(255,255,255,0.1)"/>
@@ -85,11 +97,14 @@
         </Style>
     </Window.Styles>
 
-    <Panel>
+    <Panel Background="#1a1d21">
+        <!-- Animated boid backdrop (REQ-GUI-012) -->
+        <ctrl:BoidBackdrop />
+
         <!-- Main content -->
         <DockPanel>
             <!-- Status bar (bottom) -->
-            <Border DockPanel.Dock="Bottom" Background="#202225"
+            <Border DockPanel.Dock="Bottom" Background="#e6202225"
                     BorderBrush="#35373b" BorderThickness="0,1,0,0"
                     Padding="12,6" Height="28">
                 <DockPanel>
@@ -104,7 +119,7 @@
             </Border>
 
             <!-- Unified title/toolbar bar -->
-            <Border DockPanel.Dock="Top" Background="#222529"
+            <Border DockPanel.Dock="Top" Background="#e6222529"
                     BorderBrush="#35373b" BorderThickness="0,0,0,1"
                     Padding="16,8" MinHeight="52">
                 <Grid ColumnDefinitions="Auto,*,Auto">
@@ -176,7 +191,8 @@
         <Border IsVisible="{Binding IsToastVisible}"
                 Background="rgba(20,20,20,0.9)" CornerRadius="6" Padding="12,8"
                 HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                Margin="0,0,16,44" BorderBrush="rgba(255,255,255,0.1)" BorderThickness="1">
+                Margin="0,0,16,44" BorderBrush="rgba(255,255,255,0.1)" BorderThickness="1"
+                BoxShadow="0 6 20 0 rgba(0,0,0,0.3)">
             <TextBlock Text="{Binding ToastMessage}" Foreground="#eaeaea" FontSize="12" />
         </Border>
 

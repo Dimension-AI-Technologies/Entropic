@@ -47,7 +47,7 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
   const [emptyMode, setEmptyMode] = useState<'all' | 'has_sessions' | 'has_todos' | 'active_only'>(() => {
     const savedResult = getLocalStorageItem('ui.emptyMode');
     const saved = savedResult.success ? savedResult.value : null;
-    return saved === 'all' || saved === 'has_sessions' || saved === 'has_todos' || saved === 'active_only' ? saved : 'has_todos';
+    return saved === 'all' || saved === 'has_sessions' || saved === 'has_todos' || saved === 'active_only' ? saved : 'has_sessions';
   });
 
   // Get ViewModels from container
@@ -213,15 +213,18 @@ export function ProjectView({ activityMode, setActivityMode, spacingMode, onSpac
   }, [projects]);
   
   useEffect(() => {
-    if (!selectedSession && sessions.length > 0) {
-      // Select the most recently modified session
-      const sortedSessions = todosViewModel.getSessionsSortedByDate();
-      if (sortedSessions.length > 0) {
-        setSelectedSession(sortedSessions[0]);
+    if (!selectedSession && selectedMVVMProject && sessions.length > 0) {
+      // Select the most recently modified session FOR THE CURRENT PROJECT
+      const projectSessions = todosViewModel.getSessionsForProject(selectedMVVMProject.path);
+      if (projectSessions.length > 0) {
+        const mostRecent = [...projectSessions].sort((a, b) =>
+          b.lastModified.getTime() - a.lastModified.getTime()
+        )[0];
+        setSelectedSession(mostRecent);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessions.length, todosViewModel]); // Only depend on length change, not objects
+  }, [sessions.length, selectedMVVMProject, todosViewModel]); // Re-run when sessions load or project changes
 
   // REMOVED: These useEffects were causing the auto-selection bug
   // They would reset selection whenever projects/sessions arrays changed

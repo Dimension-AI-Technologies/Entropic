@@ -176,6 +176,11 @@ export function TodoList({
           </div>
         )}
         <div className={`todos-list padding-${spacingMode}`}>
+          {filteredTodos.length === 0 && (
+            <div className="empty-session-message">
+              No todos in this session. Session ID: {selectedSession.id.substring(0, 7)}
+            </div>
+          )}
           {filteredTodos.map((todo, index) => {
             const originalIndex = displayTodos.indexOf(todo);
             const isSelected = selectedIndices.has(originalIndex);

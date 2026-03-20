@@ -223,26 +223,15 @@ export function SingleProjectPane({
     setMergePreview(null);
   };
 
-  // If the current selection is hidden by the filter, auto-select the most recent visible
+  // If the current selection is not in the session list, auto-select the most recent
   useEffect(() => {
     if (!selectedProject || !selectedSession) return;
     const all = todosViewModel.getSessionsForProject(selectedProject.path);
-    const visible = all.filter(s => {
-      switch (emptyMode) {
-        case 'all':
-        case 'has_sessions':
-          return true;
-        case 'has_todos':
-          return Array.isArray(s.todos) && s.todos.length > 0;
-        case 'active_only':
-          return Array.isArray(s.todos) && s.todos.some(t => t.status !== 'completed');
-      }
-    });
-    if (!visible.some(s => s.id === selectedSession.id) && visible.length > 0) {
-      const mostRecent = [...visible].sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())[0];
+    if (!all.some(s => s.id === selectedSession.id) && all.length > 0) {
+      const mostRecent = [...all].sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())[0];
       onSessionSelect(mostRecent);
     }
-  }, [selectedProject, selectedSession, emptyMode, todosViewModel, onSessionSelect]);
+  }, [selectedProject, selectedSession, todosViewModel, onSessionSelect]);
 
   const displayTodos = editedTodos || selectedSession?.todos || [];
 
@@ -258,18 +247,10 @@ export function SingleProjectPane({
   }
 
   // Enrich selected project with live sessions from TodosViewModel
+  // Always show ALL sessions for the selected project — emptyMode only filters
+  // which projects appear in the sidebar, not sessions within a project.
   const allSessions = todosViewModel.getSessionsForProject(selectedProject.path);
-  const filteredSessions = allSessions.filter(s => {
-    switch (emptyMode) {
-      case 'all':
-      case 'has_sessions':
-        return true;
-      case 'has_todos':
-        return Array.isArray(s.todos) && s.todos.length > 0;
-      case 'active_only':
-        return Array.isArray(s.todos) && s.todos.some(t => t.status !== 'completed');
-    }
-  });
+  const filteredSessions = allSessions;
 
   const enrichedProject: Project = {
     path: selectedProject.path,
@@ -285,7 +266,7 @@ export function SingleProjectPane({
       <SessionControls
         selectedProject={enrichedProject}
         selectedSession={selectedSession}
-        onRefresh={onRefresh}
+        onLoadTodos={onRefresh}
         selectedTabs={selectedTabs}
         onStartMerge={startMerge}
         spacingMode={spacingMode}
@@ -301,7 +282,7 @@ export function SingleProjectPane({
       />
       
       {viewMode === 'todo' && (
-        <>
+        <div className="session-content-split">
           <SessionTabs
             selectedProject={enrichedProject}
             selectedSession={selectedSession}
@@ -320,18 +301,18 @@ export function SingleProjectPane({
               setShowDeleteConfirm(true);
             }}
           />
-          
+
           <TodoList
             selectedProject={enrichedProject}
             selectedSession={selectedSession}
             selectedTodoIndex={selectedTodoIndex}
-            onRefresh={onRefresh}
+            onLoadTodos={onRefresh}
             selectedTabs={selectedTabs}
             onTabClick={handleTabClick}
             spacingMode={spacingMode}
             filterState={filterState}
           />
-        </>
+        </div>
       )}
       
       {viewMode === 'prompt' && (
@@ -347,7 +328,7 @@ export function SingleProjectPane({
         onPerformMerge={async () => {}} // Will be handled by MergeDialog itself
         onCloseMergeDialog={handleCloseMergeDialog}
         onSessionSelect={onSessionSelect}
-        onRefresh={onRefresh}
+        onLoadTodos={onRefresh}
       />
     </div>
   );

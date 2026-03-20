@@ -19,4 +19,7 @@ Condense README from verbose feature documentation... (Mathew Burkitt)
 - Redesign GUI with Discord theme and custom nav
 
 - Replace TabControl with button-based view toggl... (Mathew Burkitt)
+- Add animations, boid backdrop, and todo reordering
+
+- Implement BoidBackdrop control with flockin... (Mathew Burkitt)
 

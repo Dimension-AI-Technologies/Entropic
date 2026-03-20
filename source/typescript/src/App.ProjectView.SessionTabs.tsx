@@ -130,30 +130,49 @@ export function SessionTabs({
   }
 
   return (
-    <div className="session-tabs">
-      {selectedProject.sessions && selectedProject.sessions.length ? selectedProject.sessions
-        .sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())
-        .map((session) => {
-        const isSelected = selectedSession?.id === session.id;
-        const isMultiSelected = selectedTabs.has(session.id);
-        
-        return (
-          <div
-            key={session.id}
-            className={`session-tab ${isSelected ? 'active' : ''} ${isMultiSelected ? 'multi-selected' : ''}`}
-            onClick={(e) => onTabClick(e, session)}
-            onContextMenu={(e) => onTabRightClick(e, session)}
-            title={getSessionTooltip(session, selectedProject, isMultiSelected)}
-          >
-            <div className="session-info">
-              <div className="session-id">{session.id.substring(0, 6)}</div>
-              <div className="session-date">
+    <div className="session-column">
+      <div className="session-column-header">
+        Sessions ({selectedProject.sessions ? selectedProject.sessions.length : 0})
+      </div>
+      <div className="session-column-list">
+        {selectedProject.sessions && selectedProject.sessions.length ? selectedProject.sessions
+          .sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())
+          .map((session) => {
+          const isSelected = selectedSession?.id === session.id;
+          const isMultiSelected = selectedTabs.has(session.id);
+          const counts = getStatusCounts(session);
+          const totalTodos = counts.pending + counts.in_progress + counts.completed;
+
+          return (
+            <div
+              key={session.id}
+              className={`session-row ${isSelected ? 'active' : ''} ${isMultiSelected ? 'multi-selected' : ''}`}
+              onClick={(e) => onTabClick(e, session)}
+              onContextMenu={(e) => onTabRightClick(e, session)}
+              title={getSessionTooltip(session, selectedProject, isMultiSelected)}
+            >
+              <div className="session-row-top">
+                <span className="session-id">{session.id.substring(0, 7)}</span>
+                {totalTodos > 0 && (
+                  <span className="session-todo-count">{totalTodos}</span>
+                )}
+              </div>
+              <div className="session-row-date">
                 {formatUKDate(session.lastModified)} {formatUKTime(session.lastModified)}
               </div>
+              {totalTodos > 0 && (
+                <div className="session-row-stats">
+                  {counts.completed > 0 && <span className="stat-done">{counts.completed} done</span>}
+                  {counts.in_progress > 0 && <span className="stat-doing">{counts.in_progress} doing</span>}
+                  {counts.pending > 0 && <span className="stat-pending">{counts.pending} pending</span>}
+                </div>
+              )}
             </div>
-          </div>
-        );
-      }) : null}
+          );
+        }) : (
+          <div className="session-column-empty">No sessions</div>
+        )}
+      </div>
       {selectedTabs.size >= 2 && (
         <button className="merge-button" onClick={onStartMerge}>
           Merge Selected ({selectedTabs.size})

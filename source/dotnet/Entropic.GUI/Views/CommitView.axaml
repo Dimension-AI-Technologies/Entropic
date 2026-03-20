@@ -16,7 +16,7 @@
             <Setter Property="HorizontalGridLinesBrush" Value="#35373b"/>
         </Style>
         <Style Selector="DataGridColumnHeader">
-            <Setter Property="Background" Value="#292b2f"/>
+            <Setter Property="Background" Value="#e6292b2f"/>
             <Setter Property="Foreground" Value="#8e9297"/>
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -28,6 +28,13 @@
             <Setter Property="Foreground" Value="#dcddde"/>
             <Setter Property="FontSize" Value="13"/>
         </Style>
+        <Style Selector="DataGridRow /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Fill" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
         <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
             <Setter Property="Fill" Value="#42464d"/>
         </Style>
@@ -36,9 +43,9 @@
         </Style>
     </UserControl.Styles>
 
-    <DockPanel Background="#36393f">
+    <DockPanel Background="#d936393f">
         <!-- Header bar -->
-        <Border DockPanel.Dock="Top" Background="#292b2f"
+        <Border DockPanel.Dock="Top" Background="#e6292b2f"
                 BorderBrush="#35373b" BorderThickness="0,0,0,1"
                 Padding="12,8">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -54,11 +61,17 @@
             </StackPanel>
         </Border>
 
+        <!-- Error display -->
+        <TextBlock Text="{Binding ErrorMessage}" Foreground="#faa61a"
+                   HorizontalAlignment="Center" VerticalAlignment="Top" FontSize="12"
+                   Margin="0,8" DockPanel.Dock="Top"
+                   IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
         <!-- Empty state -->
         <TextBlock Text="Select a repository in Git View, then click View Commits"
                    Foreground="#72767d" HorizontalAlignment="Center" VerticalAlignment="Center"
                    FontSize="14"
-                   IsVisible="{Binding !SelectedRepoPath, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+                   IsVisible="{Binding SelectedRepoPath, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
 
         <DataGrid ItemsSource="{Binding Commits}" AutoGenerateColumns="False" IsReadOnly="True"
                   Foreground="#dcddde"

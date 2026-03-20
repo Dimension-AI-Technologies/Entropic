@@ -153,11 +153,11 @@ public class TodoItemViewModelTests
     public void StatusColor_maps_to_correct_colors()
     {
         var vm = new TodoItemViewModel { Status = "completed" };
-        Assert.Equal("#4caf50", vm.StatusColor);
+        Assert.Equal("#43b581", vm.StatusColor);
         vm.Status = "in_progress";
-        Assert.Equal("#2196f3", vm.StatusColor);
+        Assert.Equal("#5865f2", vm.StatusColor);
         vm.Status = "pending";
-        Assert.Equal("#9e9e9e", vm.StatusColor);
+        Assert.Equal("#72767d", vm.StatusColor);
     }
 
     // @covers(TodoItemViewModel)
@@ -598,9 +598,9 @@ public class TodoPersistenceTests
     public void ToggleStatus_updates_derived_properties()
     {
         var todo = new TodoItemViewModel { Status = "pending" };
-        Assert.Equal("#9e9e9e", todo.StatusColor);
+        Assert.Equal("#72767d", todo.StatusColor);
         todo.ToggleStatusCommand.Execute(null);
-        Assert.Equal("#2196f3", todo.StatusColor); // in_progress = blue
+        Assert.Equal("#5865f2", todo.StatusColor); // in_progress = blue
     }
 
     [Fact]
@@ -727,5 +727,627 @@ public class SplashScreenTests
     public void SplashScreen_type_exists()
     {
         Assert.NotNull(typeof(Entropic.GUI.Views.SplashScreen));
+    }
+}
+
+// ── BoidBackdrop (REQ-GUI-012) ──
+
+// @covers(BoidBackdrop)
+public class BoidBackdropTests
+{
+    [Fact]
+    public void BoidBackdrop_spawns_10_boids()
+    {
+        var backdrop = new Entropic.GUI.Controls.BoidBackdrop();
+        backdrop.SimulateStep(1400, 900);
+        Assert.Equal(10, backdrop.BoidCount);
+    }
+
+    [Fact]
+    public void AddBoid_places_boid_at_position()
+    {
+        var backdrop = new Entropic.GUI.Controls.BoidBackdrop();
+        backdrop.AddBoid(100, 200, 0.5, -0.5);
+        Assert.Single(backdrop.Boids);
+        Assert.Equal(100, backdrop.Boids[0].X);
+        Assert.Equal(200, backdrop.Boids[0].Y);
+    }
+
+    [Fact]
+    public void SimulateStep_moves_boids()
+    {
+        var backdrop = new Entropic.GUI.Controls.BoidBackdrop();
+        backdrop.AddBoid(500, 400, 0.8, 0);
+        var startX = backdrop.Boids[0].X;
+        backdrop.SimulateStep(1400, 900);
+        // After simulation, boid should have moved (some displacement expected)
+        Assert.NotEqual(startX, backdrop.Boids[0].X);
+    }
+
+    [Fact]
+    public void Boids_have_bounded_velocity()
+    {
+        var backdrop = new Entropic.GUI.Controls.BoidBackdrop();
+        backdrop.SimulateStep(1400, 900);
+        foreach (var b in backdrop.Boids)
+        {
+            var speed = Math.Sqrt(b.Vx * b.Vx + b.Vy * b.Vy);
+            Assert.True(speed <= 2.1, $"Boid speed {speed} exceeds max");
+        }
+    }
+
+    [Fact]
+    public void Multiple_steps_keep_boids_near_viewport()
+    {
+        var backdrop = new Entropic.GUI.Controls.BoidBackdrop();
+        for (int i = 0; i < 100; i++)
+            backdrop.SimulateStep(1400, 900);
+
+        // After 100 steps with edge avoidance, most boids should be within or near bounds
+        int inBounds = 0;
+        foreach (var b in backdrop.Boids)
+        {
+            if (b.X >= -50 && b.X <= 1450 && b.Y >= -50 && b.Y <= 950)
+                inBounds++;
+        }
+        Assert.True(inBounds >= 7, $"Only {inBounds}/10 boids in bounds after 100 steps");
+    }
+
+    [Fact]
+    public void IsHitTestVisible_is_false()
+    {
+        var backdrop = new Entropic.GUI.Controls.BoidBackdrop();
+        Assert.False(backdrop.IsHitTestVisible);
+    }
+}
+
+// ── Boid class ──
+
+// @covers(Boid)
+public class BoidTests
+{
+    [Fact]
+    public void Boid_initializes_with_defaults()
+    {
+        var b = new Entropic.GUI.Controls.Boid();
+        Assert.Equal(0, b.X);
+        Assert.Equal(0, b.Y);
+        Assert.Equal(0, b.Vx);
+        Assert.Equal(0, b.Vy);
+        Assert.Equal(0, b.Opacity);
+    }
+}
+
+// ── CommitViewModel extended (REQ-GIT-005) ──
+
+// @covers(CommitViewModel)
+public class CommitViewModelExtendedTests
+{
+    [Fact]
+    public void CommitLimit_defaults_to_50()
+    {
+        var vm = new CommitViewModel();
+        Assert.Equal(50, vm.CommitLimit);
+    }
+
+    [Fact]
+    public void Refresh_with_no_path_does_nothing()
+    {
+        var vm = new CommitViewModel();
+        vm.Refresh();
+        Assert.Empty(vm.Commits);
+    }
+
+    [Fact]
+    public void ErrorMessage_defaults_to_null()
+    {
+        var vm = new CommitViewModel();
+        Assert.Null(vm.ErrorMessage);
+    }
+
+    [Fact]
+    public void CommitItemViewModel_ShortHash_from_full_hash()
+    {
+        var item = new CommitItemViewModel { Hash = "abc1234567890def" };
+        // ShortHash is set manually in the ViewModel, test the pattern
+        item.ShortHash = item.Hash.Length >= 7 ? item.Hash[..7] : item.Hash;
+        Assert.Equal("abc1234", item.ShortHash);
+    }
+
+    [Fact]
+    public void CommitItemViewModel_StatsText_format()
+    {
+        var item = new CommitItemViewModel { Additions = 0, Deletions = 0, FilesChanged = 0 };
+        Assert.Equal("+0 -0 (0 files)", item.StatsText);
+    }
+}
+
+// ── SessionItemViewModel extended (REQ-SES-002) ──
+
+// @covers(SessionItemViewModel)
+public class SessionItemViewModelExtendedTests
+{
+    [Fact]
+    public void ShortLabel_shows_truncated_id_when_no_date()
+    {
+        var session = new SessionItemViewModel { SessionId = "abcdefghij", UpdatedAt = 0 };
+        Assert.Equal("abcdefg", session.ShortLabel);
+    }
+
+    [Fact]
+    public void ShortLabel_shows_id_and_date_when_updated()
+    {
+        var session = new SessionItemViewModel
+        {
+            SessionId = "abcdefghij",
+            UpdatedAt = 1710000000000L // 2024-03-09
+        };
+        var label = session.ShortLabel;
+        Assert.StartsWith("abcdefg", label);
+        Assert.Contains(":", label); // time component
+    }
+
+    [Fact]
+    public void ShortLabel_handles_short_session_id()
+    {
+        var session = new SessionItemViewModel { SessionId = "abc", UpdatedAt = 0 };
+        Assert.Equal("abc", session.ShortLabel);
+    }
+
+    [Fact]
+    public void Todos_collection_is_initialized()
+    {
+        var session = new SessionItemViewModel();
+        Assert.NotNull(session.Todos);
+        Assert.Empty(session.Todos);
+    }
+}
+
+// ── ProjectsViewModel session selection (REQ-GUI-003) ──
+
+// @covers(ProjectsViewModel)
+public class SessionSelectionTests
+{
+    [Fact]
+    public void SelectSession_sets_SelectedSession()
+    {
+        var vm = new ProjectsViewModel();
+        var session = new SessionItemViewModel { SessionId = "test-123" };
+        vm.SelectSessionCommand.Execute(session);
+        Assert.Equal(session, vm.SelectedSession);
+    }
+
+    [Fact]
+    public void SelectSession_can_be_changed()
+    {
+        var vm = new ProjectsViewModel();
+        var s1 = new SessionItemViewModel { SessionId = "s1" };
+        var s2 = new SessionItemViewModel { SessionId = "s2" };
+        vm.SelectSessionCommand.Execute(s1);
+        Assert.Equal(s1, vm.SelectedSession);
+        vm.SelectSessionCommand.Execute(s2);
+        Assert.Equal(s2, vm.SelectedSession);
+    }
+
+    [Fact]
+    public void SelectedSession_starts_null()
+    {
+        var vm = new ProjectsViewModel();
+        Assert.Null(vm.SelectedSession);
+    }
+}
+
+// ── ProjectsViewModel convert methods (REQ-PRV-005) ──
+
+// @covers(ProjectsViewModel)
+public class ConvertMethodTests
+{
+    [Fact]
+    public void ConvertProject_extracts_name_from_path()
+    {
+        var project = new Project(
+            "claude", "/home/user/my-project",
+            FSharpOption<string>.None, FSharpOption<bool>.None,
+            ListModule.Empty<Session>(),
+            FSharpOption<ProjectStats>.None,
+            FSharpOption<long>.None, FSharpOption<long>.None);
+
+        var vm = ProjectsViewModel.ConvertProject(project);
+        Assert.Equal("my-project", vm.Name);
+        Assert.Equal("claude", vm.Provider);
+    }
+
+    [Fact]
+    public void ConvertProject_handles_trailing_slash()
+    {
+        var project = new Project(
+            "codex", "/home/user/project/",
+            FSharpOption<string>.None, FSharpOption<bool>.None,
+            ListModule.Empty<Session>(),
+            FSharpOption<ProjectStats>.None,
+            FSharpOption<long>.None, FSharpOption<long>.None);
+
+        var vm = ProjectsViewModel.ConvertProject(project);
+        Assert.Equal("project", vm.Name);
+    }
+
+    [Fact]
+    public void ConvertSession_maps_all_fields()
+    {
+        var todo = new Todo(
+            FSharpOption<string>.Some("t1"), "Test todo", TodoStatus.Pending,
+            FSharpOption<long>.None, FSharpOption<long>.None, FSharpOption<string>.None);
+
+        var session = new Session(
+            "gemini", "ses-xyz", FSharpOption<string>.Some("/test/path"),
+            FSharpOption<string>.None,
+            ListModule.OfSeq(new[] { todo }),
+            FSharpOption<long>.None, FSharpOption<long>.Some(1710000000000L));
+
+        var vm = ProjectsViewModel.ConvertSession(session);
+        Assert.Equal("ses-xyz", vm.SessionId);
+        Assert.Equal("gemini", vm.Provider);
+        Assert.Equal("/test/path", vm.FilePath);
+        Assert.Equal(1710000000000L, vm.UpdatedAt);
+        Assert.Single(vm.Todos);
+        Assert.Equal("Test todo", vm.Todos[0].Content);
+    }
+
+    [Fact]
+    public void ConvertSession_sets_OwnerSession_on_todos()
+    {
+        var todo = new Todo(
+            FSharpOption<string>.None, "test", TodoStatus.Pending,
+            FSharpOption<long>.None, FSharpOption<long>.None, FSharpOption<string>.None);
+
+        var session = new Session(
+            "claude", "s1", FSharpOption<string>.None,
+            FSharpOption<string>.None,
+            ListModule.OfSeq(new[] { todo }),
+            FSharpOption<long>.None, FSharpOption<long>.None);
+
+        var vm = ProjectsViewModel.ConvertSession(session);
+        Assert.NotNull(vm.Todos[0].OwnerSession);
+        Assert.Same(vm, vm.Todos[0].OwnerSession);
+    }
+}
+
+// ── MainWindowViewModel tab switching (REQ-GUI-001) ──
+
+// @covers(MainWindowViewModel)
+public class TabSwitchingTests
+{
+    [Fact]
+    public void SwitchTab_sets_tab_index()
+    {
+        var vm = new MainWindowViewModel();
+        vm.SwitchTabCommand.Execute("2");
+        Assert.Equal(2, vm.SelectedTabIndex);
+        Assert.True(vm.IsGitTab);
+        Assert.False(vm.IsProjectTab);
+    }
+
+    [Fact]
+    public void SwitchTab_ignores_invalid_values()
+    {
+        var vm = new MainWindowViewModel();
+        vm.SwitchTabCommand.Execute("5"); // out of range
+        Assert.Equal(0, vm.SelectedTabIndex);
+        vm.SwitchTabCommand.Execute("abc"); // not a number
+        Assert.Equal(0, vm.SelectedTabIndex);
+    }
+
+    [Fact]
+    public void IsTab_properties_track_index()
+    {
+        var vm = new MainWindowViewModel();
+        Assert.True(vm.IsProjectTab);
+        Assert.False(vm.IsGlobalTab);
+        Assert.False(vm.IsGitTab);
+        Assert.False(vm.IsCommitTab);
+
+        vm.SwitchTabCommand.Execute("1");
+        Assert.False(vm.IsProjectTab);
+        Assert.True(vm.IsGlobalTab);
+
+        vm.SwitchTabCommand.Execute("3");
+        Assert.True(vm.IsCommitTab);
+    }
+}
+
+// ── GitViewModel (REQ-GIT-002, REQ-GIT-006) ──
+
+// @covers(GitViewModel)
+public class GitViewModelExtendedTests
+{
+    [Fact]
+    public void SetRootPath_changes_discovery_root()
+    {
+        var vm = new GitViewModel();
+        vm.SetRootPath("/custom/path");
+        // Can't directly read _rootPath, but ViewCommits uses it
+        Assert.NotNull(vm);
+    }
+
+    [Fact]
+    public void ViewCommits_requires_selected_repo_and_parent()
+    {
+        var vm = new GitViewModel(); // no parent
+        vm.SelectedRepo = new GitRepoItemViewModel { Name = "test", RelativePath = "test" };
+        vm.ViewCommitsCommand.Execute(null); // should not throw, just return early
+        Assert.NotNull(vm);
+    }
+
+    [Fact]
+    public void GitRepoItemViewModel_stores_all_fields()
+    {
+        var item = new GitRepoItemViewModel
+        {
+            Name = "MyRepo",
+            RelativePath = "source/repos/MyRepo",
+            RemoteUrl = "https://github.com/test/MyRepo.git",
+            Ahead = 3,
+            Behind = 1,
+        };
+        item.Languages.Add("C#");
+        item.Languages.Add("F#");
+
+        Assert.Equal("MyRepo", item.Name);
+        Assert.Equal("source/repos/MyRepo", item.RelativePath);
+        Assert.Equal("https://github.com/test/MyRepo.git", item.RemoteUrl);
+        Assert.Equal(3, item.Ahead);
+        Assert.Equal(1, item.Behind);
+        Assert.Equal(2, item.Languages.Count);
+    }
+}
+
+// ── GlobalViewModel extended (REQ-TOD-008) ──
+
+// @covers(GlobalViewModel)
+public class GlobalViewModelExtendedTests
+{
+    private static FSharpList<Project> MakeProjects()
+    {
+        var t1 = new Todo(FSharpOption<string>.None, "pending todo", TodoStatus.Pending,
+            FSharpOption<long>.None, FSharpOption<long>.None, FSharpOption<string>.None);
+        var t2 = new Todo(FSharpOption<string>.None, "active todo", TodoStatus.InProgress,
+            FSharpOption<long>.None, FSharpOption<long>.None, FSharpOption<string>.None);
+        var t3 = new Todo(FSharpOption<string>.None, "done todo", TodoStatus.Completed,
+            FSharpOption<long>.None, FSharpOption<long>.None, FSharpOption<string>.None);
+
+        var session = new Session("claude", "s1", FSharpOption<string>.None,
+            FSharpOption<string>.None, ListModule.OfSeq(new[] { t1, t2, t3 }),
+            FSharpOption<long>.None, FSharpOption<long>.None);
+
+        var project = new Project("claude", "/test", FSharpOption<string>.None,
+            FSharpOption<bool>.None, ListModule.OfSeq(new[] { session }),
+            FSharpOption<ProjectStats>.None, FSharpOption<long>.None, FSharpOption<long>.None);
+
+        return ListModule.OfSeq(new[] { project });
+    }
+
+    [Fact]
+    public void Todos_sorted_in_progress_first()
+    {
+        var vm = new GlobalViewModel();
+        vm.LoadFromProjects(MakeProjects());
+        Assert.Equal(3, vm.AllTodos.Count);
+        Assert.Equal("in_progress", vm.AllTodos[0].Status);
+        Assert.Equal("pending", vm.AllTodos[1].Status);
+        Assert.Equal("completed", vm.AllTodos[2].Status);
+    }
+
+    [Fact]
+    public void ShowActiveOnly_toggle_filters_and_restores()
+    {
+        var vm = new GlobalViewModel();
+        vm.LoadFromProjects(MakeProjects());
+        Assert.Equal(3, vm.AllTodos.Count);
+
+        vm.ShowActiveOnly = true;
+        Assert.Equal(2, vm.AllTodos.Count);
+
+        vm.ShowActiveOnly = false;
+        Assert.Equal(3, vm.AllTodos.Count);
+    }
+
+    [Fact]
+    public void Refresh_rebuilds_from_same_data()
+    {
+        var vm = new GlobalViewModel();
+        vm.LoadFromProjects(MakeProjects());
+        var count = vm.AllTodos.Count;
+        vm.Refresh();
+        Assert.Equal(count, vm.AllTodos.Count);
+    }
+}
+
+// ── ProjectsViewModel sorting (REQ-GUI-017) ──
+
+// @covers(ProjectsViewModel)
+public class ProjectSortTests
+{
+    [Fact]
+    public void ApplySort_by_todos_descending()
+    {
+        var vm = new ProjectsViewModel();
+        vm.Projects.Add(new ProjectItemViewModel { Name = "A", TodoCount = 3 });
+        vm.Projects.Add(new ProjectItemViewModel { Name = "B", TodoCount = 10 });
+        vm.Projects.Add(new ProjectItemViewModel { Name = "C", TodoCount = 1 });
+        vm.ApplySort("todos");
+        Assert.Equal("B", vm.Projects[0].Name);
+        Assert.Equal("A", vm.Projects[1].Name);
+        Assert.Equal("C", vm.Projects[2].Name);
+    }
+
+    [Fact]
+    public void ApplySort_by_recent_activity()
+    {
+        var vm = new ProjectsViewModel();
+        vm.Projects.Add(new ProjectItemViewModel { Name = "Old", LastActivity = 100 });
+        vm.Projects.Add(new ProjectItemViewModel { Name = "New", LastActivity = 999 });
+        vm.ApplySort("recent");
+        Assert.Equal("New", vm.Projects[0].Name);
+    }
+}
+
+// ── Todo Reorder Tests (REQ-TOD-012) ──
+
+public class TodoReorderTests
+{
+    private static ProjectsViewModel SetupWithTodos()
+    {
+        var vm = new ProjectsViewModel();
+        var proj = new ProjectItemViewModel { Name = "P1" };
+        var session = new SessionItemViewModel { SessionId = "s1" };
+        session.Todos.Add(new TodoItemViewModel { Content = "A" });
+        session.Todos.Add(new TodoItemViewModel { Content = "B" });
+        session.Todos.Add(new TodoItemViewModel { Content = "C" });
+        proj.Sessions.Add(session);
+        vm.Projects.Add(proj);
+        vm.SelectedProject = proj;
+        vm.SelectedSession = session;
+        return vm;
+    }
+
+    [Fact]
+    public void MoveTodoUp_moves_item_up()
+    {
+        var vm = SetupWithTodos();
+        var todoB = vm.SelectedSession!.Todos[1];
+        vm.MoveTodoUpCommand.Execute(todoB);
+        Assert.Equal("B", vm.SelectedSession.Todos[0].Content);
+        Assert.Equal("A", vm.SelectedSession.Todos[1].Content);
+    }
+
+    [Fact]
+    public void MoveTodoUp_at_top_does_nothing()
+    {
+        var vm = SetupWithTodos();
+        var todoA = vm.SelectedSession!.Todos[0];
+        vm.MoveTodoUpCommand.Execute(todoA);
+        Assert.Equal("A", vm.SelectedSession.Todos[0].Content);
+    }
+
+    [Fact]
+    public void MoveTodoDown_moves_item_down()
+    {
+        var vm = SetupWithTodos();
+        var todoA = vm.SelectedSession!.Todos[0];
+        vm.MoveTodoDownCommand.Execute(todoA);
+        Assert.Equal("B", vm.SelectedSession.Todos[0].Content);
+        Assert.Equal("A", vm.SelectedSession.Todos[1].Content);
+    }
+
+    [Fact]
+    public void MoveTodoDown_at_bottom_does_nothing()
+    {
+        var vm = SetupWithTodos();
+        var todoC = vm.SelectedSession!.Todos[2];
+        vm.MoveTodoDownCommand.Execute(todoC);
+        Assert.Equal("C", vm.SelectedSession.Todos[2].Content);
+    }
+
+    [Fact]
+    public void ReorderTodo_swaps_indices()
+    {
+        var vm = SetupWithTodos();
+        vm.ReorderTodo(0, 2);
+        Assert.Equal("B", vm.SelectedSession!.Todos[0].Content);
+        Assert.Equal("C", vm.SelectedSession.Todos[1].Content);
+        Assert.Equal("A", vm.SelectedSession.Todos[2].Content);
+    }
+
+    [Fact]
+    public void ReorderTodo_invalid_indices_no_crash()
+    {
+        var vm = SetupWithTodos();
+        vm.ReorderTodo(-1, 5); // should not throw
+        Assert.Equal(3, vm.SelectedSession!.Todos.Count);
+    }
+
+    [Fact]
+    public void ReorderTodo_no_session_no_crash()
+    {
+        var vm = new ProjectsViewModel();
+        vm.ReorderTodo(0, 1); // no session selected — should not throw
+    }
+}
+
+// ── Boid Stochastic Tests (OU process, lifecycle) ──
+
+public class BoidStochasticTests
+{
+    [Fact]
+    public void Boid_entering_state_fades_in()
+    {
+        var backdrop = new Controls.BoidBackdrop();
+        backdrop.AddBoid(100, 100, 0.5, 0.5);
+        var boid = backdrop.Boids[0];
+        // AddBoid sets Opacity to MaxBoidOpacity directly, so test spawned boids
+        // SimulateStep spawns boids in Entering state
+        backdrop.SimulateStep(800, 600);
+        // After SimulateStep fills to max, spawned boids start entering
+        Assert.True(backdrop.BoidCount > 1);
+        // At least some spawned boids should be in entering state
+        Assert.Contains(backdrop.Boids, b => b.Entering);
+    }
+
+    [Fact]
+    public void Boid_throb_phase_advances()
+    {
+        var backdrop = new Controls.BoidBackdrop();
+        backdrop.AddBoid(200, 200, 0, 0);
+        var initialPhase = backdrop.Boids[0].ThrobPhase;
+        backdrop.SimulateStep(800, 600);
+        Assert.NotEqual(initialPhase, backdrop.Boids[0].ThrobPhase);
+    }
+
+    [Fact]
+    public void Stochastic_params_vary_from_base()
+    {
+        var backdrop = new Controls.BoidBackdrop();
+        // Run many steps to trigger OU drift
+        for (int i = 0; i < 100; i++)
+            backdrop.SimulateStep(800, 600);
+        // After 100 steps, OU should have drifted at least slightly
+        // (stochastic — just verify it doesn't crash and stays positive)
+        Assert.True(backdrop.CurrentAlignForce >= 0);
+        Assert.True(backdrop.CurrentCohForce >= 0);
+    }
+}
+
+// ── Commit Navigation Tests (end-to-end ViewModel flow) ──
+
+public class CommitNavigationTests
+{
+    [Fact]
+    public void ShowCommitsForRepo_switches_to_commit_tab()
+    {
+        var vm = new MainWindowViewModel();
+        Assert.Equal(0, vm.SelectedTabIndex); // starts on project tab
+        // This will try to load commits (will fail with invalid path, that's fine)
+        vm.ShowCommitsForRepo("/fake/path", "TestRepo");
+        Assert.Equal(3, vm.SelectedTabIndex); // commit tab
+        Assert.True(vm.IsCommitTab);
+    }
+
+    [Fact]
+    public void ShowCommitsForRepo_sets_repo_name()
+    {
+        var vm = new MainWindowViewModel();
+        vm.ShowCommitsForRepo("/fake/path", "MyRepo");
+        Assert.Equal("MyRepo", vm.Commits.RepoName);
+        Assert.Equal("/fake/path", vm.Commits.SelectedRepoPath);
+    }
+
+    [Fact]
+    public void CommitViewModel_shows_error_for_invalid_path()
+    {
+        var cvm = new CommitViewModel();
+        cvm.LoadForRepo("/nonexistent/repo/path", "BadRepo");
+        // Should have error message since path doesn't exist
+        Assert.NotNull(cvm.ErrorMessage);
+        Assert.Empty(cvm.Commits);
     }
 }

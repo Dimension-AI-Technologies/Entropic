@@ -175,14 +175,19 @@ module GitIntegration =
         match runGit repoPath (sprintf "log -%d --format=%%H|%%aI|%%s|%%aN|%%aE --shortstat" limit) with
         | Error e -> Error e
         | Ok output ->
-            let lines = output.Split('\n') |> Array.toList
+            // Strip \r for Windows, filter blank lines, then pair format lines with stat lines
+            let lines =
+                output.Split('\n')
+                |> Array.map (fun l -> l.TrimEnd('\r'))
+                |> Array.filter (fun l -> l.Length > 0)
+                |> Array.toList
             let rec parse (lines: string list) (acc: GitCommit list) =
                 match lines with
                 | [] -> List.rev acc
                 | line :: rest when line.Contains("|") ->
                     let parts = line.Split('|')
                     if parts.Length >= 5 then
-                        // Next line might be shortstat
+                        // After filtering blanks, next line is shortstat (if it exists)
                         let stats, remaining =
                             match rest with
                             | statLine :: rest2 when statLine.Contains("changed") ->
@@ -197,7 +202,7 @@ module GitIntegration =
                             | _ -> { Additions = 0; Deletions = 0; TotalLines = 0; FilesAdded = 0; FilesChanged = 0; FilesDeleted = 0 }, rest
                         let commit = {
                             Hash = parts.[0]; Date = parts.[1]; Message = parts.[2]
-                            AuthorName = parts.[3]; AuthorEmail = Some parts.[4]
+                            AuthorName = parts.[3]; AuthorEmail = Some (parts.[4].TrimEnd())
                             CoAuthors = []; Stats = stats
                         }
                         parse remaining (commit :: acc)

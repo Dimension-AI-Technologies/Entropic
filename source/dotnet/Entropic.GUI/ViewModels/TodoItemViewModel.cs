@@ -69,7 +69,7 @@ public partial class TodoItemViewModel : ViewModelBase
         OnPropertyChanged(nameof(StatusColor));
         OnPropertyChanged(nameof(StatusIcon));
         OnPropertyChanged(nameof(DisplayText));
-        PersistSession();
+        PersistOwnerSession();
     }
 
     // @must_test(REQ-TOD-004)
@@ -84,7 +84,7 @@ public partial class TodoItemViewModel : ViewModelBase
     {
         IsEditing = false;
         OnPropertyChanged(nameof(DisplayText));
-        PersistSession();
+        PersistOwnerSession();
     }
 
     // @must_test(REQ-TOD-005)
@@ -93,13 +93,13 @@ public partial class TodoItemViewModel : ViewModelBase
     {
         if (OwnerSession == null) return;
         OwnerSession.Todos.Remove(this);
-        PersistSession();
+        PersistOwnerSession();
     }
 
     public bool CanDelete => true;
 
     /// Persist the owning session's todo list to disk via F# Core.
-    private void PersistSession()
+    public void PersistOwnerSession()
     {
         if (OwnerSession?.FilePath == null) return;
 

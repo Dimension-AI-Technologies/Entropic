@@ -20,13 +20,40 @@
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
         </Style>
         <Style Selector="Button.filterPill:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#3a3d42"/>
         </Style>
+        <!-- Session tab buttons -->
+        <Style Selector="Button.sessionTab">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#8e9297"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                    <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.sessionTab:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#3a3d42"/>
+            <Setter Property="BorderBrush" Value="#5865f2"/>
+        </Style>
         <!-- Sidebar project list -->
         <Style Selector="ListBox.projectList">
-            <Setter Property="Background" Value="#2f3136"/>
+            <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
         </Style>
@@ -49,13 +76,35 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Margin" Value="0,0,0,2"/>
         </Style>
+        <!-- Todo card hover + shadow -->
+        <Style Selector="ListBox.todoList ListBoxItem Border">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                    <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+            <Setter Property="BoxShadow" Value="0 1 3 0 rgba(0,0,0,0.15)"/>
+        </Style>
+        <Style Selector="ListBox.todoList ListBoxItem:pointerover Border">
+            <Setter Property="Background" Value="#35373b"/>
+            <Setter Property="BoxShadow" Value="0 2 8 0 rgba(0,0,0,0.3)"/>
+        </Style>
+        <!-- Project list hover transition -->
+        <Style Selector="ListBox.projectList ListBoxItem /template/ ContentPresenter">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
     </UserControl.Styles>
 
     <Grid ColumnDefinitions="260,Auto,*,Auto,280">
         <!-- Left pane: Project list -->
-        <DockPanel Grid.Column="0" Background="#2f3136">
+        <DockPanel Grid.Column="0" Background="#e02f3136">
             <!-- Filter bar -->
-            <Border DockPanel.Dock="Top" Background="#292b2f"
+            <Border DockPanel.Dock="Top" Background="#e6292b2f"
                     BorderBrush="#35373b" BorderThickness="0,0,0,1"
                     Padding="8,6">
                 <StackPanel Orientation="Horizontal">
@@ -105,66 +154,83 @@
 
         <GridSplitter Grid.Column="1" Width="1" Background="#35373b" />
 
-        <!-- Middle pane: Session tabs + todo list -->
-        <DockPanel Grid.Column="2" Background="#36393f">
-            <TabControl DockPanel.Dock="Top" ItemsSource="{Binding SelectedProject.Sessions}"
-                        SelectedIndex="{Binding SelectedSessionIndex}"
-                        Background="#2f3136" Padding="0">
-                <TabControl.ItemTemplate>
-                    <DataTemplate DataType="vm:SessionItemViewModel">
-                        <TextBlock Text="{Binding SessionId}" FontSize="11"
-                                   Foreground="#b9bbbe" MaxWidth="120"
-                                   TextTrimming="CharacterEllipsis"/>
+        <!-- Middle pane: Session strip (horizontal scroll) + todo list below -->
+        <DockPanel Grid.Column="2" Background="#d936393f">
+            <!-- Session tab strip — fixed height, horizontal scroll -->
+            <Border DockPanel.Dock="Top" Background="#e02f3136"
+                    BorderBrush="#35373b" BorderThickness="0,0,0,1"
+                    Height="38">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding SelectedProject.Sessions}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="vm:SessionItemViewModel">
+                                <Button Classes="sessionTab"
+                                        Content="{Binding ShortLabel}"
+                                        Command="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).SelectSessionCommand}"
+                                        CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Border>
+
+            <!-- Todo list for selected session -->
+            <ListBox Classes="todoList"
+                     ItemsSource="{Binding SelectedSession.Todos}"
+                     Margin="8"
+                     IsVisible="{Binding SelectedSession, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate DataType="vm:TodoItemViewModel">
+                        <Border Background="#2f3136" CornerRadius="4"
+                                Padding="10,8" Margin="0,0,0,4"
+                                BorderBrush="#35373b" BorderThickness="1">
+                            <Grid ColumnDefinitions="24,*,Auto">
+                                <TextBlock Grid.Column="0" Text="{Binding StatusIcon}"
+                                           Foreground="{Binding StatusColor}"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding DisplayText}"
+                                           Foreground="#dcddde" FontSize="13"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap" Margin="8,0"/>
+                                <Button Grid.Column="2" Content="Toggle"
+                                        Command="{Binding ToggleStatusCommand}"
+                                        FontSize="10" Padding="8,3"
+                                        Background="#292b2f" Foreground="#b9bbbe"
+                                        BorderBrush="#35373b" BorderThickness="1"
+                                        CornerRadius="3" Cursor="Hand"/>
+                            </Grid>
+                        </Border>
                     </DataTemplate>
-                </TabControl.ItemTemplate>
-                <TabControl.ContentTemplate>
-                    <DataTemplate DataType="vm:SessionItemViewModel">
-                        <ListBox Classes="todoList" ItemsSource="{Binding Todos}" Margin="8">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate DataType="vm:TodoItemViewModel">
-                                    <Border Background="#2f3136" CornerRadius="4"
-                                            Padding="10,8" Margin="0,0,0,4"
-                                            BorderBrush="#35373b" BorderThickness="1">
-                                        <Grid ColumnDefinitions="24,*,Auto">
-                                            <TextBlock Grid.Column="0" Text="{Binding StatusIcon}"
-                                                       Foreground="{Binding StatusColor}"
-                                                       FontSize="14"
-                                                       VerticalAlignment="Center"
-                                                       HorizontalAlignment="Center"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding DisplayText}"
-                                                       Foreground="#dcddde" FontSize="13"
-                                                       VerticalAlignment="Center"
-                                                       TextWrapping="Wrap" Margin="8,0"/>
-                                            <Button Grid.Column="2" Content="Toggle"
-                                                    Command="{Binding ToggleStatusCommand}"
-                                                    FontSize="10" Padding="8,3"
-                                                    Background="#292b2f" Foreground="#b9bbbe"
-                                                    BorderBrush="#35373b" BorderThickness="1"
-                                                    CornerRadius="3" Cursor="Hand"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                            <!-- REQ-GUI-004: Context menu on todos -->
-                            <ListBox.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="Toggle Status" />
-                                    <MenuItem Header="Edit" />
-                                    <Separator />
-                                    <MenuItem Header="Delete" />
-                                </ContextMenu>
-                            </ListBox.ContextMenu>
-                        </ListBox>
-                    </DataTemplate>
-                </TabControl.ContentTemplate>
-            </TabControl>
+                </ListBox.ItemTemplate>
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Toggle Status" />
+                        <MenuItem Header="Edit" />
+                        <Separator />
+                        <MenuItem Header="Delete" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+            </ListBox>
+
+            <!-- Empty state when no session selected -->
+            <TextBlock Text="Select a session above" Foreground="#72767d"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13"
+                       IsVisible="{Binding SelectedSession, Converter={x:Static ObjectConverters.IsNull}}" />
         </DockPanel>
 
         <GridSplitter Grid.Column="3" Width="1" Background="#35373b" />
 
         <!-- Right pane: Summary for selected project -->
-        <DockPanel Grid.Column="4" Background="#2f3136">
-            <Border DockPanel.Dock="Top" Background="#292b2f"
+        <DockPanel Grid.Column="4" Background="#e02f3136">
+            <Border DockPanel.Dock="Top" Background="#e6292b2f"
                     BorderBrush="#35373b" BorderThickness="0,0,0,1"
                     Padding="12,8">
                 <TextBlock Text="Summary" Foreground="#dcddde" FontSize="13" FontWeight="SemiBold"/>

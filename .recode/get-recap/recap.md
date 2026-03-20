@@ -213,3 +213,21 @@ dist, coverage, and tsbuildinfo to .gitignore for TypeScript builds.
 - Update test discovery paths and add screenshots
   Author: Mathew Burkitt
 
+
+---
+
+## Commit: 2026-03-20 20:30
+
+- feat: add animations, boid backdrop, and todo reordering
+
+- Implement BoidBackdrop control with flocking animation and stochastic behavior
+- Add todo reordering with Ctrl+Up/Down shortcuts and drag-and-drop support
+- Refactor session management from tabs to vertical sidebar layout
+- Add comprehensive test suite covering ViewModels and UI behaviors
+- Implement smooth animations and transitions (0.15-0.2s) throughout UI
+- Fix Git log parsing for Windows line endings and whitespace handling
+- Add error message display and handling to CommitViewModel
+- Update colors from Material Design to Discord theme palette
+- Rebuild assemblies with updated version metadata
+  Author: Mathew Burkitt
+

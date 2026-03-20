@@ -48,7 +48,16 @@ public partial class CommitViewModel : ViewModelBase
                     FilesChanged = c.Stats.FilesChanged,
                 }));
         }
+        else
+        {
+            // Store error for debugging
+            ErrorMessage = result.ErrorValue;
+            Commits = new ObservableCollection<CommitItemViewModel>();
+        }
     }
+
+    [ObservableProperty]
+    private string? _errorMessage;
 }
 
 public partial class CommitItemViewModel : ViewModelBase
