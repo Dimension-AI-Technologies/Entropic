@@ -30,6 +30,19 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private int _selectedTabIndex;
 
+    public bool IsProjectTab => SelectedTabIndex == 0;
+    public bool IsGlobalTab => SelectedTabIndex == 1;
+    public bool IsGitTab => SelectedTabIndex == 2;
+    public bool IsCommitTab => SelectedTabIndex == 3;
+
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsProjectTab));
+        OnPropertyChanged(nameof(IsGlobalTab));
+        OnPropertyChanged(nameof(IsGitTab));
+        OnPropertyChanged(nameof(IsCommitTab));
+    }
+
     [ObservableProperty]
     private string _statusText = "Entropic — loading...";
 
@@ -172,6 +185,20 @@ public partial class MainWindowViewModel : ViewModelBase
     private void ToggleActivityMode()
     {
         ActivityModeEnabled = !ActivityModeEnabled;
+    }
+
+    [RelayCommand]
+    private void SwitchTab(string index)
+    {
+        if (int.TryParse(index, out var i) && i >= 0 && i <= 3)
+            SelectedTabIndex = i;
+    }
+
+    [RelayCommand]
+    private void SetSpacing(string mode)
+    {
+        SpacingMode = mode;
+        OnPropertyChanged(nameof(SpacingPixels));
     }
 
     // @must_test(REQ-GUI-017)

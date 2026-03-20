@@ -7,15 +7,52 @@
              x:Class="Entropic.GUI.Views.GlobalView"
              x:DataType="vm:GlobalViewModel">
 
-    <DockPanel>
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,4">
-            <CheckBox Content="Active only" IsChecked="{Binding ShowActiveOnly}" Foreground="#a2a7ad" />
-        </StackPanel>
+    <UserControl.Styles>
+        <Style Selector="DataGrid">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="RowBackground" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#35373b"/>
+        </Style>
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Background" Value="#292b2f"/>
+            <Setter Property="Foreground" Value="#8e9297"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="8,8"/>
+            <Setter Property="BorderBrush" Value="#35373b"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        </Style>
+        <Style Selector="DataGridRow">
+            <Setter Property="Foreground" Value="#dcddde"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="#42464d"/>
+        </Style>
+        <Style Selector="DataGridCell">
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Background="#36393f">
+        <!-- Toolbar -->
+        <Border DockPanel.Dock="Top" Background="#292b2f"
+                BorderBrush="#35373b" BorderThickness="0,0,0,1"
+                Padding="12,6">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="ALL TODOS" Foreground="#8e9297" FontSize="11"
+                           FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                <CheckBox Content="Active only" IsChecked="{Binding ShowActiveOnly}"
+                          Foreground="#b9bbbe" FontSize="12"/>
+            </StackPanel>
+        </Border>
         <DataGrid ItemsSource="{Binding AllTodos}" AutoGenerateColumns="False" IsReadOnly="True"
-                  Background="Transparent" Foreground="#e0e0e0">
+                  Foreground="#dcddde">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Status" Binding="{Binding StatusIcon}" Width="60" />
-                <DataGridTextColumn Header="Content" Binding="{Binding DisplayText}" Width="*" />
+                <DataGridTextColumn Header="STATUS" Binding="{Binding StatusIcon}" Width="90" />
+                <DataGridTextColumn Header="CONTENT" Binding="{Binding DisplayText}" Width="*" />
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

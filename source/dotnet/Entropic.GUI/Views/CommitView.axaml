@@ -7,28 +7,68 @@
              x:Class="Entropic.GUI.Views.CommitView"
              x:DataType="vm:CommitViewModel">
 
-    <DockPanel>
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,4">
-            <TextBlock Text="Repository: " Foreground="#a2a7ad" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding RepoName}" Foreground="#e0e0e0" FontWeight="Bold" VerticalAlignment="Center" />
-            <TextBlock Text=" — " Foreground="#666" VerticalAlignment="Center"
-                       IsVisible="{Binding SelectedRepoPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-            <TextBlock Text="{Binding Commits.Count, StringFormat='{}{0} commits'}" Foreground="#a2a7ad" VerticalAlignment="Center" />
-        </StackPanel>
+    <UserControl.Styles>
+        <Style Selector="DataGrid">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="RowBackground" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#35373b"/>
+        </Style>
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Background" Value="#292b2f"/>
+            <Setter Property="Foreground" Value="#8e9297"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="8,8"/>
+            <Setter Property="BorderBrush" Value="#35373b"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        </Style>
+        <Style Selector="DataGridRow">
+            <Setter Property="Foreground" Value="#dcddde"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="#42464d"/>
+        </Style>
+        <Style Selector="DataGridCell">
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+    </UserControl.Styles>
 
-        <TextBlock Text="Select a repository in Git View, then click 'View Commits'"
-                   Foreground="#666" HorizontalAlignment="Center" VerticalAlignment="Center"
+    <DockPanel Background="#36393f">
+        <!-- Header bar -->
+        <Border DockPanel.Dock="Top" Background="#292b2f"
+                BorderBrush="#35373b" BorderThickness="0,0,0,1"
+                Padding="12,8">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="COMMITS" Foreground="#8e9297" FontSize="11"
+                           FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <TextBlock Text="{Binding RepoName}" Foreground="#dcddde" FontWeight="SemiBold"
+                           FontSize="13" VerticalAlignment="Center"/>
+                <TextBlock Foreground="#72767d" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"
+                           IsVisible="{Binding SelectedRepoPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <Run Text="{Binding Commits.Count}"/>
+                    <Run Text=" commits"/>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+
+        <!-- Empty state -->
+        <TextBlock Text="Select a repository in Git View, then click View Commits"
+                   Foreground="#72767d" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   FontSize="14"
                    IsVisible="{Binding !SelectedRepoPath, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
 
         <DataGrid ItemsSource="{Binding Commits}" AutoGenerateColumns="False" IsReadOnly="True"
-                  Background="Transparent" Foreground="#e0e0e0"
+                  Foreground="#dcddde"
                   IsVisible="{Binding SelectedRepoPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Hash" Binding="{Binding ShortHash}" Width="80" />
-                <DataGridTextColumn Header="Date" Binding="{Binding Date}" Width="180" />
-                <DataGridTextColumn Header="Author" Binding="{Binding AuthorName}" Width="150" />
-                <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*" />
-                <DataGridTextColumn Header="Stats" Binding="{Binding StatsText}" Width="160" />
+                <DataGridTextColumn Header="HASH" Binding="{Binding ShortHash}" Width="80" />
+                <DataGridTextColumn Header="DATE" Binding="{Binding Date}" Width="180" />
+                <DataGridTextColumn Header="AUTHOR" Binding="{Binding AuthorName}" Width="150" />
+                <DataGridTextColumn Header="MESSAGE" Binding="{Binding Message}" Width="*" />
+                <DataGridTextColumn Header="STATS" Binding="{Binding StatsText}" Width="160" />
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

@@ -39,9 +39,9 @@ public partial class TodoItemViewModel : ViewModelBase
     // @must_test(REQ-TOD-003)
     public string StatusColor => Status switch
     {
-        "completed" => "#4caf50",   // green
-        "in_progress" => "#2196f3", // blue
-        _ => "#9e9e9e"              // gray
+        "completed" => "#43b581",   // green (Discord)
+        "in_progress" => "#5865f2", // blue (Discord accent)
+        _ => "#72767d"              // gray (Discord muted)
     };
 
     // @must_test(REQ-TOD-003)

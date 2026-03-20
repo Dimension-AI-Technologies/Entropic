@@ -7,26 +7,90 @@
              x:Class="Entropic.GUI.Views.ProjectView"
              x:DataType="vm:ProjectsViewModel">
 
-    <Grid ColumnDefinitions="250,Auto,*,Auto,300">
+    <UserControl.Styles>
+        <!-- Filter pill buttons -->
+        <Style Selector="Button.filterPill">
+            <Setter Property="Background" Value="#2f3136"/>
+            <Setter Property="Foreground" Value="#8e9297"/>
+            <Setter Property="BorderBrush" Value="#35373b"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+        </Style>
+        <Style Selector="Button.filterPill:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#3a3d42"/>
+        </Style>
+        <!-- Sidebar project list -->
+        <Style Selector="ListBox.projectList">
+            <Setter Property="Background" Value="#2f3136"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.projectList ListBoxItem">
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.projectList ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="#42464d"/>
+        </Style>
+        <Style Selector="ListBox.projectList ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#36393f"/>
+        </Style>
+        <!-- Todo list -->
+        <Style Selector="ListBox.todoList">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style Selector="ListBox.todoList ListBoxItem">
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+        </Style>
+    </UserControl.Styles>
+
+    <Grid ColumnDefinitions="260,Auto,*,Auto,280">
         <!-- Left pane: Project list -->
-        <DockPanel Grid.Column="0">
-            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4">
-                <Button Content="All" Command="{Binding SetFilterCommand}" CommandParameter="all" />
-                <Button Content="Sessions" Command="{Binding SetFilterCommand}" CommandParameter="hasSessions" Margin="4,0,0,0" />
-                <Button Content="Todos" Command="{Binding SetFilterCommand}" CommandParameter="hasTodos" Margin="4,0,0,0" />
-                <Button Content="Active" Command="{Binding SetFilterCommand}" CommandParameter="activeOnly" Margin="4,0,0,0" />
-            </StackPanel>
-            <ListBox ItemsSource="{Binding Projects}" SelectedItem="{Binding SelectedProject}">
+        <DockPanel Grid.Column="0" Background="#2f3136">
+            <!-- Filter bar -->
+            <Border DockPanel.Dock="Top" Background="#292b2f"
+                    BorderBrush="#35373b" BorderThickness="0,0,0,1"
+                    Padding="8,6">
+                <StackPanel Orientation="Horizontal">
+                    <Button Classes="filterPill" Content="All"
+                            Command="{Binding SetFilterCommand}" CommandParameter="all" />
+                    <Button Classes="filterPill" Content="Sessions"
+                            Command="{Binding SetFilterCommand}" CommandParameter="hasSessions" />
+                    <Button Classes="filterPill" Content="Todos"
+                            Command="{Binding SetFilterCommand}" CommandParameter="hasTodos" />
+                    <Button Classes="filterPill" Content="Active"
+                            Command="{Binding SetFilterCommand}" CommandParameter="activeOnly" />
+                </StackPanel>
+            </Border>
+            <ListBox Classes="projectList" ItemsSource="{Binding Projects}"
+                     SelectedItem="{Binding SelectedProject}">
                 <ListBox.ItemTemplate>
                     <DataTemplate DataType="vm:ProjectItemViewModel">
-                        <StackPanel Orientation="Horizontal" Margin="4,2">
-                            <!-- REQ-PRV-005: Provider badge -->
-                            <Border Background="#2a2d32" CornerRadius="3" Padding="4,1" Margin="0,0,6,0">
-                                <TextBlock Text="{Binding Provider}" FontSize="10" Foreground="#7a8a9a" />
+                        <DockPanel>
+                            <!-- Provider badge -->
+                            <Border DockPanel.Dock="Left" CornerRadius="3" Padding="5,2" Margin="0,0,8,0"
+                                    Background="#292b2f">
+                                <TextBlock Text="{Binding Provider}" FontSize="10" FontWeight="Bold"
+                                           Foreground="#7aa2f7"/>
                             </Border>
-                            <TextBlock Text="{Binding Name}" Foreground="#e0e0e0" />
-                            <TextBlock Text="{Binding TodoCount, StringFormat=' ({0})'}" Foreground="#666" FontSize="11" />
-                        </StackPanel>
+                            <TextBlock DockPanel.Dock="Right"
+                                       Text="{Binding TodoCount, StringFormat='({0})'}"
+                                       Foreground="#72767d" FontSize="11"
+                                       VerticalAlignment="Center" Margin="6,0,0,0"/>
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" Foreground="#dcddde"
+                                           FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding SessionCount, StringFormat='{}{0} sessions'}"
+                                           Foreground="#72767d" FontSize="11"/>
+                            </StackPanel>
+                        </DockPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
                 <!-- REQ-GUI-004: Context menu on projects -->
@@ -39,34 +103,46 @@
             </ListBox>
         </DockPanel>
 
-        <GridSplitter Grid.Column="1" Width="4" Background="#2a2d32" />
+        <GridSplitter Grid.Column="1" Width="1" Background="#35373b" />
 
-        <!-- Middle pane: Session tabs + todo list for selected session -->
-        <DockPanel Grid.Column="2">
+        <!-- Middle pane: Session tabs + todo list -->
+        <DockPanel Grid.Column="2" Background="#36393f">
             <TabControl DockPanel.Dock="Top" ItemsSource="{Binding SelectedProject.Sessions}"
-                        SelectedIndex="{Binding SelectedSessionIndex}">
+                        SelectedIndex="{Binding SelectedSessionIndex}"
+                        Background="#2f3136" Padding="0">
                 <TabControl.ItemTemplate>
                     <DataTemplate DataType="vm:SessionItemViewModel">
-                        <TextBlock Text="{Binding SessionId}" />
+                        <TextBlock Text="{Binding SessionId}" FontSize="11"
+                                   Foreground="#b9bbbe" MaxWidth="120"
+                                   TextTrimming="CharacterEllipsis"/>
                     </DataTemplate>
                 </TabControl.ItemTemplate>
                 <TabControl.ContentTemplate>
                     <DataTemplate DataType="vm:SessionItemViewModel">
-                        <ListBox ItemsSource="{Binding Todos}" Margin="4">
+                        <ListBox Classes="todoList" ItemsSource="{Binding Todos}" Margin="8">
                             <ListBox.ItemTemplate>
                                 <DataTemplate DataType="vm:TodoItemViewModel">
-                                    <Grid ColumnDefinitions="30,*,Auto" Margin="2">
-                                        <TextBlock Grid.Column="0" Text="{Binding StatusIcon}"
-                                                   Foreground="{Binding StatusColor}"
-                                                   VerticalAlignment="Center" HorizontalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="{Binding DisplayText}"
-                                                   Foreground="#e0e0e0" VerticalAlignment="Center"
-                                                   TextWrapping="Wrap" Margin="4,0" />
-                                        <Button Grid.Column="2" Content="Toggle"
-                                                Command="{Binding ToggleStatusCommand}"
-                                                FontSize="10" Padding="6,2" Margin="4,0"
-                                                Background="#2a2d32" Foreground="#a2a7ad" />
-                                    </Grid>
+                                    <Border Background="#2f3136" CornerRadius="4"
+                                            Padding="10,8" Margin="0,0,0,4"
+                                            BorderBrush="#35373b" BorderThickness="1">
+                                        <Grid ColumnDefinitions="24,*,Auto">
+                                            <TextBlock Grid.Column="0" Text="{Binding StatusIcon}"
+                                                       Foreground="{Binding StatusColor}"
+                                                       FontSize="14"
+                                                       VerticalAlignment="Center"
+                                                       HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding DisplayText}"
+                                                       Foreground="#dcddde" FontSize="13"
+                                                       VerticalAlignment="Center"
+                                                       TextWrapping="Wrap" Margin="8,0"/>
+                                            <Button Grid.Column="2" Content="Toggle"
+                                                    Command="{Binding ToggleStatusCommand}"
+                                                    FontSize="10" Padding="8,3"
+                                                    Background="#292b2f" Foreground="#b9bbbe"
+                                                    BorderBrush="#35373b" BorderThickness="1"
+                                                    CornerRadius="3" Cursor="Hand"/>
+                                        </Grid>
+                                    </Border>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                             <!-- REQ-GUI-004: Context menu on todos -->
@@ -84,31 +160,44 @@
             </TabControl>
         </DockPanel>
 
-        <GridSplitter Grid.Column="3" Width="4" Background="#2a2d32" />
+        <GridSplitter Grid.Column="3" Width="1" Background="#35373b" />
 
         <!-- Right pane: Summary for selected project -->
-        <DockPanel Grid.Column="4">
-            <TextBlock DockPanel.Dock="Top" Text="Summary" Foreground="#a2a7ad" Margin="8,4" FontWeight="Bold" />
-            <StackPanel Margin="8,4" IsVisible="{Binding SelectedProject, Converter={x:Static ObjectConverters.IsNotNull}}">
-                <TextBlock Foreground="#e0e0e0" Margin="0,2">
-                    <Run Text="Path: " Foreground="#a2a7ad" />
-                    <Run Text="{Binding SelectedProject.Path}" />
+        <DockPanel Grid.Column="4" Background="#2f3136">
+            <Border DockPanel.Dock="Top" Background="#292b2f"
+                    BorderBrush="#35373b" BorderThickness="0,0,0,1"
+                    Padding="12,8">
+                <TextBlock Text="Summary" Foreground="#dcddde" FontSize="13" FontWeight="SemiBold"/>
+            </Border>
+            <StackPanel Margin="12,10"
+                        IsVisible="{Binding SelectedProject, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Foreground="#dcddde" Margin="0,4" FontSize="13">
+                    <Run Text="Path" Foreground="#8e9297"/>
                 </TextBlock>
-                <TextBlock Foreground="#e0e0e0" Margin="0,2">
-                    <Run Text="Provider: " Foreground="#a2a7ad" />
-                    <Run Text="{Binding SelectedProject.Provider}" />
+                <TextBlock Text="{Binding SelectedProject.Path}" Foreground="#b9bbbe"
+                           FontSize="12" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                <TextBlock Foreground="#dcddde" Margin="0,4" FontSize="13">
+                    <Run Text="Provider" Foreground="#8e9297"/>
                 </TextBlock>
-                <TextBlock Foreground="#e0e0e0" Margin="0,2">
-                    <Run Text="Sessions: " Foreground="#a2a7ad" />
-                    <Run Text="{Binding SelectedProject.SessionCount}" />
-                </TextBlock>
-                <TextBlock Foreground="#e0e0e0" Margin="0,2">
-                    <Run Text="TODOs: " Foreground="#a2a7ad" />
-                    <Run Text="{Binding SelectedProject.TodoCount}" />
-                </TextBlock>
+                <TextBlock Text="{Binding SelectedProject.Provider}" Foreground="#b9bbbe"
+                           FontSize="12" Margin="0,0,0,10"/>
+
+                <Border Background="#292b2f" CornerRadius="4" Padding="10,8" Margin="0,4">
+                    <StackPanel>
+                        <TextBlock Foreground="#dcddde" FontSize="13">
+                            <Run Text="{Binding SelectedProject.SessionCount}"/>
+                            <Run Text=" sessions" Foreground="#8e9297"/>
+                        </TextBlock>
+                        <TextBlock Foreground="#dcddde" FontSize="13" Margin="0,4,0,0">
+                            <Run Text="{Binding SelectedProject.TodoCount}"/>
+                            <Run Text=" TODOs" Foreground="#8e9297"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
             </StackPanel>
-            <TextBlock Text="Select a project" Foreground="#666"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"
+            <TextBlock Text="Select a project" Foreground="#72767d"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="13"
                        IsVisible="{Binding SelectedProject, Converter={x:Static ObjectConverters.IsNull}}" />
         </DockPanel>
     </Grid>

@@ -42,25 +42,55 @@ type ClaudeAdapter(projectsDir: string, todosDir: string) =
                         CreatedAt = None; UpdatedAt = None; ActiveForm = activeForm } ]
         with _ -> []
 
-    let loadSessionsForProject (projectDirPath: string) (projectPath: string) : Session list =
+    let loadSessionsFromIndex (projectDirPath: string) (projectPath: string) : Session list =
         try
-            let files = Directory.GetFiles(projectDirPath, ".session_*.json")
-            [ for f in files do
-                let info = FileInfo(f)
-                let sessionId =
-                    let name = Path.GetFileNameWithoutExtension(f)
-                    if name.StartsWith(".session_") then name.Substring(9) else name
-                // Check for matching todo file
-                let todoFile = Path.Combine(todosDir, sprintf "%s-agent-%s.json" sessionId sessionId)
-                let todos =
-                    if File.Exists(todoFile) then loadTodosFromFile todoFile
-                    else []
-                yield {
-                    Provider = "claude"; SessionId = sessionId; FilePath = Some f
-                    ProjectPath = Some projectPath; Todos = todos
-                    CreatedAt = Some (info.CreationTimeUtc.Ticks / TimeSpan.TicksPerMillisecond)
-                    UpdatedAt = Some (info.LastWriteTimeUtc.Ticks / TimeSpan.TicksPerMillisecond)
-                } ]
+            let indexPath = Path.Combine(projectDirPath, "sessions-index.json")
+            if File.Exists(indexPath) then
+                let json = File.ReadAllText(indexPath)
+                let doc = JsonDocument.Parse(json)
+                match doc.RootElement.TryGetProperty("entries") with
+                | true, entries ->
+                    [ for el in entries.EnumerateArray() do
+                        let sessionId = match el.TryGetProperty("sessionId") with true, v -> v.GetString() | _ -> ""
+                        if sessionId <> "" then
+                            let jsonlPath = Path.Combine(projectDirPath, sprintf "%s.jsonl" sessionId)
+                            let info = if File.Exists(jsonlPath) then Some (FileInfo(jsonlPath)) else None
+                            // Match todo file: {sessionId}-agent-{sessionId}.json in todos dir
+                            let todos =
+                                try
+                                    let todoFiles = Directory.GetFiles(todosDir, sprintf "%s-agent-*.json" sessionId)
+                                    todoFiles |> Array.toList |> List.collect loadTodosFromFile
+                                with _ -> []
+                            let created = match el.TryGetProperty("created") with
+                                          | true, v ->
+                                              try Some (DateTimeOffset.Parse(v.GetString()).ToUnixTimeMilliseconds()) with _ -> None
+                                          | _ -> None
+                            let modified = match info with
+                                           | Some i -> Some (i.LastWriteTimeUtc.Ticks / TimeSpan.TicksPerMillisecond)
+                                           | None -> created
+                            yield {
+                                Provider = "claude"; SessionId = sessionId; FilePath = Some jsonlPath
+                                ProjectPath = Some projectPath; Todos = todos
+                                CreatedAt = created; UpdatedAt = modified
+                            } ]
+                | _ -> []
+            else
+                // Fallback: scan for *.jsonl files directly
+                let files = Directory.GetFiles(projectDirPath, "*.jsonl")
+                [ for f in files do
+                    let info = FileInfo(f)
+                    let sessionId = Path.GetFileNameWithoutExtension(f)
+                    let todos =
+                        try
+                            let todoFiles = Directory.GetFiles(todosDir, sprintf "%s-agent-*.json" sessionId)
+                            todoFiles |> Array.toList |> List.collect loadTodosFromFile
+                        with _ -> []
+                    yield {
+                        Provider = "claude"; SessionId = sessionId; FilePath = Some f
+                        ProjectPath = Some projectPath; Todos = todos
+                        CreatedAt = Some (info.CreationTimeUtc.Ticks / TimeSpan.TicksPerMillisecond)
+                        UpdatedAt = Some (info.LastWriteTimeUtc.Ticks / TimeSpan.TicksPerMillisecond)
+                    } ]
         with _ -> []
 
     interface IProviderPort with
@@ -82,7 +112,7 @@ type ClaudeAdapter(projectsDir: string, todosDir: string) =
                                 let flattenedDir = Path.GetFileName(dir)
                                 let reconstructed = PathUtils.reconstructPath flattenedDir projectsDir
                                 let pathExists = Directory.Exists(reconstructed)
-                                let sessions = loadSessionsForProject dir reconstructed
+                                let sessions = loadSessionsFromIndex dir reconstructed
                                 let todoCount = sessions |> List.sumBy (fun s -> s.Todos.Length)
                                 let activeCount = sessions |> List.sumBy (fun s -> s.Todos |> List.filter (fun t -> t.Status <> Completed) |> List.length)
                                 let mostRecent = sessions |> List.choose (fun s -> s.UpdatedAt) |> (fun l -> if l.IsEmpty then None else Some (List.max l))

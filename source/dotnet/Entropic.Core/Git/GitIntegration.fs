@@ -77,46 +77,67 @@ module GitIntegration =
             |> Array.toList
         with _ -> []
 
+    let private skipDirs = Set.ofList [
+        "node_modules"; "bin"; "obj"; "dist"; "AppData"; "OneDrive"
+        ".nuget"; ".dotnet"; ".vscode"; ".vs"; "packages"
+    ]
+
+    let private addRepo (repos: ResizeArray<GitRepoStatus>) (rootPath: string) (dir: string) =
+        let name = Path.GetFileName(dir)
+        let relativePath = Path.GetRelativePath(rootPath, dir)
+        let remoteUrl =
+            match runGit dir "remote get-url origin" with
+            | Ok url -> Some url | Error _ -> None
+        // @must_test(REQ-GIT-003)
+        let ahead, behind =
+            match runGit dir "rev-list --left-right --count HEAD...@{upstream}" with
+            | Ok output ->
+                let parts = output.Split('\t')
+                if parts.Length >= 2 then
+                    (Int32.TryParse(parts.[0]) |> (fun (ok, v) -> if ok then v else 0)),
+                    (Int32.TryParse(parts.[1]) |> (fun (ok, v) -> if ok then v else 0))
+                else 0, 0
+            | Error _ -> 0, 0
+        let lastCommit =
+            match runGit dir "log -1 --format=%H" with
+            | Ok h -> Some h | Error _ -> None
+        repos.Add({
+            Name = name; RelativePath = relativePath
+            Languages = detectLanguages dir
+            RemoteUrl = remoteUrl; LastLocalCommit = lastCommit
+            LastRemoteCommit = None; Ahead = ahead; Behind = behind
+        })
+
     /// Discover git repositories under a root path.
+    /// Skips the root directory itself if it has .git (e.g. home dir dotfiles repo).
     let discoverRepos (rootPath: string) : Async<Result<GitRepoStatus list, string>> = async {
         try
             if not (Directory.Exists(rootPath)) then return Ok []
             else
                 let repos = ResizeArray<GitRepoStatus>()
+                let rootFull = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 let rec walk (dir: string) (depth: int) =
-                    if depth > 5 then ()
+                    if depth > 6 then ()
                     else
                         let gitDir = Path.Combine(dir, ".git")
                         if Directory.Exists(gitDir) then
-                            let name = Path.GetFileName(dir)
-                            let relativePath = Path.GetRelativePath(rootPath, dir)
-                            let remoteUrl =
-                                match runGit dir "remote get-url origin" with
-                                | Ok url -> Some url | Error _ -> None
-                            // @must_test(REQ-GIT-003)
-                            let ahead, behind =
-                                match runGit dir "rev-list --left-right --count HEAD...@{upstream}" with
-                                | Ok output ->
-                                    let parts = output.Split('\t')
-                                    if parts.Length >= 2 then
-                                        (Int32.TryParse(parts.[0]) |> (fun (ok, v) -> if ok then v else 0)),
-                                        (Int32.TryParse(parts.[1]) |> (fun (ok, v) -> if ok then v else 0))
-                                    else 0, 0
-                                | Error _ -> 0, 0
-                            let lastCommit =
-                                match runGit dir "log -1 --format=%H" with
-                                | Ok h -> Some h | Error _ -> None
-                            repos.Add({
-                                Name = name; RelativePath = relativePath
-                                Languages = detectLanguages dir
-                                RemoteUrl = remoteUrl; LastLocalCommit = lastCommit
-                                LastRemoteCommit = None; Ahead = ahead; Behind = behind
-                            })
+                            let dirFull = Path.GetFullPath(dir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                            let isRoot = String.Equals(dirFull, rootFull, StringComparison.OrdinalIgnoreCase)
+                            if isRoot then
+                                // Root has .git (e.g. home dir) — skip it as a repo but recurse into children
+                                try
+                                    for subDir in Directory.GetDirectories(dir) do
+                                        let subName = Path.GetFileName(subDir)
+                                        if not (skipDirs.Contains subName) && not (subName.StartsWith(".")) then
+                                            walk subDir (depth + 1)
+                                with _ -> ()
+                            else
+                                addRepo repos rootPath dir
                         else
                             try
                                 for subDir in Directory.GetDirectories(dir) do
                                     let subName = Path.GetFileName(subDir)
-                                    if not (subName.StartsWith(".")) && subName <> "node_modules" then
+                                    if not (skipDirs.Contains subName) && not (subName.StartsWith(".")) then
                                         walk subDir (depth + 1)
                             with _ -> ()
                 walk rootPath 0

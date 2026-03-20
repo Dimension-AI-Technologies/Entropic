@@ -519,8 +519,9 @@ module GitDiscoverTests =
     // @covers(GitIntegration.discoverRepos)
     [<Fact>]
     let ``discoverRepos finds git repos`` () =
-        let repoRoot = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "..", "..", ".."))
-        let result = GitIntegration.discoverRepos repoRoot |> Async.RunSynchronously
+        // Scan from parent of Entropic so it's found as a child repo (root .git is skipped)
+        let repoParent = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "..", "..", "..", ".."))
+        let result = GitIntegration.discoverRepos repoParent |> Async.RunSynchronously
         match result with
         | Ok repos ->
             Assert.True(repos.Length >= 1)
@@ -545,8 +546,8 @@ module GitLanguageDetectionTests =
     // @covers(GitIntegration.discoverRepos)
     [<Fact>]
     let ``discovered repos include detected languages`` () =
-        let repoRoot = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "..", "..", ".."))
-        let result = GitIntegration.discoverRepos repoRoot |> Async.RunSynchronously
+        let repoParent = Path.GetFullPath(Path.Combine(__SOURCE_DIRECTORY__, "..", "..", "..", ".."))
+        let result = GitIntegration.discoverRepos repoParent |> Async.RunSynchronously
         match result with
         | Ok repos ->
             let entropic = repos |> List.tryFind (fun r -> r.Name = "Entropic")

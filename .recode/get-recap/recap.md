@@ -196,3 +196,20 @@ dist, coverage, and tsbuildinfo to .gitignore for TypeScript builds.
 - Update sourcelink.json commit references
   Author: Mathew Burkitt
 
+
+---
+
+## Commit: 2026-03-20 09:42
+
+- feat: redesign GUI with Discord theme and custom nav
+
+- Replace TabControl with button-based view toggles
+- Implement Discord-inspired dark theme colors
+- Add Avalonia.Controls.DataGrid dependency
+- Migrate session loading to index-based approach
+- Improve repo discovery with skip-list handling
+- Enhance ViewModels with tab state management
+- Add visual framework comparison script
+- Update test discovery paths and add screenshots
+  Author: Mathew Burkitt
+

@@ -16,4 +16,7 @@ Condense README from verbose feature documentation... (Mathew Burkitt)
 
 ### Added
 - Add commit view and test infrastructure (Mathew Burkitt)
+- Redesign GUI with Discord theme and custom nav
+
+- Replace TabControl with button-based view toggl... (Mathew Burkitt)
 

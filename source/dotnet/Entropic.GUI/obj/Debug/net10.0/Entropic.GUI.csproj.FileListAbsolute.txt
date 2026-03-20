@@ -90,3 +90,4 @@ C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.GUI\obj\
 C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.GUI\obj\Debug\net10.0\Entropic.GUI.pdb
 C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.GUI\obj\Debug\net10.0\Entropic.GUI.genruntimeconfig.cache
 C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.GUI\obj\Debug\net10.0\ref\Entropic.GUI.dll
+C:\Users\mathew.burkitt\source\repos\DT\Entropic\source\dotnet\Entropic.GUI\bin\Debug\net10.0\Avalonia.Controls.DataGrid.dll

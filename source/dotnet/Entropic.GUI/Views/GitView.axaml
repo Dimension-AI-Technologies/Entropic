@@ -7,24 +7,66 @@
              x:Class="Entropic.GUI.Views.GitView"
              x:DataType="vm:GitViewModel">
 
-    <DockPanel>
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,4">
-            <TextBlock Text="Repositories: " Foreground="#a2a7ad" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding TotalRepos}" Foreground="#e0e0e0" FontWeight="Bold" VerticalAlignment="Center" />
-            <TextBlock Text=" — Out of sync: " Foreground="#a2a7ad" Margin="12,0,0,0" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding OutOfSync}" Foreground="#ff9800" FontWeight="Bold" VerticalAlignment="Center" />
-            <Button Content="View Commits" Command="{Binding ViewCommitsCommand}" Margin="20,0,0,0"
-                    Padding="8,3" FontSize="12" />
-        </StackPanel>
+    <UserControl.Styles>
+        <Style Selector="DataGrid">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="RowBackground" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#35373b"/>
+        </Style>
+        <Style Selector="DataGridColumnHeader">
+            <Setter Property="Background" Value="#292b2f"/>
+            <Setter Property="Foreground" Value="#8e9297"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="8,8"/>
+            <Setter Property="BorderBrush" Value="#35373b"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        </Style>
+        <Style Selector="DataGridRow">
+            <Setter Property="Foreground" Value="#dcddde"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
+            <Setter Property="Fill" Value="#42464d"/>
+        </Style>
+        <Style Selector="DataGridCell">
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Background="#36393f">
+        <!-- Summary bar -->
+        <Border DockPanel.Dock="Top" Background="#292b2f"
+                BorderBrush="#35373b" BorderThickness="0,0,0,1"
+                Padding="12,8">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="REPOSITORIES" Foreground="#8e9297" FontSize="11"
+                           FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <Border Background="#36393f" CornerRadius="10" Padding="8,2" Margin="0,0,16,0">
+                    <TextBlock Text="{Binding TotalRepos}" Foreground="#dcddde" FontSize="12"
+                               FontWeight="Bold"/>
+                </Border>
+                <TextBlock Text="Out of sync:" Foreground="#8e9297" FontSize="12"
+                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBlock Text="{Binding OutOfSync}" Foreground="#faa61a" FontSize="12"
+                           FontWeight="Bold" VerticalAlignment="Center"/>
+                <Border Width="1" Background="#35373b" Margin="16,4" />
+                <Button Content="View Commits" Command="{Binding ViewCommitsCommand}"
+                        Padding="10,4" FontSize="12"
+                        Background="#5865f2" Foreground="#ffffff"
+                        BorderThickness="0" CornerRadius="3" Cursor="Hand"/>
+            </StackPanel>
+        </Border>
         <DataGrid ItemsSource="{Binding Repos}" AutoGenerateColumns="False" IsReadOnly="True"
-                  SelectedItem="{Binding SelectedRepo}"
-                  Background="Transparent" Foreground="#e0e0e0">
+                  SelectedItem="{Binding SelectedRepo}" Foreground="#dcddde">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="200" />
-                <DataGridTextColumn Header="Path" Binding="{Binding RelativePath}" Width="*" />
-                <DataGridTextColumn Header="Remote" Binding="{Binding RemoteUrl}" Width="300" />
-                <DataGridTextColumn Header="Ahead" Binding="{Binding Ahead}" Width="70" />
-                <DataGridTextColumn Header="Behind" Binding="{Binding Behind}" Width="70" />
+                <DataGridTextColumn Header="NAME" Binding="{Binding Name}" Width="200" />
+                <DataGridTextColumn Header="PATH" Binding="{Binding RelativePath}" Width="*" />
+                <DataGridTextColumn Header="REMOTE" Binding="{Binding RemoteUrl}" Width="300" />
+                <DataGridTextColumn Header="AHEAD" Binding="{Binding Ahead}" Width="90" />
+                <DataGridTextColumn Header="BEHIND" Binding="{Binding Behind}" Width="90" />
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

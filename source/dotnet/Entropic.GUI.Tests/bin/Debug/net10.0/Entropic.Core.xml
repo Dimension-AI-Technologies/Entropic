@@ -273,6 +273,7 @@
 <member name="M:Entropic.Core.Git.GitIntegration.discoverRepos(System.String)">
 <summary>
  Discover git repositories under a root path.
+ Skips the root directory itself if it has .git (e.g. home dir dotfiles repo).
 </summary>
 </member>
 </members>
