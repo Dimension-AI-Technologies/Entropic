@@ -231,3 +231,11 @@ dist, coverage, and tsbuildinfo to .gitignore for TypeScript builds.
 - Rebuild assemblies with updated version metadata
   Author: Mathew Burkitt
 
+
+---
+
+## Commit: 2026-03-20 20:41
+
+- chore: add untracked files
+  Author: Mathew Burkitt
+
