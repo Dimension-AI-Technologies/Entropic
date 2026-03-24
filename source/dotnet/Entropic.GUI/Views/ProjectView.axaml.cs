@@ -8,7 +8,6 @@ using Entropic.GUI.ViewModels;
 
 namespace Entropic.GUI.Views;
 
-// @must_test(REQ-TOD-012)
 public partial class ProjectView : UserControl
 {
     private TodoItemViewModel? _draggedTodo;

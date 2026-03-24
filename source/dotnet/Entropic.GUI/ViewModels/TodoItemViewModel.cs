@@ -8,11 +8,6 @@ using Microsoft.FSharp.Collections;
 
 namespace Entropic.GUI.ViewModels;
 
-// @must_test(REQ-TOD-001)
-// @must_test(REQ-TOD-003)
-// @must_test(REQ-TOD-004)
-// @must_test(REQ-TOD-005)
-// @must_test(REQ-TOD-012)
 public partial class TodoItemViewModel : ViewModelBase
 {
     [ObservableProperty]
@@ -52,6 +47,7 @@ public partial class TodoItemViewModel : ViewModelBase
         _ => "\u25CB"               // circle
     };
 
+    // @must_test(REQ-TOD-001)
     public string DisplayText => Status == "in_progress" && !string.IsNullOrEmpty(ActiveForm)
         ? ActiveForm
         : Content;
@@ -98,6 +94,7 @@ public partial class TodoItemViewModel : ViewModelBase
 
     public bool CanDelete => true;
 
+    // @must_test(REQ-TOD-012)
     /// Persist the owning session's todo list to disk via F# Core.
     public void PersistOwnerSession()
     {

@@ -2,7 +2,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Entropic.GUI.ViewModels;
 
-// @must_test(REQ-GUI-021)
 public partial class ProgressViewModel : ViewModelBase
 {
     [ObservableProperty]
@@ -14,6 +13,7 @@ public partial class ProgressViewModel : ViewModelBase
     [ObservableProperty]
     private double _progress;
 
+    // @must_test(REQ-GUI-021)
     public void Show(string message)
     {
         StatusMessage = message;

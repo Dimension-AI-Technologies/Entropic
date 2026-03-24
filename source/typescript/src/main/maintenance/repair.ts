@@ -1,12 +1,17 @@
-// @must_test(REQ-DGN-001)
-// @must_test(REQ-DGN-003)
-// @must_test(REQ-DGN-004)
-// @must_test(REQ-SES-004)
-// @must_test(REQ-HOK-003)
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import { PathUtils } from '../../utils/PathUtils.js';
+
+/** Best-effort async I/O — returns undefined on failure instead of throwing. */
+async function tryIO<T>(fn: () => Promise<T>): Promise<T | undefined> {
+  try { return await fn(); } catch { return undefined; }
+}
+
+/** Best-effort sync check — returns false on failure. */
+function existsSafe(p: string): boolean {
+  try { return fsSync.existsSync(p); } catch { return false; }
+}
 
 type RepairSummary = {
   projectsScanned: number;
@@ -24,6 +29,10 @@ type RepairSummary = {
 
 const TODO_FILE_RE = /^([0-9a-f-]+)-agent(?:-[0-9a-f-]+)?\.json$/;
 
+// @must_test(REQ-DGN-001)
+// @must_test(REQ-DGN-003)
+// @must_test(REQ-DGN-004)
+// @must_test(REQ-SES-004)
 export async function repairProjectMetadata(projectsDir: string, todosDir?: string, dryRun: boolean = true): Promise<RepairSummary> {
   const summary: RepairSummary = {
     projectsScanned: 0,
@@ -39,251 +48,70 @@ export async function repairProjectMetadata(projectsDir: string, todosDir?: stri
     dryRun,
   };
 
-  async function writeSidecarMeta(sessionId: string, projectPath: string) {
+  async function writeMetaIfMissing(metaPath: string, payload: object): Promise<void> {
+    if (existsSafe(metaPath)) return;
+    summary.metadataPlanned++;
+    if (!dryRun) {
+      const wrote = await tryIO(() => fs.writeFile(metaPath, JSON.stringify(payload, null, 2), 'utf-8'));
+      if (wrote !== undefined) summary.metadataWritten++;
+    }
+  }
+
+  // @must_test(REQ-HOK-003)
+  async function writeSidecarMeta(sessionId: string, projectPath: string): Promise<void> {
     if (!todosDir) return;
-    try {
-      const sidecar = path.join(todosDir, `${sessionId}-agent.meta.json`);
-      if (!fsSync.existsSync(sidecar)) {
-        if (!dryRun) {
-          try { await fs.writeFile(sidecar, JSON.stringify({ projectPath }, null, 2), 'utf-8'); } catch {}
-        }
-      }
-    } catch {}
+    const sidecar = path.join(todosDir, `${sessionId}-agent.meta.json`);
+    if (!existsSafe(sidecar) && !dryRun) {
+      await tryIO(() => fs.writeFile(sidecar, JSON.stringify({ projectPath }, null, 2), 'utf-8'));
+    }
   }
 
   // 1) Ensure every valid flattened project dir has metadata.json
-  let projectDirs: string[] = [];
-  try {
-    projectDirs = await fs.readdir(projectsDir);
-  } catch {}
+  const projectDirs = (await tryIO(() => fs.readdir(projectsDir))) ?? [];
   summary.projectsScanned = projectDirs.length;
 
   for (const flat of projectDirs) {
     const projPath = path.join(projectsDir, flat);
-    try {
-      const stat = await fs.stat(projPath);
-      if (!stat.isDirectory()) continue;
-    } catch { continue; }
+    const stat = await tryIO(() => fs.stat(projPath));
+    if (!stat || !stat.isDirectory()) continue;
     const reconstructed = PathUtils.guessPathFromFlattenedName(flat);
     const valid = PathUtils.validatePath(reconstructed);
     if (valid.success && valid.value) {
-      const metaPath = path.join(projPath, 'metadata.json');
-      if (!fsSync.existsSync(metaPath)) {
-        summary.metadataPlanned++;
-        if (!dryRun) { try { await fs.writeFile(metaPath, JSON.stringify({ path: reconstructed }, null, 2), 'utf-8'); summary.metadataWritten++; } catch {} }
-      }
+      await writeMetaIfMissing(path.join(projPath, 'metadata.json'), { path: reconstructed });
     }
   }
 
   // 2) Scan todos sessions and backfill based on JSONL filename match or sidecar meta
-  if (todosDir && fsSync.existsSync(todosDir)) {
-    let todoFiles: string[] = [];
-    try { todoFiles = await fs.readdir(todosDir); } catch {}
+  if (todosDir && existsSafe(todosDir)) {
+    const todoFiles = (await tryIO(() => fs.readdir(todosDir))) ?? [];
     for (const file of todoFiles) {
       const m = file.match(TODO_FILE_RE);
       if (!m) continue;
       summary.todosScanned++;
       const sessionId = m[1];
-      let resolved: { flattened?: string; real?: string } | null = null;
+      let resolved = false;
 
-      // Prefer sidecar meta first
-      try {
-        const sidecar = path.join(todosDir, `${sessionId}-agent.meta.json`);
-        if (fsSync.existsSync(sidecar)) {
-          const raw = await fs.readFile(sidecar, 'utf-8');
-          const meta = JSON.parse(raw);
-          if (meta && typeof meta.projectPath === 'string') {
-            const flat = PathUtils.createFlattenedPath(meta.projectPath);
-            const projDir = path.join(projectsDir, flat);
-            if (fsSync.existsSync(projDir)) {
-              const metaPath = path.join(projDir, 'metadata.json');
-              if (!fsSync.existsSync(metaPath)) {
-                summary.metadataPlanned++;
-                if (!dryRun) { try { await fs.writeFile(metaPath, JSON.stringify({ path: meta.projectPath }, null, 2), 'utf-8'); summary.metadataWritten++; } catch {} }
-              }
-              summary.matchedBySidecar++;
-              resolved = { flattened: flat, real: meta.projectPath };
-              // Ensure sidecar exists for downstream tools
-              await writeSidecarMeta(sessionId, meta.projectPath);
-            }
-          }
-        }
-      } catch {}
+      // Strategy 1: Prefer sidecar meta
+      resolved = await tryResolveBySidecar(sessionId, todosDir, projectsDir, summary, writeMetaIfMissing, writeSidecarMeta);
 
+      // Strategy 2: Match JSONL filename in project dirs
       if (!resolved) {
-        // Search for matching JSONL in projects
-        for (const flat of projectDirs) {
-          const dir = path.join(projectsDir, flat);
-          try {
-            const files = await fs.readdir(dir);
-            if (files.includes(`${sessionId}.jsonl`)) {
-              const real = PathUtils.guessPathFromFlattenedName(flat);
-              const valid = PathUtils.validatePath(real);
-              if (valid.success && valid.value) {
-                const metaPath = path.join(dir, 'metadata.json');
-                if (!fsSync.existsSync(metaPath)) {
-                  summary.metadataPlanned++;
-                  if (!dryRun) { try { await fs.writeFile(metaPath, JSON.stringify({ path: real }, null, 2), 'utf-8'); summary.metadataWritten++; } catch {} }
-                }
-                summary.matchedByJsonl++;
-                resolved = { flattened: flat, real };
-                await writeSidecarMeta(sessionId, real);
-              }
-              break;
-            }
-          } catch {}
-        }
+        resolved = await tryResolveByJsonl(sessionId, projectDirs, projectsDir, summary, writeMetaIfMissing, writeSidecarMeta);
       }
 
-      // Method 3: Scan JSONL content for "Working directory:" pattern
-      // Method 3: Scan JSONL content for "Working directory:" pattern
+      // Strategy 3: Scan JSONL content for "Working directory:" pattern
       if (!resolved) {
-        try {
-          for (const flat of projectDirs) {
-            const dir = path.join(projectsDir, flat);
-            const jsonlPath = path.join(dir, `${sessionId}.jsonl`);
-            if (fsSync.existsSync(jsonlPath)) {
-              try {
-                const content = await fs.readFile(jsonlPath, 'utf-8');
-                const lines = content.split('\n').filter(l => l.trim());
-                for (const line of lines.slice(0, 50)) { // Check first 50 lines
-                  try {
-                    const parsed = JSON.parse(line);
-                    const text = JSON.stringify(parsed).toLowerCase();
-                    if (text.includes('working directory:')) {
-                      const match = text.match(/working directory:\s*([^"\\]+)/);
-                      if (match && match[1]) {
-                        const inferredPath = match[1].replace(/\\\\/g, '/').trim();
-                        if (inferredPath && inferredPath.length > 3) {
-                          const metaPath = path.join(dir, 'metadata.json');
-                          if (!fsSync.existsSync(metaPath)) {
-                            summary.metadataPlanned++;
-                            if (!dryRun) { 
-                              try { 
-                                await fs.writeFile(metaPath, JSON.stringify({ path: inferredPath }, null, 2), 'utf-8'); 
-                                summary.metadataWritten++; 
-                              } catch {} 
-                            }
-                          }
-                          summary.matchedByContent++;
-                          resolved = { flattened: flat, real: inferredPath };
-                          await writeSidecarMeta(sessionId, inferredPath);
-                          break;
-                        }
-                      }
-                    }
-                  } catch {}
-                  if (resolved) break;
-                }
-              } catch {}
-              if (resolved) break;
-            }
-          }
-        } catch {}
+        resolved = await tryResolveByContent(sessionId, projectDirs, projectsDir, summary, writeMetaIfMissing, writeSidecarMeta);
       }
 
-      // Method 4: Check environment variables in JSONL for cwd/pwd
+      // Strategy 4: Check environment variables in JSONL for cwd/pwd
       if (!resolved) {
-        try {
-          for (const flat of projectDirs) {
-            const dir = path.join(projectsDir, flat);
-            const jsonlPath = path.join(dir, `${sessionId}.jsonl`);
-            if (fsSync.existsSync(jsonlPath)) {
-              try {
-                const content = await fs.readFile(jsonlPath, 'utf-8');
-                const lines = content.split('\n').filter(l => l.trim());
-                for (const line of lines.slice(0, 100)) {
-                  try {
-                    const parsed = JSON.parse(line);
-                    // Look for environment messages or cwd/pwd references
-                    const text = JSON.stringify(parsed);
-                    const patterns = [
-                      /"cwd":\s*"([^"]+)"/,
-                      /"pwd":\s*"([^"]+)"/,
-                      /current working directory[^:]*:\s*([^"\\,}]+)/i,
-                      /workspace[^:]*:\s*([^"\\,}]+)/i
-                    ];
-                    for (const pattern of patterns) {
-                      const match = text.match(pattern);
-                      if (match && match[1]) {
-                        const inferredPath = match[1].replace(/\\\\/g, '/').trim();
-                        if (inferredPath && inferredPath.length > 3 && !inferredPath.includes('undefined')) {
-                          const metaPath = path.join(dir, 'metadata.json');
-                          if (!fsSync.existsSync(metaPath)) {
-                            summary.metadataPlanned++;
-                            if (!dryRun) { 
-                              try { 
-                                await fs.writeFile(metaPath, JSON.stringify({ path: inferredPath }, null, 2), 'utf-8'); 
-                                summary.metadataWritten++; 
-                              } catch {} 
-                            }
-                          }
-                          summary.matchedByEnvironment++;
-                          resolved = { flattened: flat, real: inferredPath };
-                          await writeSidecarMeta(sessionId, inferredPath);
-                          break;
-                        }
-                      }
-                    }
-                  } catch {}
-                  if (resolved) break;
-                }
-              } catch {}
-              if (resolved) break;
-            }
-          }
-        } catch {}
+        resolved = await tryResolveByEnvVars(sessionId, projectDirs, projectsDir, summary, writeMetaIfMissing, writeSidecarMeta);
       }
 
-      // Method 5: Check logs/current_todos.json for project paths
+      // Strategy 5: Check logs/current_todos.json for project paths
       if (!resolved && todosDir) {
-        try {
-          const logsDir = path.join(path.dirname(todosDir), 'logs');
-          const currentTodosPath = path.join(logsDir, 'current_todos.json');
-          if (fsSync.existsSync(currentTodosPath)) {
-            try {
-              const content = await fs.readFile(currentTodosPath, 'utf-8');
-              const data = JSON.parse(content);
-              // Look for matching session ID in logs
-              const text = JSON.stringify(data);
-              if (text.includes(sessionId)) {
-                // Try to extract project path from context around session ID
-                const patterns = [
-                  new RegExp(`${sessionId}[^}]*"projectPath":\s*"([^"]+)"`, 'i'),
-                  new RegExp(`${sessionId}[^}]*"path":\s*"([^"]+)"`, 'i'),
-                  new RegExp(`"([^"]+)"[^}]*${sessionId}`, 'i')
-                ];
-                for (const pattern of patterns) {
-                  const match = text.match(pattern);
-                  if (match && match[1]) {
-                    const inferredPath = match[1].replace(/\\\\/g, '/').trim();
-                    if (inferredPath && inferredPath.length > 3 && !inferredPath.includes(sessionId)) {
-                      // Try to find or create the project directory
-                      const flat = PathUtils.createFlattenedPath(inferredPath);
-                      const projDir = path.join(projectsDir, flat);
-                      if (fsSync.existsSync(projDir)) {
-                        const metaPath = path.join(projDir, 'metadata.json');
-                        if (!fsSync.existsSync(metaPath)) {
-                          summary.metadataPlanned++;
-                          if (!dryRun) { 
-                            try { 
-                              await fs.writeFile(metaPath, JSON.stringify({ path: inferredPath }, null, 2), 'utf-8'); 
-                              summary.metadataWritten++; 
-                            } catch {} 
-                          }
-                        }
-                        summary.matchedByLogFile++;
-                        resolved = { flattened: flat, real: inferredPath };
-                        await writeSidecarMeta(sessionId, inferredPath);
-                        break;
-                      }
-                    }
-                  }
-                }
-              }
-            } catch {}
-          }
-        } catch {}
+        resolved = await tryResolveByLogFile(sessionId, todosDir, projectsDir, summary, writeMetaIfMissing, writeSidecarMeta);
       }
 
       if (!resolved) {
@@ -293,6 +121,149 @@ export async function repairProjectMetadata(projectsDir: string, todosDir?: stri
   }
 
   return summary;
+}
+
+type MetaWriter = (metaPath: string, payload: object) => Promise<void>;
+type SidecarWriter = (sessionId: string, projectPath: string) => Promise<void>;
+
+async function tryResolveBySidecar(
+  sessionId: string, todosDir: string, projectsDir: string,
+  summary: RepairSummary, writeMetaIfMissing: MetaWriter, writeSidecarMeta: SidecarWriter,
+): Promise<boolean> {
+  const sidecar = path.join(todosDir, `${sessionId}-agent.meta.json`);
+  if (!existsSafe(sidecar)) return false;
+  const raw = await tryIO(() => fs.readFile(sidecar, 'utf-8'));
+  if (!raw) return false;
+  const meta = JSON.parse(raw);
+  if (!meta || typeof meta.projectPath !== 'string') return false;
+  const flat = PathUtils.createFlattenedPath(meta.projectPath);
+  const projDir = path.join(projectsDir, flat);
+  if (!existsSafe(projDir)) return false;
+  await writeMetaIfMissing(path.join(projDir, 'metadata.json'), { path: meta.projectPath });
+  summary.matchedBySidecar++;
+  await writeSidecarMeta(sessionId, meta.projectPath);
+  return true;
+}
+
+async function tryResolveByJsonl(
+  sessionId: string, projectDirs: string[], projectsDir: string,
+  summary: RepairSummary, writeMetaIfMissing: MetaWriter, writeSidecarMeta: SidecarWriter,
+): Promise<boolean> {
+  for (const flat of projectDirs) {
+    const dir = path.join(projectsDir, flat);
+    const files = await tryIO(() => fs.readdir(dir));
+    if (!files || !files.includes(`${sessionId}.jsonl`)) continue;
+    const real = PathUtils.guessPathFromFlattenedName(flat);
+    const valid = PathUtils.validatePath(real);
+    if (!valid.success || !valid.value) continue;
+    await writeMetaIfMissing(path.join(dir, 'metadata.json'), { path: real });
+    summary.matchedByJsonl++;
+    await writeSidecarMeta(sessionId, real);
+    return true;
+  }
+  return false;
+}
+
+function parseJsonlLines(content: string, maxLines: number): string[] {
+  return content.split('\n').filter(l => l.trim()).slice(0, maxLines);
+}
+
+async function tryResolveByContent(
+  sessionId: string, projectDirs: string[], projectsDir: string,
+  summary: RepairSummary, writeMetaIfMissing: MetaWriter, writeSidecarMeta: SidecarWriter,
+): Promise<boolean> {
+  for (const flat of projectDirs) {
+    const dir = path.join(projectsDir, flat);
+    const jsonlPath = path.join(dir, `${sessionId}.jsonl`);
+    if (!existsSafe(jsonlPath)) continue;
+    const content = await tryIO(() => fs.readFile(jsonlPath, 'utf-8'));
+    if (!content) continue;
+    for (const line of parseJsonlLines(content, 50)) {
+      const parsed = await tryIO(async () => JSON.parse(line));
+      if (!parsed) continue;
+      const text = JSON.stringify(parsed).toLowerCase();
+      if (!text.includes('working directory:')) continue;
+      const match = text.match(/working directory:\s*([^"\\]+)/);
+      if (!match?.[1]) continue;
+      const inferredPath = match[1].replace(/\\\\/g, '/').trim();
+      if (!inferredPath || inferredPath.length <= 3) continue;
+      await writeMetaIfMissing(path.join(dir, 'metadata.json'), { path: inferredPath });
+      summary.matchedByContent++;
+      await writeSidecarMeta(sessionId, inferredPath);
+      return true;
+    }
+  }
+  return false;
+}
+
+const ENV_PATTERNS = [
+  /"cwd":\s*"([^"]+)"/,
+  /"pwd":\s*"([^"]+)"/,
+  /current working directory[^:]*:\s*([^"\\,}]+)/i,
+  /workspace[^:]*:\s*([^"\\,}]+)/i,
+];
+
+async function tryResolveByEnvVars(
+  sessionId: string, projectDirs: string[], projectsDir: string,
+  summary: RepairSummary, writeMetaIfMissing: MetaWriter, writeSidecarMeta: SidecarWriter,
+): Promise<boolean> {
+  for (const flat of projectDirs) {
+    const dir = path.join(projectsDir, flat);
+    const jsonlPath = path.join(dir, `${sessionId}.jsonl`);
+    if (!existsSafe(jsonlPath)) continue;
+    const content = await tryIO(() => fs.readFile(jsonlPath, 'utf-8'));
+    if (!content) continue;
+    for (const line of parseJsonlLines(content, 100)) {
+      const parsed = await tryIO(async () => JSON.parse(line));
+      if (!parsed) continue;
+      const text = JSON.stringify(parsed);
+      for (const pattern of ENV_PATTERNS) {
+        const match = text.match(pattern);
+        if (!match?.[1]) continue;
+        const inferredPath = match[1].replace(/\\\\/g, '/').trim();
+        if (!inferredPath || inferredPath.length <= 3 || inferredPath.includes('undefined')) continue;
+        await writeMetaIfMissing(path.join(dir, 'metadata.json'), { path: inferredPath });
+        summary.matchedByEnvironment++;
+        await writeSidecarMeta(sessionId, inferredPath);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+async function tryResolveByLogFile(
+  sessionId: string, todosDir: string, projectsDir: string,
+  summary: RepairSummary, writeMetaIfMissing: MetaWriter, writeSidecarMeta: SidecarWriter,
+): Promise<boolean> {
+  const logsDir = path.join(path.dirname(todosDir), 'logs');
+  const currentTodosPath = path.join(logsDir, 'current_todos.json');
+  if (!existsSafe(currentTodosPath)) return false;
+  const content = await tryIO(() => fs.readFile(currentTodosPath, 'utf-8'));
+  if (!content) return false;
+  const data = await tryIO(async () => JSON.parse(content));
+  if (!data) return false;
+  const text = JSON.stringify(data);
+  if (!text.includes(sessionId)) return false;
+  const patterns = [
+    new RegExp(`${sessionId}[^}]*"projectPath":\\s*"([^"]+)"`, 'i'),
+    new RegExp(`${sessionId}[^}]*"path":\\s*"([^"]+)"`, 'i'),
+    new RegExp(`"([^"]+)"[^}]*${sessionId}`, 'i'),
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (!match?.[1]) continue;
+    const inferredPath = match[1].replace(/\\\\/g, '/').trim();
+    if (!inferredPath || inferredPath.length <= 3 || inferredPath.includes(sessionId)) continue;
+    const flat = PathUtils.createFlattenedPath(inferredPath);
+    const projDir = path.join(projectsDir, flat);
+    if (!existsSafe(projDir)) continue;
+    await writeMetaIfMissing(path.join(projDir, 'metadata.json'), { path: inferredPath });
+    summary.matchedByLogFile++;
+    await writeSidecarMeta(sessionId, inferredPath);
+    return true;
+  }
+  return false;
 }
 
 export async function collectDiagnostics(projectsDir: string, todosDir?: string): Promise<{ text: string; unknownCount: number; planned: number; written: number }> {

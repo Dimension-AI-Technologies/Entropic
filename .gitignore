@@ -38,3 +38,40 @@ test2.txt
 # Screenshots  
 screenshot*.png
 .recode/
+
+# csharp
+bin/
+obj/
+*.nupkg
+*.user
+.vs/
+*.DotSettings.user
+*.dll
+*.exe
+*.pdb
+
+# fsharp
+bin/
+obj/
+*.nupkg
+*.user
+.vs/
+*.DotSettings.user
+*.dll
+*.exe
+*.pdb
+
+# javascript
+node_modules/
+.bun/
+dist/
+.deno/
+coverage/
+*.tsbuildinfo
+
+# typescript
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+

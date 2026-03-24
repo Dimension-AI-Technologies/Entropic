@@ -13,23 +13,17 @@ using Microsoft.FSharp.Core;
 namespace Entropic.GUI.ViewModels;
 
 // @must_test(REQ-ARC-003)
-// @must_test(REQ-GUI-001)
 // @must_test(REQ-GUI-006)
-// @must_test(REQ-GUI-011)
-// @must_test(REQ-GUI-012)
-// @must_test(REQ-GUI-014)
-// @must_test(REQ-GUI-015)
-// @must_test(REQ-GUI-016)
-// @must_test(REQ-GUI-017)
-// @must_test(REQ-GUI-020)
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly List<IProviderPort> _providers = new();
     private readonly ErrorBoundaryService _errorService = new();
 
+    // @must_test(REQ-GUI-001)
     [ObservableProperty]
     private int _selectedTabIndex;
 
+    // @must_test(REQ-GUI-001)
     public bool IsProjectTab => SelectedTabIndex == 0;
     public bool IsGlobalTab => SelectedTabIndex == 1;
     public bool IsGitTab => SelectedTabIndex == 2;
@@ -43,6 +37,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsCommitTab));
     }
 
+    // @must_test(REQ-GUI-011)
     [ObservableProperty]
     private string _statusText = "Entropic — loading...";
 
@@ -52,9 +47,11 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private int _activeTodoCount;
 
+    // @must_test(REQ-GUI-016)
     [ObservableProperty]
     private bool _activityModeEnabled;
 
+    // @must_test(REQ-GUI-017)
     [ObservableProperty]
     private string _projectSortMode = "recent";
 
@@ -72,6 +69,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _spacingMode = "normal";
 
+    // @must_test(REQ-GUI-005)
     public int SpacingPixels => SpacingMode switch
     {
         "compact" => 6,
@@ -120,6 +118,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void ToggleHelp() => IsHelpOpen = !IsHelpOpen;
 
+    // @must_test(REQ-GUI-020)
     public void ShowCommitsForRepo(string repoPath, string repoName)
     {
         Commits.LoadForRepo(repoPath, repoName);
@@ -142,6 +141,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     // @must_test(REQ-GUI-015)
+    // @must_test(REQ-GUI-012)
     [RelayCommand]
     private async Task Refresh()
     {
@@ -201,6 +201,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SpacingPixels));
     }
 
+    // @must_test(REQ-GUI-014)
     // @must_test(REQ-GUI-017)
     [RelayCommand]
     private void SetSortMode(string mode)

@@ -13,6 +13,7 @@
 
 - Rebuild Entropic.Core and Entropic.GUI assemblies (DL... (Mathew Burkitt)
 - Add untracked files (Mathew Burkitt)
+- Add repair functionality tests (Mathew Burkitt)
 Condense README from verbose feature documentation... (Mathew Burkitt)
 
 ### Added

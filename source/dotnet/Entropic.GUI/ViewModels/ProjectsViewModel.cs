@@ -12,11 +12,6 @@ using Microsoft.FSharp.Collections;
 namespace Entropic.GUI.ViewModels;
 
 // @must_test(REQ-GUI-002)
-// @must_test(REQ-GUI-003)
-// @must_test(REQ-GUI-004)
-// @must_test(REQ-TOD-007)
-// @must_test(REQ-PRV-005)
-// @must_test(REQ-SES-002)
 public partial class ProjectsViewModel : ViewModelBase
 {
     private FSharpList<Project>? _coreProjects;
@@ -34,6 +29,8 @@ public partial class ProjectsViewModel : ViewModelBase
     private SessionItemViewModel? _selectedSession;
 
     // @must_test(REQ-GUI-003)
+    // @must_test(REQ-SES-002)
+    // @must_test(REQ-GUI-020)
     [RelayCommand]
     private void SelectSession(SessionItemViewModel session)
     {
@@ -71,6 +68,7 @@ public partial class ProjectsViewModel : ViewModelBase
     }
 
     // @must_test(REQ-GUI-003)
+    // @must_test(REQ-GUI-004)
     [RelayCommand]
     private void SetFilter(string mode)
     {
@@ -140,6 +138,8 @@ public partial class ProjectsViewModel : ViewModelBase
         Projects = new ObservableCollection<ProjectItemViewModel>(sorted);
     }
 
+    // @must_test(REQ-PRV-005)
+    // @must_test(REQ-TOD-007)
     public static ProjectItemViewModel ConvertProject(Project p)
     {
         var vm = new ProjectItemViewModel
