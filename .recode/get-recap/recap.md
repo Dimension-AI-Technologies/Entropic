@@ -247,3 +247,16 @@ dist, coverage, and tsbuildinfo to .gitignore for TypeScript builds.
 - test: add repair functionality tests
   Author: Mathew Burkitt
 
+
+---
+
+## Commit: 2026-03-25 18:37
+
+- chore: rebuild debug assemblies and update metadata
+
+- Regenerate .dll and .pdb files for Debug configuration
+- Update assembly metadata to commit 15ffa68
+- Invalidate and regenerate AssemblyInfoInputs.cache
+- Rebuild reference assemblies
+  Author: Mathew Burkitt
+

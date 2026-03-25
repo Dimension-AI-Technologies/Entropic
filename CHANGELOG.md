@@ -14,6 +14,9 @@
 - Rebuild Entropic.Core and Entropic.GUI assemblies (DL... (Mathew Burkitt)
 - Add untracked files (Mathew Burkitt)
 - Add repair functionality tests (Mathew Burkitt)
+- Rebuild debug assemblies and update metadata
+
+- Regenerate .dll and .pdb files for Debug configur... (Mathew Burkitt)
 Condense README from verbose feature documentation... (Mathew Burkitt)
 
 ### Added
