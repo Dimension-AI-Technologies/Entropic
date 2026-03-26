@@ -260,3 +260,15 @@ dist, coverage, and tsbuildinfo to .gitignore for TypeScript builds.
 - Rebuild reference assemblies
   Author: Mathew Burkitt
 
+
+---
+
+## Commit: 2026-03-26 18:37
+
+- test: add test configuration and rebuild artifacts
+
+- Add musttest-implementations.json defining test layers for entropic-electron (TypeScript) and entropic-avalonia (.NET)
+- Remove @must_test requirement annotations from ScriptReferences.fs
+- Rebuild DLLs, PDBs, and assembly metadata with updated commit reference
+  Author: Mathew Burkitt
+

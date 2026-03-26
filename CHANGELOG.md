@@ -17,6 +17,9 @@
 - Rebuild debug assemblies and update metadata
 
 - Regenerate .dll and .pdb files for Debug configur... (Mathew Burkitt)
+- Add test configuration and rebuild artifacts
+
+- Add musttest-implementations.json defining test l... (Mathew Burkitt)
 Condense README from verbose feature documentation... (Mathew Burkitt)
 
 ### Added
