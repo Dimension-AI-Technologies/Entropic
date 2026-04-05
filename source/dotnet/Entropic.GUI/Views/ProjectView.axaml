@@ -51,6 +51,55 @@
             <Setter Property="Background" Value="#3a3d42"/>
             <Setter Property="BorderBrush" Value="#5865f2"/>
         </Style>
+        <Style Selector="Button.sessionTab.active">
+            <Setter Property="Foreground" Value="#dcddde"/>
+            <Setter Property="BorderBrush" Value="#5865f2"/>
+        </Style>
+        <Style Selector="Button.sessionTab.active /template/ ContentPresenter">
+            <Setter Property="Background" Value="#42464d"/>
+            <Setter Property="BorderBrush" Value="#5865f2"/>
+        </Style>
+        <!-- Control bar filter toggles -->
+        <Style Selector="ToggleButton.statusFilter">
+            <Setter Property="Background" Value="#2f3136"/>
+            <Setter Property="Foreground" Value="#8e9297"/>
+            <Setter Property="BorderBrush" Value="#35373b"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+        </Style>
+        <Style Selector="ToggleButton.statusFilter:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="#5865f2"/>
+            <Setter Property="Foreground" Value="#ffffff"/>
+        </Style>
+        <!-- Delete/action buttons -->
+        <Style Selector="Button.dangerBtn">
+            <Setter Property="Background" Value="#4f292b"/>
+            <Setter Property="Foreground" Value="#ed4245"/>
+            <Setter Property="BorderBrush" Value="#5c3133"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.dangerBtn:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#5c3133"/>
+        </Style>
+        <Style Selector="Button.mergeBtn">
+            <Setter Property="Background" Value="#2f3a4f"/>
+            <Setter Property="Foreground" Value="#7aa2f7"/>
+            <Setter Property="BorderBrush" Value="#3a4a5c"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,3"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
         <!-- Sidebar project list -->
         <Style Selector="ListBox.projectList">
             <Setter Property="Background" Value="Transparent"/>
@@ -171,6 +220,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="vm:SessionItemViewModel">
                                 <Button Classes="sessionTab"
+                                        Classes.active="{Binding IsSelected}"
                                         Content="{Binding ShortLabel}"
                                         Command="{Binding $parent[UserControl].((vm:ProjectsViewModel)DataContext).SelectSessionCommand}"
                                         CommandParameter="{Binding}" />
@@ -180,9 +230,47 @@
                 </ScrollViewer>
             </Border>
 
-            <!-- Todo list for selected session -->
+            <!-- Session control bar: filters + actions -->
+            <Border DockPanel.Dock="Top" Background="#e6292b2f"
+                    BorderBrush="#35373b" BorderThickness="0,0,0,1"
+                    Padding="8,5"
+                    IsVisible="{Binding SelectedSession, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <DockPanel>
+                    <!-- Right: action buttons -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                        <Button Classes="mergeBtn"
+                                Content="{Binding SelectedProject.Sessions.Count, StringFormat='Merge ({0})'}"
+                                Command="{Binding StartMergeCommand}"
+                                IsVisible="{Binding SelectedProject.Sessions.Count, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <Button Classes="dangerBtn"
+                                Content="{Binding EmptySessionCount, StringFormat='Delete Empty ({0})'}"
+                                Command="{Binding DeleteEmptySessionsCommand}" />
+                        <!-- Delete session with confirmation -->
+                        <Button Classes="dangerBtn" Content="Delete Session"
+                                IsVisible="{Binding !ShowDeleteConfirm}"
+                                Command="{Binding SetShowDeleteConfirmCommand}" CommandParameter="true" />
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    IsVisible="{Binding ShowDeleteConfirm}">
+                            <TextBlock Text="Delete?" Foreground="#ed4245" FontSize="11" VerticalAlignment="Center" />
+                            <Button Classes="dangerBtn" Content="Yes" Command="{Binding DeleteSelectedSessionCommand}" />
+                            <Button Classes="filterPill" Content="No"
+                                    Command="{Binding SetShowDeleteConfirmCommand}" CommandParameter="false" />
+                        </StackPanel>
+                    </StackPanel>
+                    <!-- Left: status filter toggles -->
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="Filter:" Foreground="#8e9297" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <ToggleButton Classes="statusFilter" Content="Done" IsChecked="{Binding ShowCompleted}" />
+                        <ToggleButton Classes="statusFilter" Content="Doing" IsChecked="{Binding ShowInProgress}" />
+                        <ToggleButton Classes="statusFilter" Content="Pending" IsChecked="{Binding ShowPending}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Todo list for selected session (filtered) -->
             <ListBox Classes="todoList"
-                     ItemsSource="{Binding SelectedSession.Todos}"
+                     ItemsSource="{Binding FilteredTodos}"
+                     SelectedItem="{Binding SelectedTodoItem}"
                      Margin="8"
                      IsVisible="{Binding SelectedSession, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <ListBox.ItemTemplate>
@@ -212,10 +300,12 @@
                 </ListBox.ItemTemplate>
                 <ListBox.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="Toggle Status" />
-                        <MenuItem Header="Edit" />
-                        <Separator />
-                        <MenuItem Header="Delete" />
+                        <MenuItem Header="Toggle Status"
+                                  Command="{Binding SelectedTodoItem.ToggleStatusCommand}"
+                                  IsEnabled="{Binding SelectedTodoItem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <MenuItem Header="Edit"
+                                  Command="{Binding SelectedTodoItem.StartEditCommand}"
+                                  IsEnabled="{Binding SelectedTodoItem, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </ContextMenu>
                 </ListBox.ContextMenu>
             </ListBox>
@@ -227,6 +317,24 @@
         </DockPanel>
 
         <GridSplitter Grid.Column="3" Width="1" Background="#35373b" />
+
+        <!-- Merge dialog overlay (spans middle pane) -->
+        <Border Grid.Column="2" IsVisible="{Binding IsMergeDialogOpen}"
+                Background="rgba(0,0,0,0.5)" ZIndex="10">
+            <Border Background="#1f2227" CornerRadius="8" Padding="20,16"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="360" BorderBrush="#3a3d42" BorderThickness="1"
+                    BoxShadow="0 12 30 0 rgba(0,0,0,0.4)">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="Merge Sessions" Foreground="#ffffff" FontSize="15" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding MergePreviewText}" Foreground="#b9bbbe" FontSize="13" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                        <Button Content="Cancel" Classes="filterPill" Command="{Binding CancelMergeCommand}" />
+                        <Button Content="Merge" Classes="mergeBtn" Command="{Binding ConfirmMergeCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
 
         <!-- Right pane: Summary for selected project -->
         <DockPanel Grid.Column="4" Background="#e02f3136">

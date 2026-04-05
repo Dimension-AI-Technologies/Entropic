@@ -13,7 +13,7 @@ public sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        using var guard = new SingleInstanceGuard("com.claudecode.todomonitor");
+        using var guard = new SingleInstanceGuard();
         if (!guard.IsFirstInstance)
         {
             Console.Error.WriteLine("Another instance is already running.");

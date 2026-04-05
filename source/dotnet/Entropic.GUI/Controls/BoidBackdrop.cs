@@ -50,7 +50,12 @@ public class BoidBackdrop : Control
     private const double MeanReversionRate = 0.01;
     private const double Volatility = 0.02;
 
+    // Cached brushes to avoid per-frame allocations
+    private static readonly SolidColorBrush LogoGlowBrush = new(Color.FromArgb((byte)(LogoOpacity * 0.3 * 255), 0x58, 0x65, 0xF2));
+    private static readonly SolidColorBrush LogoCoreBrush = new(Color.FromArgb((byte)(LogoOpacity * 255), 0x58, 0x65, 0xF2));
+
     private readonly List<Boid> _boids = new();
+    private readonly List<int> _toRemoveBuffer = new();
     private readonly Random _rng = new();
     private DispatcherTimer? _timer;
     private double _elapsed;
@@ -99,7 +104,7 @@ public class BoidBackdrop : Control
 
         var cx = w / 2;
         var cy = h / 2;
-        var toRemove = new List<int>();
+        _toRemoveBuffer.Clear();
 
         for (int i = 0; i < _boids.Count; i++)
         {
@@ -120,7 +125,7 @@ public class BoidBackdrop : Control
             else if (b.Leaving)
             {
                 b.Opacity = Math.Max(0, b.Opacity - 0.0003);
-                if (b.Opacity <= 0) { toRemove.Add(i); continue; }
+                if (b.Opacity <= 0) { _toRemoveBuffer.Add(i); continue; }
                 b.X += b.Vx * 2;
                 b.Y += b.Vy * 2;
                 continue;
@@ -150,29 +155,15 @@ public class BoidBackdrop : Control
             ApplyFlocking(b, i);
             ApplyEdgeAvoidance(b, w, h);
             ApplyWander(b);
-
-            b.Vx = Clamp(b.Vx + b.Ax, -BaseSpeed * 2, BaseSpeed * 2);
-            b.Vy = Clamp(b.Vy + b.Ay, -BaseSpeed * 2, BaseSpeed * 2);
-
-            var speed = Math.Sqrt(b.Vx * b.Vx + b.Vy * b.Vy);
-            if (speed > BaseSpeed * 2)
-            {
-                b.Vx = b.Vx / speed * BaseSpeed * 2;
-                b.Vy = b.Vy / speed * BaseSpeed * 2;
-            }
-
-            b.X += b.Vx;
-            b.Y += b.Vy;
-            b.Ax = 0;
-            b.Ay = 0;
+            ApplyVelocityAndMove(b);
 
             // Remove if far off screen
             if (b.X < -200 || b.X > w + 200 || b.Y < -200 || b.Y > h + 200)
-                toRemove.Add(i);
+                _toRemoveBuffer.Add(i);
         }
 
-        for (int i = toRemove.Count - 1; i >= 0; i--)
-            _boids.RemoveAt(toRemove[i]);
+        for (int i = _toRemoveBuffer.Count - 1; i >= 0; i--)
+            _boids.RemoveAt(_toRemoveBuffer[i]);
 
         InvalidateVisual();
     }
@@ -308,6 +299,23 @@ public class BoidBackdrop : Control
         b.Ay += (_rng.NextDouble() - 0.5) * _wanderForce;
     }
 
+    private static void ApplyVelocityAndMove(Boid b)
+    {
+        const double maxSpeed = BaseSpeed * 2;
+        b.Vx = Clamp(b.Vx + b.Ax, -maxSpeed, maxSpeed);
+        b.Vy = Clamp(b.Vy + b.Ay, -maxSpeed, maxSpeed);
+        var speed = Math.Sqrt(b.Vx * b.Vx + b.Vy * b.Vy);
+        if (speed > maxSpeed)
+        {
+            b.Vx = b.Vx / speed * maxSpeed;
+            b.Vy = b.Vy / speed * maxSpeed;
+        }
+        b.X += b.Vx;
+        b.Y += b.Vy;
+        b.Ax = 0;
+        b.Ay = 0;
+    }
+
     public override void Render(DrawingContext ctx)
     {
         base.Render(ctx);
@@ -325,15 +333,8 @@ public class BoidBackdrop : Control
             * Matrix.CreateRotation(_logoRotation * Math.PI / 180)
             * Matrix.CreateTranslation(cx, cy)))
         {
-            // Outer glow
-            var glowBrush = new SolidColorBrush(Color.FromArgb(
-                (byte)(LogoOpacity * 0.3 * 255), 0x58, 0x65, 0xF2));
-            ctx.DrawEllipse(glowBrush, null, new Point(cx, cy), logoR * 1.5, logoR * 1.5);
-
-            // Core circle
-            var logoBrush = new SolidColorBrush(Color.FromArgb(
-                (byte)(LogoOpacity * 255), 0x58, 0x65, 0xF2));
-            ctx.DrawEllipse(logoBrush, null, new Point(cx, cy), logoR, logoR);
+            ctx.DrawEllipse(LogoGlowBrush, null, new Point(cx, cy), logoR * 1.5, logoR * 1.5);
+            ctx.DrawEllipse(LogoCoreBrush, null, new Point(cx, cy), logoR, logoR);
         }
 
         // Draw boids with throb and rotation
@@ -350,14 +351,9 @@ public class BoidBackdrop : Control
                 * Matrix.CreateScale(boidThrob, boidThrob)
                 * Matrix.CreateTranslation(b.X, b.Y)))
             {
-                // Glow
-                var glowBrush = new SolidColorBrush(Color.FromArgb(
-                    (byte)(alpha / 3), 0x58, 0x65, 0xF2));
-                ctx.DrawEllipse(glowBrush, null, new Point(b.X, b.Y), size * 2.5, size * 2.5);
-
-                // Core
-                var coreBrush = new SolidColorBrush(Color.FromArgb(alpha, 0x7A, 0xA2, 0xF7));
-                ctx.DrawEllipse(coreBrush, null, new Point(b.X, b.Y), size, size);
+                b.UpdateBrushes(alpha);
+                ctx.DrawEllipse(b.GlowBrush, null, new Point(b.X, b.Y), size * 2.5, size * 2.5);
+                ctx.DrawEllipse(b.CoreBrush, null, new Point(b.X, b.Y), size, size);
             }
         }
     }
@@ -406,14 +402,7 @@ public class BoidBackdrop : Control
             ApplyFlocking(b, i);
             ApplyEdgeAvoidance(b, width, height);
             ApplyWander(b);
-            b.Vx = Clamp(b.Vx + b.Ax, -BaseSpeed * 2, BaseSpeed * 2);
-            b.Vy = Clamp(b.Vy + b.Ay, -BaseSpeed * 2, BaseSpeed * 2);
-            var speed = Math.Sqrt(b.Vx * b.Vx + b.Vy * b.Vy);
-            if (speed > BaseSpeed * 2) { b.Vx = b.Vx / speed * BaseSpeed * 2; b.Vy = b.Vy / speed * BaseSpeed * 2; }
-            b.X += b.Vx;
-            b.Y += b.Vy;
-            b.Ax = 0;
-            b.Ay = 0;
+            ApplyVelocityAndMove(b);
             if (b.Opacity < MaxBoidOpacity) b.Opacity = Math.Min(b.Opacity + 0.0003, MaxBoidOpacity);
         }
     }
@@ -435,4 +424,17 @@ public class Boid
     public double ThrobSpeed { get; set; } = 0.02;
     public bool Entering { get; set; }
     public bool Leaving { get; set; }
+
+    // Cached brushes — only recreated when alpha changes
+    private byte _lastAlpha;
+    public SolidColorBrush GlowBrush { get; private set; } = new(Colors.Transparent);
+    public SolidColorBrush CoreBrush { get; private set; } = new(Colors.Transparent);
+
+    public void UpdateBrushes(byte alpha)
+    {
+        if (alpha == _lastAlpha) return;
+        _lastAlpha = alpha;
+        GlowBrush = new SolidColorBrush(Color.FromArgb((byte)(alpha / 3), 0x58, 0x65, 0xF2));
+        CoreBrush = new SolidColorBrush(Color.FromArgb(alpha, 0x7A, 0xA2, 0xF7));
+    }
 }

@@ -1,10 +1,10 @@
-using System;
-using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Entropic.Core;
 using Microsoft.FSharp.Collections;
+using FSharpOption = Microsoft.FSharp.Core.FSharpOption<string>;
+using FSharpOptionLong = Microsoft.FSharp.Core.FSharpOption<long>;
 
 namespace Entropic.GUI.ViewModels;
 
@@ -17,7 +17,7 @@ public partial class TodoItemViewModel : ViewModelBase
     private string _content = "";
 
     [ObservableProperty]
-    private string _status = "pending"; // pending, in_progress, completed
+    private string _status = TodoStatuses.Pending;
 
     [ObservableProperty]
     private string? _activeForm;
@@ -34,21 +34,21 @@ public partial class TodoItemViewModel : ViewModelBase
     // @must_test(REQ-TOD-003)
     public string StatusColor => Status switch
     {
-        "completed" => "#43b581",   // green (Discord)
-        "in_progress" => "#5865f2", // blue (Discord accent)
-        _ => "#72767d"              // gray (Discord muted)
+        TodoStatuses.Completed => "#43b581",
+        TodoStatuses.InProgress => "#5865f2",
+        _ => "#72767d"
     };
 
     // @must_test(REQ-TOD-003)
     public string StatusIcon => Status switch
     {
-        "completed" => "\u2713",    // checkmark
-        "in_progress" => "\u2192",  // arrow
-        _ => "\u25CB"               // circle
+        TodoStatuses.Completed => "\u2713",
+        TodoStatuses.InProgress => "\u2192",
+        _ => "\u25CB"
     };
 
     // @must_test(REQ-TOD-001)
-    public string DisplayText => Status == "in_progress" && !string.IsNullOrEmpty(ActiveForm)
+    public string DisplayText => Status == TodoStatuses.InProgress && !string.IsNullOrEmpty(ActiveForm)
         ? ActiveForm
         : Content;
 
@@ -58,9 +58,9 @@ public partial class TodoItemViewModel : ViewModelBase
     {
         Status = Status switch
         {
-            "pending" => "in_progress",
-            "in_progress" => "completed",
-            _ => "pending"
+            TodoStatuses.Pending => TodoStatuses.InProgress,
+            TodoStatuses.InProgress => TodoStatuses.Completed,
+            _ => TodoStatuses.Pending
         };
         OnPropertyChanged(nameof(StatusColor));
         OnPropertyChanged(nameof(StatusIcon));
@@ -70,10 +70,7 @@ public partial class TodoItemViewModel : ViewModelBase
 
     // @must_test(REQ-TOD-004)
     [RelayCommand]
-    private void StartEdit()
-    {
-        IsEditing = true;
-    }
+    private void StartEdit() => IsEditing = true;
 
     [RelayCommand]
     private void EndEdit()
@@ -92,14 +89,11 @@ public partial class TodoItemViewModel : ViewModelBase
         PersistOwnerSession();
     }
 
-    public bool CanDelete => true;
-
     // @must_test(REQ-TOD-012)
     /// Persist the owning session's todo list to disk via F# Core.
     public void PersistOwnerSession()
     {
         if (OwnerSession?.FilePath == null) return;
-
         var fsharpTodos = OwnerSession.Todos.Select(ToCoreTodo);
         TodoManager.persistTodos(OwnerSession.FilePath, ListModule.OfSeq(fsharpTodos));
     }
@@ -108,17 +102,14 @@ public partial class TodoItemViewModel : ViewModelBase
     {
         var status = t.Status switch
         {
-            "in_progress" => TodoStatus.InProgress,
-            "completed" => TodoStatus.Completed,
+            TodoStatuses.InProgress => TodoStatus.InProgress,
+            TodoStatuses.Completed => TodoStatus.Completed,
             _ => TodoStatus.Pending
         };
         return new Todo(
-            t.Id != null ? Microsoft.FSharp.Core.FSharpOption<string>.Some(t.Id) : Microsoft.FSharp.Core.FSharpOption<string>.None,
-            t.Content,
-            status,
-            Microsoft.FSharp.Core.FSharpOption<long>.None,
-            Microsoft.FSharp.Core.FSharpOption<long>.None,
-            t.ActiveForm != null ? Microsoft.FSharp.Core.FSharpOption<string>.Some(t.ActiveForm) : Microsoft.FSharp.Core.FSharpOption<string>.None
-        );
+            t.Id != null ? FSharpOption.Some(t.Id) : FSharpOption.None,
+            t.Content, status,
+            FSharpOptionLong.None, FSharpOptionLong.None,
+            t.ActiveForm != null ? FSharpOption.Some(t.ActiveForm) : FSharpOption.None);
     }
 }

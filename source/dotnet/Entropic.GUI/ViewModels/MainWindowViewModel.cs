@@ -14,8 +14,10 @@ namespace Entropic.GUI.ViewModels;
 
 // @must_test(REQ-ARC-003)
 // @must_test(REQ-GUI-006)
-public partial class MainWindowViewModel : ViewModelBase
+public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
+    private const int TabCount = 4;
+
     private readonly List<IProviderPort> _providers = new();
     private readonly ErrorBoundaryService _errorService = new();
 
@@ -103,13 +105,14 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         Git = new GitViewModel(this);
         _toastService.ToastRequested += OnToastRequested;
+        _errorService.ErrorCaught += ex => ShowToast($"Error: {ex.Message}");
     }
 
     private async void OnToastRequested(string message)
     {
         ToastMessage = message;
         IsToastVisible = true;
-        await Task.Delay(2500);
+        await Task.Delay(ToastService.AutoDismissMs);
         IsToastVisible = false;
     }
 
@@ -117,6 +120,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [RelayCommand]
     private void ToggleHelp() => IsHelpOpen = !IsHelpOpen;
+
+    [RelayCommand]
+    private static void Close() => Environment.Exit(0);
 
     // @must_test(REQ-GUI-020)
     public void ShowCommitsForRepo(string repoPath, string repoName)
@@ -190,7 +196,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void SwitchTab(string index)
     {
-        if (int.TryParse(index, out var i) && i >= 0 && i <= 3)
+        if (int.TryParse(index, out var i) && i >= 0 && i < TabCount)
             SelectedTabIndex = i;
     }
 
@@ -213,5 +219,10 @@ public partial class MainWindowViewModel : ViewModelBase
     public void UpdateStatusBar()
     {
         StatusText = $"{ProjectCount} projects — {ActiveTodoCount} active TODOs";
+    }
+
+    public void Dispose()
+    {
+        _toastService.ToastRequested -= OnToastRequested;
     }
 }

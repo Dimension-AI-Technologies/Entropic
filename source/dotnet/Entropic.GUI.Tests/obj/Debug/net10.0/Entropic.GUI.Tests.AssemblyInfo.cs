@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Entropic.GUI.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+28d0b77fc5cc1fa59d3971bf9c934172b215082a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+de215b51cd1423e564293f2d17750199c89f0e01")]
 [assembly: System.Reflection.AssemblyProductAttribute("Entropic.GUI.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Entropic.GUI.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -25,7 +25,7 @@
     <Pkgxunit_analyzers Condition=" '$(Pkgxunit_analyzers)' == '' ">C:\Users\mathew.burkitt\.nuget\packages\xunit.analyzers\1.18.0</Pkgxunit_analyzers>
     <Pkgxunit Condition=" '$(Pkgxunit)' == '' ">C:\Users\mathew.burkitt\.nuget\packages\xunit\2.9.3</Pkgxunit>
     <PkgMicrosoft_NET_Test_Sdk Condition=" '$(PkgMicrosoft_NET_Test_Sdk)' == '' ">C:\Users\mathew.burkitt\.nuget\packages\microsoft.net.test.sdk\17.14.1</PkgMicrosoft_NET_Test_Sdk>
-    <PkgFSharp_Core Condition=" '$(PkgFSharp_Core)' == '' ">C:\Users\mathew.burkitt\.nuget\packages\fsharp.core\11.0.100</PkgFSharp_Core>
+    <PkgFSharp_Core Condition=" '$(PkgFSharp_Core)' == '' ">C:\Users\mathew.burkitt\.nuget\packages\fsharp.core\10.1.201</PkgFSharp_Core>
     <Pkgcoverlet_collector Condition=" '$(Pkgcoverlet_collector)' == '' ">C:\Users\mathew.burkitt\.nuget\packages\coverlet.collector\6.0.4</Pkgcoverlet_collector>
   </PropertyGroup>
 </Project>

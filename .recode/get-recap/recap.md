@@ -272,3 +272,11 @@ dist, coverage, and tsbuildinfo to .gitignore for TypeScript builds.
 - Rebuild DLLs, PDBs, and assembly metadata with updated commit reference
   Author: Mathew Burkitt
 
+
+---
+
+## Commit: 2026-04-05 19:15
+
+- chore: rebuild artifacts and update test configuration
+  Author: Mathew Burkitt
+

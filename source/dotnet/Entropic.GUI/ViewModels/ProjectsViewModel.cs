@@ -8,8 +8,18 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Entropic.Core;
 using Microsoft.FSharp.Collections;
+using FSharpOption = Microsoft.FSharp.Core.FSharpOption<string>;
+using FSharpOptionLong = Microsoft.FSharp.Core.FSharpOption<long>;
 
 namespace Entropic.GUI.ViewModels;
+
+internal static class TodoStatuses
+{
+    public const string Pending = "pending";
+    public const string InProgress = "in_progress";
+    public const string Completed = "completed";
+    public const int ShortIdLength = 7;
+}
 
 // @must_test(REQ-GUI-002)
 public partial class ProjectsViewModel : ViewModelBase
@@ -28,14 +38,152 @@ public partial class ProjectsViewModel : ViewModelBase
     [ObservableProperty]
     private SessionItemViewModel? _selectedSession;
 
+    // Todo status filter toggles (REQ-GUI-003)
+    [ObservableProperty]
+    private bool _showCompleted = true;
+
+    [ObservableProperty]
+    private bool _showInProgress = true;
+
+    [ObservableProperty]
+    private bool _showPending = true;
+
+    // Delete confirmation state
+    [ObservableProperty]
+    private bool _showDeleteConfirm;
+
+    // Merge dialog state
+    [ObservableProperty]
+    private bool _isMergeDialogOpen;
+
+    [ObservableProperty]
+    private string _mergePreviewText = "";
+
+    [ObservableProperty]
+    private ObservableCollection<TodoItemViewModel> _filteredTodos = new();
+
+    [ObservableProperty]
+    private TodoItemViewModel? _selectedTodoItem;
+
+    partial void OnShowCompletedChanged(bool value) => RebuildFilteredTodos();
+    partial void OnShowInProgressChanged(bool value) => RebuildFilteredTodos();
+    partial void OnShowPendingChanged(bool value) => RebuildFilteredTodos();
+
+    private void RebuildFilteredTodos()
+    {
+        FilteredTodos.Clear();
+        if (SelectedSession == null) return;
+        foreach (var t in SelectedSession.Todos)
+        {
+            if ((t.Status == TodoStatuses.Completed && ShowCompleted) ||
+                (t.Status == TodoStatuses.InProgress && ShowInProgress) ||
+                (t.Status == TodoStatuses.Pending && ShowPending))
+                FilteredTodos.Add(t);
+        }
+    }
+
+    /// Count of empty sessions in selected project.
+    public int EmptySessionCount =>
+        SelectedProject?.Sessions.Count(s => s.Todos.Count == 0) ?? 0;
+
     // @must_test(REQ-GUI-003)
     // @must_test(REQ-SES-002)
     // @must_test(REQ-GUI-020)
     [RelayCommand]
     private void SelectSession(SessionItemViewModel session)
     {
+        // Clear previous selection
+        if (SelectedSession != null) SelectedSession.IsSelected = false;
         SelectedSession = session;
+        session.IsSelected = true;
+        RebuildFilteredTodos();
+        OnPropertyChanged(nameof(EmptySessionCount));
     }
+
+    // @must_test(REQ-SES-007)
+    [RelayCommand]
+    private void DeleteSelectedSession()
+    {
+        if (SelectedSession?.FilePath == null) return;
+        var result = SessionManager.deleteSession(new Session(
+            SelectedSession.Provider, SelectedSession.SessionId,
+            FSharpOption.Some(SelectedSession.FilePath),
+            FSharpOption.None, FSharpList<Todo>.Empty,
+            FSharpOptionLong.None, FSharpOptionLong.None));
+        if (result.IsOk && SelectedProject != null)
+        {
+            SelectedProject.Sessions.Remove(SelectedSession);
+            SelectedSession = SelectedProject.Sessions.FirstOrDefault();
+            ShowDeleteConfirm = false;
+            RebuildFilteredTodos();
+            OnPropertyChanged(nameof(EmptySessionCount));
+        }
+    }
+
+    // @must_test(REQ-SES-010)
+    [RelayCommand]
+    private void DeleteEmptySessions()
+    {
+        if (SelectedProject == null) return;
+        var emptySessions = SelectedProject.Sessions.Where(s => s.Todos.Count == 0).ToList();
+        foreach (var s in emptySessions)
+        {
+            if (s.FilePath == null) continue;
+            var result = SessionManager.deleteSession(new Session(
+                s.Provider, s.SessionId,
+                FSharpOption.Some(s.FilePath), FSharpOption.None,
+                FSharpList<Todo>.Empty, FSharpOptionLong.None, FSharpOptionLong.None));
+            if (result.IsOk)
+                SelectedProject.Sessions.Remove(s);
+        }
+        OnPropertyChanged(nameof(EmptySessionCount));
+    }
+
+    private (List<SessionItemViewModel> Sources, HashSet<string> ExistingContents)? GetMergeContext()
+    {
+        if (SelectedProject == null || SelectedSession == null) return null;
+        var sources = SelectedProject.Sessions.Where(s => s != SelectedSession).ToList();
+        var existing = new HashSet<string>(SelectedSession.Todos.Select(t => t.Content));
+        return (sources, existing);
+    }
+
+    // @must_test(REQ-SES-006)
+    [RelayCommand]
+    private void StartMerge()
+    {
+        var ctx = GetMergeContext();
+        if (ctx == null) return;
+        var (sources, existing) = ctx.Value;
+        var allSourceTodos = sources.SelectMany(s => s.Todos).ToList();
+        var newCount = allSourceTodos.Count(t => !existing.Contains(t.Content));
+        var dupCount = allSourceTodos.Count(t => existing.Contains(t.Content));
+        MergePreviewText = $"Merge {sources.Count} sessions into selected.\n{newCount} new todos, {dupCount} duplicates will be skipped.";
+        IsMergeDialogOpen = true;
+    }
+
+    [RelayCommand]
+    private void ConfirmMerge()
+    {
+        var ctx = GetMergeContext();
+        if (ctx == null) { IsMergeDialogOpen = false; return; }
+        var (sources, existing) = ctx.Value;
+        foreach (var todo in sources.SelectMany(s => s.Todos))
+        {
+            if (existing.Add(todo.Content))
+                SelectedSession!.Todos.Add(todo);
+        }
+        foreach (var s in sources)
+            SelectedProject!.Sessions.Remove(s);
+        IsMergeDialogOpen = false;
+        RebuildFilteredTodos();
+        OnPropertyChanged(nameof(EmptySessionCount));
+    }
+
+    [RelayCommand]
+    private void CancelMerge() => IsMergeDialogOpen = false;
+
+    [RelayCommand]
+    private void SetShowDeleteConfirm(string show) => ShowDeleteConfirm = show == "true";
 
     // @must_test(REQ-TOD-012) — drag-and-drop / keyboard reorder
     [RelayCommand]
@@ -105,11 +253,6 @@ public partial class ProjectsViewModel : ViewModelBase
         ApplyFilter();
     }
 
-    public void Refresh()
-    {
-        // Called from MainWindowViewModel.Refresh() via LoadFromCore
-    }
-
     private void ApplyFilter()
     {
         if (_coreProjects == null) return;
@@ -123,8 +266,9 @@ public partial class ProjectsViewModel : ViewModelBase
             _ => filtered
         };
 
-        Projects = new ObservableCollection<ProjectItemViewModel>(
-            filtered.Select(ConvertProject));
+        var items = filtered.Select(ConvertProject).ToList();
+        Projects.Clear();
+        foreach (var item in items) Projects.Add(item);
     }
 
     public void ApplySort(string mode)
@@ -135,7 +279,8 @@ public partial class ProjectsViewModel : ViewModelBase
             "todos" => Projects.OrderByDescending(p => p.TodoCount).ToList(),
             _ => Projects.OrderByDescending(p => p.LastActivity).ToList()
         };
-        Projects = new ObservableCollection<ProjectItemViewModel>(sorted);
+        Projects.Clear();
+        foreach (var item in sorted) Projects.Add(item);
     }
 
     // @must_test(REQ-PRV-005)
@@ -184,9 +329,9 @@ public partial class ProjectsViewModel : ViewModelBase
         {
             Id = t.Id?.Value,
             Content = t.Content,
-            Status = t.Status.IsCompleted ? "completed"
-                   : t.Status.IsInProgress ? "in_progress"
-                   : "pending",
+            Status = t.Status.IsCompleted ? TodoStatuses.Completed
+                   : t.Status.IsInProgress ? TodoStatuses.InProgress
+                   : TodoStatuses.Pending,
             ActiveForm = t.ActiveForm?.Value,
         };
     }
@@ -234,7 +379,7 @@ public partial class SessionItemViewModel : ViewModelBase
     {
         get
         {
-            var id = SessionId.Length > 7 ? SessionId[..7] : SessionId;
+            var id = SessionId.Length > TodoStatuses.ShortIdLength ? SessionId[..TodoStatuses.ShortIdLength] : SessionId;
             if (UpdatedAt > 0)
             {
                 var dt = DateTimeOffset.FromUnixTimeMilliseconds(UpdatedAt);
@@ -246,6 +391,9 @@ public partial class SessionItemViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? _filePath;
+
+    [ObservableProperty]
+    private bool _isSelected;
 
     [ObservableProperty]
     private ObservableCollection<TodoItemViewModel> _todos = new();

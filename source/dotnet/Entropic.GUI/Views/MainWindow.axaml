@@ -12,6 +12,35 @@
         Width="1400" Height="900"
         Background="#36393f">
 
+    <NativeMenu.Menu>
+        <NativeMenu>
+            <NativeMenuItem Header="File">
+                <NativeMenu>
+                    <NativeMenuItem Header="Refresh" Command="{Binding RefreshCommand}" Gesture="F5" />
+                    <NativeMenuItemSeparator />
+                    <NativeMenuItem Header="Quit" Command="{Binding CloseCommand}" Gesture="Ctrl+Q" />
+                </NativeMenu>
+            </NativeMenuItem>
+            <NativeMenuItem Header="View">
+                <NativeMenu>
+                    <NativeMenuItem Header="Project View" Command="{Binding SwitchTabCommand}" CommandParameter="0" Gesture="Ctrl+1" />
+                    <NativeMenuItem Header="Global View" Command="{Binding SwitchTabCommand}" CommandParameter="1" Gesture="Ctrl+2" />
+                    <NativeMenuItem Header="Git View" Command="{Binding SwitchTabCommand}" CommandParameter="2" Gesture="Ctrl+3" />
+                    <NativeMenuItem Header="Commit View" Command="{Binding SwitchTabCommand}" CommandParameter="3" Gesture="Ctrl+4" />
+                    <NativeMenuItemSeparator />
+                    <NativeMenuItem Header="Compact Spacing" Command="{Binding SetSpacingCommand}" CommandParameter="compact" />
+                    <NativeMenuItem Header="Normal Spacing" Command="{Binding SetSpacingCommand}" CommandParameter="normal" />
+                    <NativeMenuItem Header="Wide Spacing" Command="{Binding SetSpacingCommand}" CommandParameter="wide" />
+                </NativeMenu>
+            </NativeMenuItem>
+            <NativeMenuItem Header="Help">
+                <NativeMenu>
+                    <NativeMenuItem Header="Keyboard Shortcuts" Command="{Binding ToggleHelpCommand}" Gesture="F1" />
+                </NativeMenu>
+            </NativeMenuItem>
+        </NativeMenu>
+    </NativeMenu.Menu>
+
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
@@ -170,6 +199,10 @@
                                 VerticalAlignment="Center">
                         <Button Classes="spacingBtn" Content="Compact"
                                 Command="{Binding SetSpacingCommand}" CommandParameter="compact" />
+                        <Button Classes="spacingBtn" Content="Normal"
+                                Command="{Binding SetSpacingCommand}" CommandParameter="normal" />
+                        <Button Classes="spacingBtn" Content="Wide"
+                                Command="{Binding SetSpacingCommand}" CommandParameter="wide" />
                     </StackPanel>
                 </Grid>
             </Border>
@@ -186,6 +219,24 @@
                               IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsCommitTab}" />
             </Panel>
         </DockPanel>
+
+        <!-- Progress overlay (REQ-GUI-021) -->
+        <Border IsVisible="{Binding Progress.IsVisible}"
+                Background="rgba(0,0,0,0.4)"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="#1f2227" CornerRadius="8" Padding="24,18"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="280" BorderBrush="#3a3d42" BorderThickness="1"
+                    BoxShadow="0 8 24 0 rgba(0,0,0,0.35)">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="4"
+                                 Foreground="#5865f2" Background="#2f3136" />
+                    <TextBlock Text="{Binding Progress.StatusMessage}"
+                               Foreground="#dcddde" FontSize="13"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </Border>
 
         <!-- Toast overlay (bottom-right like Electron) -->
         <Border IsVisible="{Binding IsToastVisible}"
@@ -215,12 +266,13 @@
                                 VerticalAlignment="Center" Cursor="Hand" />
                     </StackPanel>
                     <StackPanel Spacing="4">
-                        <TextBlock Text="F1 — Help" Foreground="#b9bbbe" FontSize="13" />
-                        <TextBlock Text="F5 — Refresh data" Foreground="#b9bbbe" FontSize="13" />
-                        <TextBlock Text="Ctrl+1..4 — Switch tabs" Foreground="#b9bbbe" FontSize="13" />
-                        <TextBlock Text="Ctrl+A — Toggle activity mode" Foreground="#b9bbbe" FontSize="13" />
-                        <TextBlock Text="Delete — Delete selected item" Foreground="#b9bbbe" FontSize="13" />
-                        <TextBlock Text="Ctrl+Arrow — Reorder TODOs" Foreground="#b9bbbe" FontSize="13" />
+                        <ItemsControl ItemsSource="{Binding Help.KeyboardShortcuts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Foreground="#b9bbbe" FontSize="13" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                         <TextBlock Text="{Binding Help.Version, StringFormat='Entropic v{0}'}"
                                    Foreground="#8e9297" Margin="0,10,0,0" FontSize="11" />
                     </StackPanel>

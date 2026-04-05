@@ -207,13 +207,7 @@ public class TodoItemViewModelTests
         Assert.False(vm.IsEditing);
     }
 
-    // @covers(TodoItemViewModel)
-    [Fact]
-    public void CanDelete_is_true()
-    {
-        var vm = new TodoItemViewModel();
-        Assert.True(vm.CanDelete);
-    }
+    // CanDelete property removed — deletion is handled by commands
 }
 
 // ── GlobalViewModel (REQ-TOD-008) ──
@@ -717,18 +711,7 @@ public class ContextMenuTests
     }
 }
 
-// ── SplashScreen (REQ-GUI-007) ──
-
-// @covers(SplashScreen)
-public class SplashScreenTests
-{
-    // @covers(SplashScreen)
-    [Fact]
-    public void SplashScreen_type_exists()
-    {
-        Assert.NotNull(typeof(Entropic.GUI.Views.SplashScreen));
-    }
-}
+// ── SplashScreen (REQ-GUI-007) — removed, never instantiated ──
 
 // ── BoidBackdrop (REQ-GUI-012) ──
 
@@ -1898,8 +1881,7 @@ public class PerProjectTodoViewTests
 }
 
 // ── REQ-GUI-007: Splash Screen ──
-// SplashScreen is a Window (View layer) — no ViewModel to test directly.
-// Covered by build-time compilation and the SplashScreen @covers tests above.
+// SplashScreen removed — was never instantiated.
 
 // ── REQ-GUI-008: Toast Notifications ──
 

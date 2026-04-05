@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "h2PYIZbyS9Y=",
+  "dgSpecHash": "OaQg5TY1lyk=",
   "success": true,
   "projectFilePath": "C:\\Users\\mathew.burkitt\\source\\repos\\DT\\Entropic\\source\\dotnet\\Entropic.GUI.Tests\\Entropic.GUI.Tests.csproj",
   "expectedPackageFiles": [
@@ -22,7 +22,7 @@
     "C:\\Users\\mathew.burkitt\\.nuget\\packages\\avalonia.x11\\11.3.12\\avalonia.x11.11.3.12.nupkg.sha512",
     "C:\\Users\\mathew.burkitt\\.nuget\\packages\\communitytoolkit.mvvm\\8.2.1\\communitytoolkit.mvvm.8.2.1.nupkg.sha512",
     "C:\\Users\\mathew.burkitt\\.nuget\\packages\\coverlet.collector\\6.0.4\\coverlet.collector.6.0.4.nupkg.sha512",
-    "C:\\Users\\mathew.burkitt\\.nuget\\packages\\fsharp.core\\11.0.100\\fsharp.core.11.0.100.nupkg.sha512",
+    "C:\\Users\\mathew.burkitt\\.nuget\\packages\\fsharp.core\\10.1.201\\fsharp.core.10.1.201.nupkg.sha512",
     "C:\\Users\\mathew.burkitt\\.nuget\\packages\\harfbuzzsharp\\8.3.1.1\\harfbuzzsharp.8.3.1.1.nupkg.sha512",
     "C:\\Users\\mathew.burkitt\\.nuget\\packages\\harfbuzzsharp.nativeassets.linux\\8.3.1.1\\harfbuzzsharp.nativeassets.linux.8.3.1.1.nupkg.sha512",
     "C:\\Users\\mathew.burkitt\\.nuget\\packages\\harfbuzzsharp.nativeassets.macos\\8.3.1.1\\harfbuzzsharp.nativeassets.macos.8.3.1.1.nupkg.sha512",

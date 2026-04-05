@@ -357,7 +357,7 @@
           "buildTransitive/netstandard2.1/CommunityToolkit.Mvvm.targets": {}
         }
       },
-      "FSharp.Core/11.0.100": {
+      "FSharp.Core/10.1.201": {
         "type": "package",
         "compile": {
           "lib/netstandard2.1/FSharp.Core.dll": {
@@ -654,7 +654,7 @@
         "type": "project",
         "framework": ".NETCoreApp,Version=v10.0",
         "dependencies": {
-          "FSharp.Core": "11.0.100"
+          "FSharp.Core": "10.1.201"
         },
         "compile": {
           "bin/placeholder/Entropic.Core.dll": {}
@@ -1143,15 +1143,15 @@
         "lib/netstandard2.1/CommunityToolkit.Mvvm.xml"
       ]
     },
-    "FSharp.Core/11.0.100": {
-      "sha512": "ijfOz8ihqkFNdKUY57l8YTrbJNfQW/6tFYAUU57ByZzmTxxf1o12cQaCqDOjNqAz4h86AKS7IwQkNhYcrjLeCQ==",
+    "FSharp.Core/10.1.201": {
+      "sha512": "s5w9LWYurZ9yZdIppoIaYLkRadyT5s3u0wbQCb0J4bQd3ubIlIWQ3Nd5+ll1y3pv5OnTS373dP8T1S/BP46QXg==",
       "type": "package",
-      "path": "fsharp.core/11.0.100",
+      "path": "fsharp.core/10.1.201",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
-        "fsharp.core.11.0.100.nupkg.sha512",
+        "fsharp.core.10.1.201.nupkg.sha512",
         "fsharp.core.nuspec",
         "lib/netstandard2.0/FSharp.Core.dll",
         "lib/netstandard2.0/FSharp.Core.xml",
@@ -1667,7 +1667,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.CSharp": "(,4.7.32767]",
           "Microsoft.VisualBasic": "(,10.4.32767]",

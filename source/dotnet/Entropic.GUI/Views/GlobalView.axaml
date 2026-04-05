@@ -7,42 +7,6 @@
              x:Class="Entropic.GUI.Views.GlobalView"
              x:DataType="vm:GlobalViewModel">
 
-    <UserControl.Styles>
-        <Style Selector="DataGrid">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="RowBackground" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="#35373b"/>
-        </Style>
-        <Style Selector="DataGridColumnHeader">
-            <Setter Property="Background" Value="#e6292b2f"/>
-            <Setter Property="Foreground" Value="#8e9297"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="8,8"/>
-            <Setter Property="BorderBrush" Value="#35373b"/>
-            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        </Style>
-        <Style Selector="DataGridRow">
-            <Setter Property="Foreground" Value="#dcddde"/>
-            <Setter Property="FontSize" Value="13"/>
-        </Style>
-        <Style Selector="DataGridRow /template/ Rectangle#BackgroundRectangle">
-            <Setter Property="Transitions">
-                <Transitions>
-                    <BrushTransition Property="Fill" Duration="0:0:0.15"/>
-                </Transitions>
-            </Setter>
-        </Style>
-        <Style Selector="DataGridRow:pointerover /template/ Rectangle#BackgroundRectangle">
-            <Setter Property="Fill" Value="#42464d"/>
-        </Style>
-        <Style Selector="DataGridCell">
-            <Setter Property="Padding" Value="8,6"/>
-        </Style>
-    </UserControl.Styles>
-
     <DockPanel Background="#d936393f">
         <!-- Toolbar -->
         <Border DockPanel.Dock="Top" Background="#e6292b2f"

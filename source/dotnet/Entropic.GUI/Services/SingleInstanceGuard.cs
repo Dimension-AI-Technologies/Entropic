@@ -8,10 +8,12 @@ public sealed class SingleInstanceGuard : IDisposable
     private readonly Mutex _mutex;
     private readonly bool _acquired;
 
+    public const string DefaultAppId = "com.claudecode.todomonitor";
+
     // @must_test(REQ-PLT-005)
-    public SingleInstanceGuard(string appId = "com.claudecode.todomonitor")
+    public SingleInstanceGuard(string? appId = null)
     {
-        _mutex = new Mutex(true, appId, out _acquired);
+        _mutex = new Mutex(true, appId ?? DefaultAppId, out _acquired);
     }
 
     public bool IsFirstInstance => _acquired;

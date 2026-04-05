@@ -33,26 +33,27 @@ public partial class CommitViewModel : ViewModelBase
         if (string.IsNullOrEmpty(SelectedRepoPath)) return;
 
         var result = GitIntegration.getCommitHistory(SelectedRepoPath, CommitLimit);
+        Commits.Clear();
         if (result.IsOk)
         {
-            Commits = new ObservableCollection<CommitItemViewModel>(
-                result.ResultValue.Select(c => new CommitItemViewModel
+            foreach (var c in result.ResultValue)
+            {
+                Commits.Add(new CommitItemViewModel
                 {
                     Hash = c.Hash,
-                    ShortHash = c.Hash.Length >= 7 ? c.Hash[..7] : c.Hash,
+                    ShortHash = c.Hash.Length >= TodoStatuses.ShortIdLength ? c.Hash[..TodoStatuses.ShortIdLength] : c.Hash,
                     Date = c.Date,
                     Message = c.Message,
                     AuthorName = c.AuthorName,
                     Additions = c.Stats.Additions,
                     Deletions = c.Stats.Deletions,
                     FilesChanged = c.Stats.FilesChanged,
-                }));
+                });
+            }
         }
         else
         {
-            // Store error for debugging
             ErrorMessage = result.ErrorValue;
-            Commits = new ObservableCollection<CommitItemViewModel>();
         }
     }
 

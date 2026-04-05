@@ -42,15 +42,15 @@ public partial class GlobalViewModel : ViewModelBase
             .SelectMany(s => s.Todos);
 
         if (ShowActiveOnly)
-        {
             allTodos = allTodos.Where(t => !t.Status.IsCompleted);
-        }
 
-        // Sort: in_progress first, then pending, then completed
         var sorted = allTodos
             .OrderBy(t => t.Status.IsInProgress ? 0 : t.Status.IsPending ? 1 : 2)
-            .Select(ProjectsViewModel.ConvertTodo);
+            .Select(ProjectsViewModel.ConvertTodo)
+            .ToList();
 
-        AllTodos = new ObservableCollection<TodoItemViewModel>(sorted);
+        AllTodos.Clear();
+        foreach (var item in sorted)
+            AllTodos.Add(item);
     }
 }

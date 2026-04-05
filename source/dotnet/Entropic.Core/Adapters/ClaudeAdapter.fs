@@ -148,22 +148,9 @@ type ClaudeAdapter(projectsDir: string, todosDir: string) =
         }
 
         member _.RepairMetadata(dryRun) = async {
-            // Simplified: scan todos dir, write metadata for unanchored sessions
             try
-                let mutable planned = 0
-                let mutable written = 0
-                let mutable unknownCount = 0
-                if Directory.Exists(todosDir) then
-                    for f in Directory.GetFiles(todosDir, "*-agent*.json") do
-                        let metaFile = Path.ChangeExtension(f, ".meta.json")
-                        if not (File.Exists(metaFile)) then
-                            planned <- planned + 1
-                            unknownCount <- unknownCount + 1
-                            if not dryRun then
-                                // Try to infer project path from directory structure
-                                File.WriteAllText(metaFile, """{"path":"unknown"}""")
-                                written <- written + 1
-                return Ok {| Planned = planned; Written = written; UnknownCount = unknownCount |}
+                let summary = RepairStrategies.repairProjectMetadata projectsDir todosDir dryRun
+                return Ok {| Planned = summary.MetadataPlanned; Written = summary.MetadataWritten; UnknownCount = summary.UnknownSessions.Length |}
             with ex ->
                 return Error (sprintf "repair failed: %s" ex.Message)
         }

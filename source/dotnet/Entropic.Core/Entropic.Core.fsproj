@@ -17,6 +17,7 @@
     <Compile Include="FileWatcher.fs" />
     <Compile Include="Preferences.fs" />
     <Compile Include="ProviderDetection.fs" />
+    <Compile Include="RepairStrategies.fs" />
     <Compile Include="Diagnostics.fs" />
     <Compile Include="SessionManager.fs" />
     <Compile Include="ScriptReferences.fs" />

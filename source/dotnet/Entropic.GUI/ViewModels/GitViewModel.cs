@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Entropic.Core.Git;
@@ -48,31 +49,34 @@ public partial class GitViewModel : ViewModelBase
         _parent.ShowCommitsForRepo(fullPath, SelectedRepo.Name);
     }
 
-    public async void Refresh()
+    public async Task RefreshAsync()
     {
         var result = await FSharpAsync.StartAsTask(
             GitIntegration.discoverRepos(_rootPath), null, null);
 
-        if (result.IsOk)
+        if (!result.IsOk) return;
+        var repos = result.ResultValue;
+        var summary = GitIntegration.summarize(repos);
+
+        TotalRepos = summary.TotalRepos;
+        OutOfSync = summary.OutOfSync;
+
+        Repos.Clear();
+        foreach (var r in repos)
         {
-            var repos = result.ResultValue;
-            var summary = GitIntegration.summarize(repos);
-
-            TotalRepos = summary.TotalRepos;
-            OutOfSync = summary.OutOfSync;
-
-            Repos = new ObservableCollection<GitRepoItemViewModel>(
-                repos.Select(r => new GitRepoItemViewModel
-                {
-                    Name = r.Name,
-                    RelativePath = r.RelativePath,
-                    RemoteUrl = r.RemoteUrl?.Value ?? "",
-                    Ahead = r.Ahead,
-                    Behind = r.Behind,
-                    Languages = new ObservableCollection<string>(r.Languages),
-                }));
+            Repos.Add(new GitRepoItemViewModel
+            {
+                Name = r.Name,
+                RelativePath = r.RelativePath,
+                RemoteUrl = r.RemoteUrl?.Value ?? "",
+                Ahead = r.Ahead,
+                Behind = r.Behind,
+                Languages = new ObservableCollection<string>(r.Languages),
+            });
         }
     }
+
+    public void Refresh() => _ = RefreshAsync();
 }
 
 public partial class GitRepoItemViewModel : ViewModelBase

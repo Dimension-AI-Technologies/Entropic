@@ -20,6 +20,7 @@
 - Add test configuration and rebuild artifacts
 
 - Add musttest-implementations.json defining test l... (Mathew Burkitt)
+- Rebuild artifacts and update test configuration (Mathew Burkitt)
 Condense README from verbose feature documentation... (Mathew Burkitt)
 
 ### Added

@@ -173,6 +173,47 @@
  Auto-detection of installed AI coding agent data directories.
 </summary>
 </member>
+<member name="M:Entropic.Core.RepairStrategies.repairProjectMetadata(System.String,System.String,System.Boolean)">
+<summary>
+ Run full repair across all todo sessions.
+</summary>
+</member>
+<member name="M:Entropic.Core.RepairStrategies.resolveSession(System.String,System.String,System.String,Microsoft.FSharp.Collections.FSharpList{System.String},System.Boolean)">
+<summary>
+ Run all 5 strategies in priority order for a single session.
+</summary>
+</member>
+<member name="M:Entropic.Core.RepairStrategies.tryResolveByLogFile(System.String,System.String,System.String,System.Boolean)">
+<summary>
+ Strategy 5: Check logs/current_todos.json for session→project mapping.
+</summary>
+</member>
+<member name="M:Entropic.Core.RepairStrategies.tryResolveByEnvVars(System.String,Microsoft.FSharp.Collections.FSharpList{System.String},System.String,System.Boolean)">
+<summary>
+ Strategy 4: Scan JSONL for cwd/pwd/workspace environment patterns.
+</summary>
+</member>
+<member name="M:Entropic.Core.RepairStrategies.tryResolveByContent(System.String,Microsoft.FSharp.Collections.FSharpList{System.String},System.String,System.Boolean)">
+<summary>
+ Strategy 3: Scan JSONL content for &quot;Working directory:&quot; pattern.
+</summary>
+</member>
+<member name="M:Entropic.Core.RepairStrategies.tryResolveByJsonl(System.String,Microsoft.FSharp.Collections.FSharpList{System.String},System.String,System.Boolean)">
+<summary>
+ Strategy 2: Match JSONL filename in project directories.
+</summary>
+</member>
+<member name="M:Entropic.Core.RepairStrategies.tryResolveBySidecar(System.String,System.String,System.String,System.Boolean)">
+<summary>
+ Strategy 1: Read sidecar meta file for session→project mapping.
+</summary>
+</member>
+<member name="T:Entropic.Core.RepairStrategies">
+<summary>
+ Repair strategies for resolving orphaned todo sessions to project paths.
+ Ported from TypeScript repair.ts — 5 resolution strategies in priority order.
+</summary>
+</member>
 <member name="M:Entropic.Core.Diagnostics.repairAll(Microsoft.FSharp.Collections.FSharpList{Entropic.Core.IProviderPort},System.Boolean)">
 <summary>
  Run repair across all providers (REQ-DGN-003, REQ-DGN-004).

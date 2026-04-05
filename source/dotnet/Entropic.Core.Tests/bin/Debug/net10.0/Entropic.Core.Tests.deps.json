@@ -9,7 +9,7 @@
       "Entropic.Core.Tests/1.0.0": {
         "dependencies": {
           "Entropic.Core": "1.0.0",
-          "FSharp.Core": "11.0.100",
+          "FSharp.Core": "10.1.201",
           "Microsoft.NET.Test.Sdk": "17.14.1",
           "xunit": "2.9.3"
         },
@@ -17,11 +17,11 @@
           "Entropic.Core.Tests.dll": {}
         }
       },
-      "FSharp.Core/11.0.100": {
+      "FSharp.Core/10.1.201": {
         "runtime": {
           "lib/netstandard2.1/FSharp.Core.dll": {
-            "assemblyVersion": "11.0.0.0",
-            "fileVersion": "11.1.26.12022"
+            "assemblyVersion": "10.1.0.0",
+            "fileVersion": "10.102.126.15422"
           }
         },
         "resources": {
@@ -383,7 +383,7 @@
       },
       "Entropic.Core/1.0.0": {
         "dependencies": {
-          "FSharp.Core": "11.0.100"
+          "FSharp.Core": "10.1.201"
         },
         "runtime": {
           "Entropic.Core.dll": {
@@ -400,12 +400,12 @@
       "serviceable": false,
       "sha512": ""
     },
-    "FSharp.Core/11.0.100": {
+    "FSharp.Core/10.1.201": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-ijfOz8ihqkFNdKUY57l8YTrbJNfQW/6tFYAUU57ByZzmTxxf1o12cQaCqDOjNqAz4h86AKS7IwQkNhYcrjLeCQ==",
-      "path": "fsharp.core/11.0.100",
-      "hashPath": "fsharp.core.11.0.100.nupkg.sha512"
+      "sha512": "sha512-s5w9LWYurZ9yZdIppoIaYLkRadyT5s3u0wbQCb0J4bQd3ubIlIWQ3Nd5+ll1y3pv5OnTS373dP8T1S/BP46QXg==",
+      "path": "fsharp.core/10.1.201",
+      "hashPath": "fsharp.core.10.1.201.nupkg.sha512"
     },
     "Microsoft.CodeCoverage/17.14.1": {
       "type": "package",
