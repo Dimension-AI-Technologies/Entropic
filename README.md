@@ -1,76 +1,62 @@
 # Entropic
 
-Real-time monitoring dashboard for AI coding agents (Claude Code, OpenAI Codex, Google Gemini). Track TODO lists, project history, and Git repositories across all your projects from a unified desktop interface.
+Real-time monitoring dashboard for AI coding agents (Claude Code, OpenAI Codex, Google Gemini). Track TODO lists, session history, git repositories, and commit activity across all your projects from a unified desktop interface.
 
 ## Overview
 
-Entropic is a cross-platform companion application that ingests session and history data from multiple AI coding assistants, merges them into a unified provider-aware data model, and renders a live dashboard with project activity, session diagnostics, and maintenance tooling. Available as an Electron/TypeScript GUI, PowerShell CLI, and Bash CLI.
+Entropic is a cross-platform companion application that ingests session and history data from multiple AI coding assistants, merges them into a unified provider-aware data model, and renders a live dashboard with project activity, session diagnostics, and maintenance tooling.
 
-**Core Features:**
-- 📋 **Live TODO Tracking** — Per-project TODO lists and global TODO view with real-time updates
-- 💬 **Session History** — Amalgamated user-prompt history per project for workflow review
-- 🌐 **Multi-Agent Support** — Unified interface for Claude Code, OpenAI Codex, and Google Gemini
-- 🔄 **Git Integration** — Real-time repository status, commit history, and language detection
-- 🎨 **Visual Monitoring** — Color-coded status indicators, session tabs, and automatic refresh every 5 seconds
+The primary implementation is a .NET 10 / Avalonia desktop app (F# core + C# GUI). Legacy Electron/TypeScript, PowerShell, and Bash monitors are also included in the repo.
 
-## Setup
-
-### TypeScript/Electron GUI (recommended)
+## Quick Start (.NET Desktop App)
 
 ```sh
-cd typescript
-npm install
-npm run build
-npm start
+cd source/dotnet
+dotnet build Entropic.slnx
+dotnet run --project Entropic.GUI/Entropic.GUI.csproj
 ```
 
-Runs as a native desktop application on Windows, macOS, and Linux. Auto-detects AI agent session data from `~/.claude`, `~/.codex`, and `~/.gemini` directories.
+Auto-detects agent data under `~/.claude`, `~/.codex`, and `~/.gemini`. No configuration required.
 
-### PowerShell Monitor
+## Core Features
 
-```powershell
-powershell7/Launch-TodoMonitor.ps1
-```
+- **Live TODO Tracking** — Per-project and global TODO views with real-time updates
+- **Session History** — Rendered JSONL transcripts per session (markdown, code blocks)
+- **Multi-Agent Support** — Unified view across Claude Code, Codex, and Gemini
+- **Git Integration** — Repository discovery, ahead/behind status, language detection
+- **Commit View** — Per-repo commit history on demand
+- **Chat View** — Full transcript rendering with 4 display modes (WebView, plain, inline runs, AvaloniaEdit)
+- **Keyboard-driven** — Ctrl+1–5 tab switching, F5 refresh, F1 help
 
-Cross-platform terminal monitor using PowerShell 7. See `README-ps.md` for configuration.
+## Documentation
 
-### Bash Monitor
+- [README.Vision.md](README.Vision.md) — Vision & goals
+- [README.Functional.md](README.Functional.md) — Functional capabilities
+- [README.Architecture.md](README.Architecture.md) — Architecture & diagrams
+- [README.Technical.md](README.Technical.md) — Technical stack & specs
+- [README.Data.md](README.Data.md) — Data sources & handling
+- [README.Security.md](README.Security.md) — Security posture
+- [README.Deploy.md](README.Deploy.md) — Build & deployment
 
-```bash
-bash/todo_live_monitor.sh
-```
+## Alternative Implementations
 
-Original lightweight terminal monitor. See `README-sh.md` for setup.
-
-## Usage
-
-**Desktop App:**
-- Switch between Project TODOs, Project History, Global View, Git Status, and Commit History tabs
-- Toggle provider filters (Claude/Codex/Gemini) and customize spacing density
-- Right-click for context menus; use diagnostics panel to repair metadata
-- Auto-refresh monitors all source directories; manual refresh available via menu
-
-**Hook Integration:**
-Claude Code users can optionally configure hooks to automatically emit sidecar metadata files. Creates `~/.claude/todos/{sessionId}-agent.meta.json` with project path information for accurate session-to-project mapping. See `HOOKS-codex.md` for Codex automation examples.
+- **TypeScript / Electron** — see `source/typescript/`
+- **PowerShell 7** — see [README-ps.md](README-ps.md)
+- **Bash** — see [README-sh.md](README-sh.md)
 
 ## Project Structure
 
-- **`typescript/`** — Electron GUI with React components, IPC handlers, and file watchers
-- **`powershell7/`** — PowerShell implementation with test suite
-- **`bash/`** — Minimal Bash monitor
-- **`Structure.md`** — Detailed directory layout and architecture
-- **`Hexagon.md`** — Hexagon pattern design documentation
-
-## Testing & Build
-
-```sh
-npm test              # Run Jest unit/integration suite
-npm test:watch       # Watch mode
-npm test:coverage    # Coverage report
-npm run dist         # Create platform installers (AppImage, macOS, Windows portable)
+```
+Entropic/
+├── source/
+│   ├── dotnet/         # Primary: F# Core + C# Avalonia GUI
+│   ├── typescript/     # Legacy Electron GUI
+├── powershell7/        # PowerShell terminal monitor
+├── bash/               # Bash terminal monitor
+├── Structure.md        # Detailed directory layout
+├── Hexagon.md          # Hexagonal architecture design
 ```
 
 ---
 
-**License:** MIT | **Authors:** Dimension Zero, Jameson Nyp
-```
+**License:** MIT — **Authors:** Dimension Zero, Jameson Nyp

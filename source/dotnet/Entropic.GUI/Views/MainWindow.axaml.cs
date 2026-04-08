@@ -1,6 +1,12 @@
+using System;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Media.Imaging;
 using Entropic.GUI.ViewModels;
 
 namespace Entropic.GUI.Views;
@@ -20,6 +26,14 @@ public partial class MainWindow : Window
     private void OnKeyDown(object? sender, KeyEventArgs e)
     {
         if (DataContext is not MainWindowViewModel vm) return;
+
+        // Forward chat-specific keys when Chat tab is active
+        if (vm.IsChatTab && !e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        {
+            var chatView = this.FindControl<ChatView>("ChatViewControl");
+            chatView?.HandleChatKeyDown(e);
+            if (e.Handled) return;
+        }
 
         // F1 = Help
         if (e.Key == Key.F1)
@@ -48,6 +62,7 @@ public partial class MainWindow : Window
                 Key.D2 => 1,
                 Key.D3 => 2,
                 Key.D4 => 3,
+                Key.D5 => 4,
                 _ => -1
             };
             if (tabIndex >= 0)
@@ -86,5 +101,26 @@ public partial class MainWindow : Window
                 e.Handled = true;
             }
         }
+    }
+
+    public void TakeScreenshotPublic()
+    {
+        var bounds = Bounds;
+        if (bounds.Width < 1 || bounds.Height < 1) return;
+
+        var pixelSize = new PixelSize((int)bounds.Width, (int)bounds.Height);
+        using var bitmap = new RenderTargetBitmap(pixelSize, new Vector(96, 96));
+        bitmap.Render(this);
+
+        var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        var filename = $"Entropic-{timestamp}.png";
+        var filepath = Path.Combine(Path.GetTempPath(), filename);
+        bitmap.Save(filepath);
+
+        if (DataContext is MainWindowViewModel vm)
+            vm.ShowToast($"Screenshot saved: {filepath}");
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            Process.Start(new ProcessStartInfo(filepath) { UseShellExecute = true });
     }
 }

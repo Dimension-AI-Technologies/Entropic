@@ -5,14 +5,73 @@
              RequestedThemeVariant="Dark">
 
     <Application.Resources>
-        <Color x:Key="AccentColor">#5865f2</Color>
-        <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
-        <Color x:Key="SurfaceColor">#36393f</Color>
-        <Color x:Key="SurfaceDarkColor">#2f3136</Color>
-        <Color x:Key="BorderColor">#35373b</Color>
-        <Color x:Key="TextColor">#dcddde</Color>
-        <Color x:Key="MutedColor">#8e9297</Color>
-        <Color x:Key="SubtleColor">#72767d</Color>
+        <ResourceDictionary>
+            <Color x:Key="AccentColor">#5865f2</Color>
+            <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+            <Color x:Key="SurfaceColor">#36393f</Color>
+            <Color x:Key="SurfaceDarkColor">#2f3136</Color>
+            <Color x:Key="BorderColor">#35373b</Color>
+            <Color x:Key="TextColor">#dcddde</Color>
+            <Color x:Key="MutedColor">#8e9297</Color>
+            <Color x:Key="SubtleColor">#72767d</Color>
+
+            <ResourceDictionary.ThemeDictionaries>
+                <!-- Chat Dark theme -->
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="ChatWindowBg" Color="#1a1d21"/>
+                    <SolidColorBrush x:Key="ChatStatusBarBg" Color="#252526"/>
+                    <SolidColorBrush x:Key="ChatToolbarBg" Color="#2d2d30"/>
+                    <SolidColorBrush x:Key="ChatToolbarBorder" Color="#444444"/>
+                    <SolidColorBrush x:Key="ChatTextFg" Color="#e0e0e0"/>
+                    <SolidColorBrush x:Key="ChatMutedFg" Color="#999999"/>
+                    <SolidColorBrush x:Key="ChatRoleFg" Color="#888888"/>
+                    <SolidColorBrush x:Key="ChatBtnFg" Color="#aaaaaa"/>
+                    <SolidColorBrush x:Key="ChatBtnBorder" Color="#555555"/>
+                    <SolidColorBrush x:Key="ChatBtnHover" Color="#3a3a3e"/>
+                    <SolidColorBrush x:Key="ChatTabFg" Color="#cccccc"/>
+                    <SolidColorBrush x:Key="ChatUserBubbleBg" Color="#1a3a5c"/>
+                    <SolidColorBrush x:Key="ChatAssistantBubbleBg" Color="#2d2d30"/>
+                    <SolidColorBrush x:Key="ChatAssistantBubbleBorder" Color="#444444"/>
+                    <SolidColorBrush x:Key="ChatMetaBubbleBg" Color="#3a3a20"/>
+                    <SolidColorBrush x:Key="ChatMetaBubbleBorder" Color="#666655"/>
+                    <Color x:Key="ChatCodeBg">#1e1e1e</Color>
+                    <Color x:Key="ChatInlineCodeBg">#3c3c3c</Color>
+                    <Color x:Key="ChatCodeFg">#d4d4d4</Color>
+                    <Color x:Key="ChatSearchHighlight">#FFE600</Color>
+                    <Color x:Key="ChatSearchHighlightFg">#000000</Color>
+                    <SolidColorBrush x:Key="ChatFollowBtnBg" Color="#333333"/>
+                    <SolidColorBrush x:Key="ChatFollowBtnFg" Color="#cccccc"/>
+                    <Color x:Key="ChatTextFgColor">#e0e0e0</Color>
+                </ResourceDictionary>
+                <!-- Chat Light theme -->
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="ChatWindowBg" Color="#f5f5f5"/>
+                    <SolidColorBrush x:Key="ChatStatusBarBg" Color="#e8e8e8"/>
+                    <SolidColorBrush x:Key="ChatToolbarBg" Color="#f0f0f0"/>
+                    <SolidColorBrush x:Key="ChatToolbarBorder" Color="#cccccc"/>
+                    <SolidColorBrush x:Key="ChatTextFg" Color="#1e1e1e"/>
+                    <SolidColorBrush x:Key="ChatMutedFg" Color="#666666"/>
+                    <SolidColorBrush x:Key="ChatRoleFg" Color="#777777"/>
+                    <SolidColorBrush x:Key="ChatBtnFg" Color="#555555"/>
+                    <SolidColorBrush x:Key="ChatBtnBorder" Color="#bbbbbb"/>
+                    <SolidColorBrush x:Key="ChatBtnHover" Color="#e0e0e0"/>
+                    <SolidColorBrush x:Key="ChatTabFg" Color="#333333"/>
+                    <SolidColorBrush x:Key="ChatUserBubbleBg" Color="#dce8f5"/>
+                    <SolidColorBrush x:Key="ChatAssistantBubbleBg" Color="#ffffff"/>
+                    <SolidColorBrush x:Key="ChatAssistantBubbleBorder" Color="#cccccc"/>
+                    <SolidColorBrush x:Key="ChatMetaBubbleBg" Color="#f5f5e0"/>
+                    <SolidColorBrush x:Key="ChatMetaBubbleBorder" Color="#ddddaa"/>
+                    <Color x:Key="ChatCodeBg">#f0f0f0</Color>
+                    <Color x:Key="ChatInlineCodeBg">#e0e0e0</Color>
+                    <Color x:Key="ChatCodeFg">#1e1e1e</Color>
+                    <Color x:Key="ChatSearchHighlight">#FFFF00</Color>
+                    <Color x:Key="ChatSearchHighlightFg">#000000</Color>
+                    <SolidColorBrush x:Key="ChatFollowBtnBg" Color="#e0e0e0"/>
+                    <SolidColorBrush x:Key="ChatFollowBtnFg" Color="#333333"/>
+                    <Color x:Key="ChatTextFgColor">#1e1e1e</Color>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 
     <Application.DataTemplates>

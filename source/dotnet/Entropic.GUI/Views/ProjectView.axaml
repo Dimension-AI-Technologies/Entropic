@@ -238,6 +238,9 @@
                 <DockPanel>
                     <!-- Right: action buttons -->
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                        <Button Classes="filterPill" Content="View Chat"
+                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ViewChatForSessionCommand}"
+                                CommandParameter="{Binding SelectedSession}" />
                         <Button Classes="mergeBtn"
                                 Content="{Binding SelectedProject.Sessions.Count, StringFormat='Merge ({0})'}"
                                 Command="{Binding StartMergeCommand}"

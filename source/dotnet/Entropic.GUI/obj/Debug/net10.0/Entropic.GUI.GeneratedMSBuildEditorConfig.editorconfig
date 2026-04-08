@@ -26,6 +26,27 @@ build_property.EnableCodeStyleSeverity =
 [C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/App.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
 
+[C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/Controls/Chat/AvaloniaEditChat.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/Controls/Chat/ChatTimeline.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/Controls/Chat/ChatToolbar.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/Controls/Chat/InlineRunsChat.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/Controls/Chat/PlainTextChat.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/Controls/Chat/WebViewChat.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
+[C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/Views/ChatView.axaml]
+build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
+
 [C:/Users/mathew.burkitt/source/repos/DT/Entropic/source/dotnet/Entropic.GUI/Views/CommitView.axaml]
 build_metadata.AdditionalFiles.SourceItemGroup = AvaloniaXaml
 

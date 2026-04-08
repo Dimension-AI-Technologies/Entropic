@@ -16,7 +16,7 @@ namespace Entropic.GUI.ViewModels;
 // @must_test(REQ-GUI-006)
 public partial class MainWindowViewModel : ViewModelBase, IDisposable
 {
-    private const int TabCount = 4;
+    private const int TabCount = 5;
 
     private readonly List<IProviderPort> _providers = new();
     private readonly ErrorBoundaryService _errorService = new();
@@ -30,6 +30,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public bool IsGlobalTab => SelectedTabIndex == 1;
     public bool IsGitTab => SelectedTabIndex == 2;
     public bool IsCommitTab => SelectedTabIndex == 3;
+    public bool IsChatTab => SelectedTabIndex == 4;
 
     partial void OnSelectedTabIndexChanged(int value)
     {
@@ -37,6 +38,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsGlobalTab));
         OnPropertyChanged(nameof(IsGitTab));
         OnPropertyChanged(nameof(IsCommitTab));
+        OnPropertyChanged(nameof(IsChatTab));
     }
 
     // @must_test(REQ-GUI-011)
@@ -87,6 +89,7 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public GlobalViewModel Global { get; } = new();
     public GitViewModel Git { get; }
     public CommitViewModel Commits { get; } = new();
+    public ChatViewModel Chat { get; } = new();
     public ProgressViewModel Progress { get; } = new();
     public HelpViewModel Help { get; } = new();
 
@@ -129,6 +132,15 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     {
         Commits.LoadForRepo(repoPath, repoName);
         SelectedTabIndex = 3; // Switch to Commit tab
+    }
+
+    [RelayCommand]
+    private async System.Threading.Tasks.Task ViewChatForSession(SessionItemViewModel? session)
+    {
+        if (session?.FilePath == null) return;
+        var projectName = Projects.SelectedProject?.Name ?? "Chat";
+        await Chat.LoadFromSessionPath(session.FilePath, projectName);
+        SelectedTabIndex = 4; // Switch to Chat tab
     }
 
     public void SetProviders(List<IProviderPort> providers)
@@ -224,5 +236,6 @@ public partial class MainWindowViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _toastService.ToastRequested -= OnToastRequested;
+        Chat.Dispose();
     }
 }

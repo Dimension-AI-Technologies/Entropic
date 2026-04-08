@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Entropic.GUI.Controls.Chat.ChatTimeline"
+             Width="28" Background="#1a1a1e" ClipToBounds="False">
+
+  <UserControl.Styles>
+    <Style Selector="Border.marker">
+      <Setter Property="Width" Value="20"/>
+      <Setter Property="Height" Value="5"/>
+      <Setter Property="CornerRadius" Value="3"/>
+      <Setter Property="Background" Value="#4a90d9"/>
+      <Setter Property="Opacity" Value="0.35"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="HorizontalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Border.marker:pointerover">
+      <Setter Property="Opacity" Value="0.8"/>
+    </Style>
+    <Style Selector="Border.marker.active">
+      <Setter Property="Opacity" Value="1"/>
+      <Setter Property="Width" Value="24"/>
+      <Setter Property="Height" Value="9"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Panel ClipToBounds="False">
+    <Canvas Name="MarkerCanvas" ClipToBounds="False"/>
+
+    <!-- Tooltip (positioned outside the narrow timeline bar) -->
+    <Canvas Name="TooltipCanvas" ClipToBounds="False" IsHitTestVisible="False">
+      <Border Name="Tooltip" IsVisible="False" IsHitTestVisible="False"
+              Background="#2d2d30" BorderBrush="#555" BorderThickness="1"
+              CornerRadius="6" Padding="8,6" MinWidth="200" MaxWidth="400">
+        <TextBlock Name="TooltipText" Foreground="#ccc" FontSize="11"
+                   TextWrapping="Wrap" MaxWidth="380"
+                   FontFamily="Cascadia Mono, Consolas, monospace"/>
+      </Border>
+    </Canvas>
+  </Panel>
+</UserControl>

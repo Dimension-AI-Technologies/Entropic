@@ -403,6 +403,10 @@
               "target": "Package",
               "version": "[11.3.12, )"
             },
+            "Avalonia.AvaloniaEdit": {
+              "target": "Package",
+              "version": "[11.4.1, )"
+            },
             "Avalonia.Controls.DataGrid": {
               "target": "Package",
               "version": "[11.3.12, )"
@@ -423,9 +427,17 @@
               "target": "Package",
               "version": "[11.3.12, )"
             },
+            "AvaloniaEdit.TextMate": {
+              "target": "Package",
+              "version": "[11.4.1, )"
+            },
             "CommunityToolkit.Mvvm": {
               "target": "Package",
               "version": "[8.2.1, )"
+            },
+            "Microsoft.Web.WebView2": {
+              "target": "Package",
+              "version": "[1.0.3856.49, )"
             }
           },
           "imports": [

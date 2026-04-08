@@ -9,13 +9,19 @@
       "Entropic.GUI/1.0.0": {
         "dependencies": {
           "Avalonia": "11.3.12",
+          "Avalonia.AvaloniaEdit": "11.4.1",
           "Avalonia.Controls.DataGrid": "11.3.12",
           "Avalonia.Desktop": "11.3.12",
           "Avalonia.Diagnostics": "11.3.12",
           "Avalonia.Fonts.Inter": "11.3.12",
           "Avalonia.Themes.Fluent": "11.3.12",
+          "AvaloniaEdit.TextMate": "11.4.1",
           "CommunityToolkit.Mvvm": "8.2.1",
-          "Entropic.Core": "1.0.0"
+          "Entropic.Core": "1.0.0",
+          "Microsoft.Web.WebView2": "1.0.3856.49",
+          "Microsoft.Web.WebView2.Core": "1.0.3856.49",
+          "Microsoft.Web.WebView2.WinForms": "1.0.3856.49",
+          "Microsoft.Web.WebView2.Wpf": "1.0.3856.49"
         },
         "runtime": {
           "Entropic.GUI.dll": {}
@@ -89,6 +95,22 @@
             "rid": "win-x86",
             "assetType": "native",
             "fileVersion": "2.1.25606.0"
+          }
+        }
+      },
+      "Avalonia.AvaloniaEdit/11.4.1": {
+        "dependencies": {
+          "Avalonia": "11.3.12"
+        },
+        "runtime": {
+          "lib/net6.0/AvaloniaEdit.dll": {
+            "assemblyVersion": "11.3.0.0",
+            "fileVersion": "11.3.0.0"
+          }
+        },
+        "resources": {
+          "lib/net6.0/zh-Hans/AvaloniaEdit.resources.dll": {
+            "locale": "zh-Hans"
           }
         }
       },
@@ -258,6 +280,20 @@
           }
         }
       },
+      "AvaloniaEdit.TextMate/11.4.1": {
+        "dependencies": {
+          "Avalonia": "11.3.12",
+          "Avalonia.AvaloniaEdit": "11.4.1",
+          "TextMateSharp": "2.0.2",
+          "TextMateSharp.Grammars": "2.0.2"
+        },
+        "runtime": {
+          "lib/net6.0/AvaloniaEdit.TextMate.dll": {
+            "assemblyVersion": "11.3.0.0",
+            "fileVersion": "11.3.0.0"
+          }
+        }
+      },
       "CommunityToolkit.Mvvm/8.2.1": {
         "runtime": {
           "lib/net6.0/CommunityToolkit.Mvvm.dll": {
@@ -422,6 +458,100 @@
           }
         }
       },
+      "Microsoft.Web.WebView2/1.0.3856.49": {
+        "runtimeTargets": {
+          "runtimes/win-arm64/native/WebView2Loader.dll": {
+            "rid": "win-arm64",
+            "assetType": "native",
+            "fileVersion": "1.0.3856.49"
+          },
+          "runtimes/win-x64/native/WebView2Loader.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
+            "fileVersion": "1.0.3856.49"
+          },
+          "runtimes/win-x86/native/WebView2Loader.dll": {
+            "rid": "win-x86",
+            "assetType": "native",
+            "fileVersion": "1.0.3856.49"
+          }
+        }
+      },
+      "Onigwrap/1.0.10": {
+        "runtime": {
+          "lib/netstandard2.0/Onigwrap.dll": {
+            "assemblyVersion": "1.0.10.0",
+            "fileVersion": "1.0.10.0"
+          }
+        },
+        "runtimeTargets": {
+          "runtimes/linux-arm64/native/libonigwrap.so": {
+            "rid": "linux-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/linux-bionic-arm64/native/libonigwrap.so": {
+            "rid": "linux-bionic-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/linux-bionic-x64/native/libonigwrap.so": {
+            "rid": "linux-bionic-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/linux-musl-arm64/native/libonigwrap.so": {
+            "rid": "linux-musl-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/linux-musl-x64/native/libonigwrap.so": {
+            "rid": "linux-musl-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/linux-x64/native/libonigwrap.so": {
+            "rid": "linux-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/maccatalyst-arm64/native/libonigwrap.dylib": {
+            "rid": "maccatalyst-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/maccatalyst-x64/native/libonigwrap.dylib": {
+            "rid": "maccatalyst-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/osx-arm64/native/libonigwrap.dylib": {
+            "rid": "osx-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/osx-x64/native/libonigwrap.dylib": {
+            "rid": "osx-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/win-arm64/native/libonigwrap.dll": {
+            "rid": "win-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/win-x64/native/libonigwrap.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/win-x86/native/libonigwrap.dll": {
+            "rid": "win-x86",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      },
       "SkiaSharp/2.88.9": {
         "dependencies": {
           "SkiaSharp.NativeAssets.Win32": "2.88.9",
@@ -489,6 +619,28 @@
           }
         }
       },
+      "TextMateSharp/2.0.2": {
+        "dependencies": {
+          "Onigwrap": "1.0.10"
+        },
+        "runtime": {
+          "lib/netstandard2.0/TextMateSharp.dll": {
+            "assemblyVersion": "2.0.2.0",
+            "fileVersion": "2.0.2.0"
+          }
+        }
+      },
+      "TextMateSharp.Grammars/2.0.2": {
+        "dependencies": {
+          "TextMateSharp": "2.0.2"
+        },
+        "runtime": {
+          "lib/netstandard2.0/TextMateSharp.Grammars.dll": {
+            "assemblyVersion": "2.0.2.0",
+            "fileVersion": "2.0.2.0"
+          }
+        }
+      },
       "Tmds.DBus.Protocol/0.21.2": {
         "runtime": {
           "lib/net8.0/Tmds.DBus.Protocol.dll": {
@@ -505,6 +657,30 @@
           "Entropic.Core.dll": {
             "assemblyVersion": "1.0.0.0",
             "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Microsoft.Web.WebView2.Core/1.0.3856.49": {
+        "runtime": {
+          "Microsoft.Web.WebView2.Core.dll": {
+            "assemblyVersion": "1.0.3856.49",
+            "fileVersion": "1.0.3856.49"
+          }
+        }
+      },
+      "Microsoft.Web.WebView2.WinForms/1.0.3856.49": {
+        "runtime": {
+          "Microsoft.Web.WebView2.WinForms.dll": {
+            "assemblyVersion": "1.0.3856.49",
+            "fileVersion": "1.0.3856.49"
+          }
+        }
+      },
+      "Microsoft.Web.WebView2.Wpf/1.0.3856.49": {
+        "runtime": {
+          "Microsoft.Web.WebView2.Wpf.dll": {
+            "assemblyVersion": "1.0.3856.49",
+            "fileVersion": "1.0.3856.49"
           }
         }
       }
@@ -529,6 +705,13 @@
       "sha512": "sha512-ZL0VLc4s9rvNNFt19Pxm5UNAkmKNylugAwJPX9ulXZ6JWs/l6XZihPWWTyezaoNOVyEPU8YbURtW7XMAtqXH5A==",
       "path": "avalonia.angle.windows.natives/2.1.25547.20250602",
       "hashPath": "avalonia.angle.windows.natives.2.1.25547.20250602.nupkg.sha512"
+    },
+    "Avalonia.AvaloniaEdit/11.4.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Ykn/bxPiCNE4C30GCzSi+16kFNgy1fZ+4KFjmdLtUcjQNABDSA1an5Rmsz+bt24ajdyUM/IC7xpEphhfcWY7QA==",
+      "path": "avalonia.avaloniaedit/11.4.1",
+      "hashPath": "avalonia.avaloniaedit.11.4.1.nupkg.sha512"
     },
     "Avalonia.Controls.ColorPicker/11.3.12": {
       "type": "package",
@@ -621,6 +804,13 @@
       "path": "avalonia.x11/11.3.12",
       "hashPath": "avalonia.x11.11.3.12.nupkg.sha512"
     },
+    "AvaloniaEdit.TextMate/11.4.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-q9/HE1gOHz/+EiUxzPVk+45hDhrzwCHMPkjeobemd15Ery5U9Y0wQXyq4e4Qr3IQ75bLGmsrpTuLLgJrvSye6Q==",
+      "path": "avaloniaedit.textmate/11.4.1",
+      "hashPath": "avaloniaedit.textmate.11.4.1.nupkg.sha512"
+    },
     "CommunityToolkit.Mvvm/8.2.1": {
       "type": "package",
       "serviceable": true,
@@ -670,6 +860,20 @@
       "path": "microcom.runtime/0.11.0",
       "hashPath": "microcom.runtime.0.11.0.nupkg.sha512"
     },
+    "Microsoft.Web.WebView2/1.0.3856.49": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-OOBKvFgK0pUKcndvTK6/jUsbrPRwce62Wt/0hkJWDsK2AcsJ2ylOS/mLa4xAcNUTOs96YIjpPN4AHMADXJcrgQ==",
+      "path": "microsoft.web.webview2/1.0.3856.49",
+      "hashPath": "microsoft.web.webview2.1.0.3856.49.nupkg.sha512"
+    },
+    "Onigwrap/1.0.10": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-eujNEpEhCl4UiqHTG0CeG/sWS8v/iYXGqUpaVkgBmYRZp3Utmz/aw38fuFL2rcnhj1FNfHwHaxGDeLY34a3nEA==",
+      "path": "onigwrap/1.0.10",
+      "hashPath": "onigwrap.1.0.10.nupkg.sha512"
+    },
     "SkiaSharp/2.88.9": {
       "type": "package",
       "serviceable": true,
@@ -698,6 +902,20 @@
       "path": "skiasharp.nativeassets.win32/2.88.9",
       "hashPath": "skiasharp.nativeassets.win32.2.88.9.nupkg.sha512"
     },
+    "TextMateSharp/2.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-2s0cKCS8nOmEXcGUwqrSf07relZtb8XK7qqlxMIGipebWb4iIZjUpzRuRuyagVYVLT7YUJN33cAKGm2rjNgX8w==",
+      "path": "textmatesharp/2.0.2",
+      "hashPath": "textmatesharp.2.0.2.nupkg.sha512"
+    },
+    "TextMateSharp.Grammars/2.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-0jAuZVr3iujV3VEhwzQGQRJRu81pH4hpbJHXIKwsFlKLWkZ0v1Cf23PnLUVVAFhOV3k0e4CvZHl/emmH42FAHw==",
+      "path": "textmatesharp.grammars/2.0.2",
+      "hashPath": "textmatesharp.grammars.2.0.2.nupkg.sha512"
+    },
     "Tmds.DBus.Protocol/0.21.2": {
       "type": "package",
       "serviceable": true,
@@ -707,6 +925,21 @@
     },
     "Entropic.Core/1.0.0": {
       "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Microsoft.Web.WebView2.Core/1.0.3856.49": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Microsoft.Web.WebView2.WinForms/1.0.3856.49": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Microsoft.Web.WebView2.Wpf/1.0.3856.49": {
+      "type": "reference",
       "serviceable": false,
       "sha512": ""
     }

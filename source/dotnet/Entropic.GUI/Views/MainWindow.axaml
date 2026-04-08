@@ -27,6 +27,7 @@
                     <NativeMenuItem Header="Global View" Command="{Binding SwitchTabCommand}" CommandParameter="1" Gesture="Ctrl+2" />
                     <NativeMenuItem Header="Git View" Command="{Binding SwitchTabCommand}" CommandParameter="2" Gesture="Ctrl+3" />
                     <NativeMenuItem Header="Commit View" Command="{Binding SwitchTabCommand}" CommandParameter="3" Gesture="Ctrl+4" />
+                    <NativeMenuItem Header="Chat View" Command="{Binding SwitchTabCommand}" CommandParameter="4" Gesture="Ctrl+5" />
                     <NativeMenuItemSeparator />
                     <NativeMenuItem Header="Compact Spacing" Command="{Binding SetSpacingCommand}" CommandParameter="compact" />
                     <NativeMenuItem Header="Normal Spacing" Command="{Binding SetSpacingCommand}" CommandParameter="normal" />
@@ -192,6 +193,9 @@
                         <Button Classes="viewToggle" Content="Commit View"
                                 Command="{Binding SwitchTabCommand}" CommandParameter="3"
                                 Classes.active="{Binding IsCommitTab}" />
+                        <Button Classes="viewToggle" Content="Chat View"
+                                Command="{Binding SwitchTabCommand}" CommandParameter="4"
+                                Classes.active="{Binding IsChatTab}" />
                     </StackPanel>
 
                     <!-- Right: Spacing mode -->
@@ -217,6 +221,8 @@
                            IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsGitTab}" />
                 <v:CommitView DataContext="{Binding Commits}"
                               IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsCommitTab}" />
+                <v:ChatView Name="ChatViewControl" DataContext="{Binding Chat}"
+                            IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsChatTab}" />
             </Panel>
         </DockPanel>
 

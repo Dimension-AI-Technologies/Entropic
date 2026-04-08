@@ -1,0 +1,230 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Entropic.GUI.ViewModels"
+             xmlns:ctrl="using:Entropic.GUI.Controls.Chat"
+             xmlns:m="using:Entropic.GUI.Models"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Entropic.GUI.Views.ChatView"
+             x:DataType="vm:ChatViewModel"
+             Background="{DynamicResource ChatWindowBg}">
+
+  <DockPanel>
+    <!-- Status bar -->
+    <Border DockPanel.Dock="Bottom" Background="{DynamicResource ChatStatusBarBg}" Padding="8,3">
+      <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource ChatMutedFg}" FontSize="11"
+                 VerticalAlignment="Center"/>
+    </Border>
+
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="220" MinWidth="140" MaxWidth="400"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*" MinWidth="400"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- Project sidebar -->
+      <Border Grid.Column="0"
+              Background="{DynamicResource ChatToolbarBg}"
+              BorderBrush="{DynamicResource ChatToolbarBorder}" BorderThickness="0,0,1,0"
+              IsVisible="{Binding IsSidebarVisible}">
+        <DockPanel>
+          <!-- Header row -->
+          <Border DockPanel.Dock="Top" Padding="8,5"
+                  BorderBrush="{DynamicResource ChatToolbarBorder}" BorderThickness="0,0,0,1">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Content="&#x21BB;" FontSize="13"
+                      Command="{Binding ScanProjectsCommand}" Padding="4,1"
+                      Background="Transparent" Foreground="{DynamicResource ChatBtnFg}"
+                      BorderThickness="0" ToolTip.Tip="Refresh"/>
+              <TextBlock Text="Projects" FontWeight="Bold" FontSize="13"
+                         Foreground="{DynamicResource ChatTextFg}" VerticalAlignment="Center"/>
+            </DockPanel>
+          </Border>
+
+          <!-- Sort/group controls + search -->
+          <Border DockPanel.Dock="Top" Padding="6,4"
+                  BorderBrush="{DynamicResource ChatToolbarBorder}" BorderThickness="0,0,0,1">
+            <DockPanel>
+              <Button DockPanel.Dock="Left" Content="{Binding SortModeLabel}" Command="{Binding ToggleSortModeCommand}"
+                      Padding="5,2" FontSize="10" CornerRadius="3" MinWidth="32" Margin="0,0,3,0"
+                      Background="{DynamicResource ChatFollowBtnBg}" Foreground="{DynamicResource ChatFollowBtnFg}"
+                      BorderBrush="{DynamicResource ChatBtnBorder}" ToolTip.Tip="Toggle A-Z / Date sort"/>
+              <Button DockPanel.Dock="Left" Content="{Binding SortDirLabel}" Command="{Binding ToggleSortDirCommand}"
+                      Padding="5,2" FontSize="10" CornerRadius="3" MinWidth="20" Margin="0,0,3,0"
+                      Background="{DynamicResource ChatFollowBtnBg}" Foreground="{DynamicResource ChatFollowBtnFg}"
+                      BorderBrush="{DynamicResource ChatBtnBorder}" ToolTip.Tip="Toggle ascending / descending"/>
+              <ToggleButton DockPanel.Dock="Left" Content="Group" IsChecked="{Binding GroupByFolder}"
+                            Padding="5,2" FontSize="10" CornerRadius="3" Margin="0,0,3,0"
+                            Background="{DynamicResource ChatFollowBtnBg}" Foreground="{DynamicResource ChatFollowBtnFg}"
+                            BorderBrush="{DynamicResource ChatBtnBorder}" ToolTip.Tip="Group by parent folder"/>
+              <TextBox Text="{Binding SidebarSearch, Mode=TwoWay}" Watermark="Filter..."
+                       FontSize="10" Padding="4,2" MinHeight="20"
+                       VerticalContentAlignment="Center"/>
+            </DockPanel>
+          </Border>
+
+          <!-- Flat project list (when not grouped) -->
+          <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding !GroupByFolder}">
+            <ItemsControl ItemsSource="{Binding ChatProjects}">
+              <ItemsControl.DataTemplates>
+                <DataTemplate DataType="m:ProjectEntry">
+                  <Panel>
+                    <Border Background="{DynamicResource ChatUserBubbleBg}"
+                            IsVisible="{Binding IsSelected}"/>
+                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                            Padding="10,4" CornerRadius="0" Cursor="Hand"
+                            Background="Transparent" BorderThickness="0"
+                            Command="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).OpenProjectCommand}"
+                            CommandParameter="{Binding}"
+                            ToolTip.ShowDelay="300">
+                      <ToolTip.Tip>
+                        <TextBlock Text="{Binding ProjectPath}" TextWrapping="NoWrap"
+                                   FontFamily="Cascadia Mono, Consolas, monospace" FontSize="12"/>
+                      </ToolTip.Tip>
+                      <Button.Content>
+                        <TextBlock Text="{Binding SidebarLabel}" FontSize="12"
+                                   Foreground="{DynamicResource ChatTextFg}"
+                                   TextTrimming="CharacterEllipsis"/>
+                      </Button.Content>
+                    </Button>
+                  </Panel>
+                </DataTemplate>
+                <DataTemplate DataType="m:TimeDivider">
+                  <Border Margin="10,6,10,2" Padding="0,0,0,2"
+                          BorderBrush="{DynamicResource ChatToolbarBorder}" BorderThickness="0,0,0,1">
+                    <TextBlock Text="{Binding Label}" FontSize="9" FontStyle="Italic"
+                               Foreground="{DynamicResource ChatMutedFg}"/>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.DataTemplates>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <!-- Grouped project list (when grouped by folder) -->
+          <ScrollViewer VerticalScrollBarVisibility="Auto" IsVisible="{Binding GroupByFolder}">
+            <ItemsControl ItemsSource="{Binding ProjectGroups}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="m:ProjectFolderGroup">
+                  <StackPanel>
+                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                            Padding="8,5" CornerRadius="0" Cursor="Hand"
+                            Background="Transparent" BorderThickness="0"
+                            Command="{Binding ToggleExpandedCommand}">
+                      <StackPanel Orientation="Horizontal" Spacing="5">
+                        <TextBlock Text="{Binding Arrow}" FontSize="9" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource ChatMutedFg}" Width="10"/>
+                        <TextBlock Text="{Binding FolderName}" FontWeight="Bold" FontSize="11"
+                                   Foreground="{DynamicResource ChatMutedFg}"/>
+                      </StackPanel>
+                    </Button>
+                    <ItemsControl ItemsSource="{Binding Items}" IsVisible="{Binding IsExpanded}">
+                      <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="m:ProjectEntry">
+                          <Panel>
+                            <Border Background="{DynamicResource ChatUserBubbleBg}"
+                                    IsVisible="{Binding IsSelected}"/>
+                            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                    Padding="22,4,10,4" CornerRadius="0" Cursor="Hand"
+                                    Background="Transparent" BorderThickness="0"
+                                    Command="{Binding $parent[UserControl].((vm:ChatViewModel)DataContext).OpenProjectCommand}"
+                                    CommandParameter="{Binding}"
+                                    ToolTip.ShowDelay="300">
+                              <ToolTip.Tip>
+                                <TextBlock Text="{Binding ProjectPath}" TextWrapping="NoWrap"
+                                           FontFamily="Cascadia Mono, Consolas, monospace" FontSize="12"/>
+                              </ToolTip.Tip>
+                              <Button.Content>
+                                <TextBlock Text="{Binding DisplayName}" FontSize="12"
+                                           Foreground="{DynamicResource ChatTextFg}"
+                                           TextTrimming="CharacterEllipsis"/>
+                              </Button.Content>
+                            </Button>
+                          </Panel>
+                        </DataTemplate>
+                        <DataTemplate DataType="m:TimeDivider">
+                          <Border Margin="22,6,10,2" Padding="0,0,0,2"
+                                  BorderBrush="{DynamicResource ChatToolbarBorder}" BorderThickness="0,0,0,1">
+                            <TextBlock Text="{Binding Label}" FontSize="9" FontStyle="Italic"
+                                       Foreground="{DynamicResource ChatMutedFg}"/>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.DataTemplates>
+                    </ItemsControl>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+
+      <!-- Resizer -->
+      <GridSplitter Grid.Column="1" Width="4" Background="Transparent"
+                    IsVisible="{Binding IsSidebarVisible}"/>
+
+      <!-- Chat rendering tabs + loading overlay -->
+      <Panel Grid.Column="2">
+        <TabControl Name="ChatTabs" Margin="0" Padding="4">
+          <TabControl.Styles>
+            <Style Selector="TabItem">
+              <Setter Property="FontSize" Value="13"/>
+              <Setter Property="Foreground" Value="{DynamicResource ChatTabFg}"/>
+              <Setter Property="Padding" Value="12,6"/>
+            </Style>
+          </TabControl.Styles>
+
+          <TabItem Header="WebView">
+            <ctrl:WebViewChat DataContext="{Binding}"/>
+          </TabItem>
+
+          <TabItem Header="PlainText">
+            <ctrl:PlainTextChat DataContext="{Binding}"/>
+          </TabItem>
+
+          <TabItem Header="InlineRuns">
+            <ctrl:InlineRunsChat DataContext="{Binding}"/>
+          </TabItem>
+
+          <TabItem Header="AvaloniaEdit">
+            <ctrl:AvaloniaEditChat DataContext="{Binding}"/>
+          </TabItem>
+        </TabControl>
+
+        <!-- Loading overlay -->
+        <Border IsVisible="{Binding IsLoading}" Background="#CC1a1a1e"
+                IsHitTestVisible="True" ZIndex="100">
+          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+            <Border Width="48" Height="48" CornerRadius="24"
+                    BorderBrush="#4a90d9" BorderThickness="4"
+                    Name="SpinnerBorder" ClipToBounds="True">
+              <Border.RenderTransform>
+                <RotateTransform/>
+              </Border.RenderTransform>
+              <Border Width="48" Height="48" CornerRadius="24"
+                      BorderBrush="Transparent" BorderThickness="4"
+                      Margin="-4">
+                <Border.BorderBrush>
+                  <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                    <GradientStop Color="#4a90d9" Offset="0"/>
+                    <GradientStop Color="Transparent" Offset="0.7"/>
+                  </LinearGradientBrush>
+                </Border.BorderBrush>
+              </Border>
+            </Border>
+            <TextBlock Text="{Binding LoadingText}" FontSize="14"
+                       Foreground="#ccc" HorizontalAlignment="Center"
+                       FontFamily="Cascadia Mono, Consolas, monospace"/>
+          </StackPanel>
+        </Border>
+
+        <!-- Empty state when no chat loaded -->
+        <TextBlock Text="Select a project from the sidebar to load a chat transcript"
+                   Foreground="#72767d" FontSize="13"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   IsVisible="{Binding !Messages.Count}"/>
+      </Panel>
+    </Grid>
+  </DockPanel>
+</UserControl>

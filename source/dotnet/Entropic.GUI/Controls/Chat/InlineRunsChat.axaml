@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Entropic.GUI.ViewModels"
+             xmlns:m="using:Entropic.GUI.Models"
+             xmlns:ctrl="using:Entropic.GUI.Controls.Chat"
+             x:Class="Entropic.GUI.Controls.Chat.InlineRunsChat"
+             x:DataType="vm:ChatViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="Border.bubble">
+      <Setter Property="CornerRadius" Value="10"/>
+      <Setter Property="Padding" Value="12,8"/>
+      <Setter Property="Margin" Value="4,6"/>
+      <Setter Property="MaxWidth" Value="700"/>
+    </Style>
+    <Style Selector="TextBlock.role">
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="FontSize" Value="11"/>
+      <Setter Property="Foreground" Value="{DynamicResource ChatRoleFg}"/>
+      <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+    <Style Selector="TextBlock.ts">
+      <Setter Property="FontSize" Value="10"/>
+      <Setter Property="Foreground" Value="{DynamicResource ChatMutedFg}"/>
+      <Setter Property="HorizontalAlignment" Value="Right"/>
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <ctrl:ChatToolbar Name="Toolbar" DockPanel.Dock="Top"/>
+    <ctrl:ChatTimeline Name="Timeline" DockPanel.Dock="Left"/>
+    <Panel>
+      <ScrollViewer Name="ChatScrollViewer" VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding FilteredGroups}" Name="MessageList">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="m:ChatMessageGroup">
+              <Panel>
+                <!-- User bubble -->
+                <Border Classes="bubble" Background="{DynamicResource ChatUserBubbleBg}"
+                        HorizontalAlignment="Left" IsVisible="{Binding IsUser}">
+                  <StackPanel>
+                    <TextBlock Classes="role" Text="{Binding DisplayRole}"/>
+                    <ItemsControl ItemsSource="{Binding Items}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="m:ChatMessage">
+                          <StackPanel Margin="0,2">
+                            <TextBlock Classes="ts" Text="{Binding ShortTimestamp}"/>
+                            <ctrl:RichTextContent Message="{Binding}" SearchText="{Binding $parent[ctrl:InlineRunsChat].((vm:ChatViewModel)DataContext).SearchText}"/>
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+
+                <!-- Assistant bubble -->
+                <Border Classes="bubble" Background="{DynamicResource ChatAssistantBubbleBg}" BorderBrush="{DynamicResource ChatAssistantBubbleBorder}" BorderThickness="1"
+                        HorizontalAlignment="Right" IsVisible="{Binding IsAssistant}">
+                  <StackPanel>
+                    <TextBlock Classes="role" Text="{Binding DisplayRole}"/>
+                    <ItemsControl ItemsSource="{Binding Items}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="m:ChatMessage">
+                          <StackPanel Margin="0,2">
+                            <TextBlock Classes="ts" Text="{Binding ShortTimestamp}" HorizontalAlignment="Right"/>
+                            <ctrl:RichTextContent Message="{Binding}" SearchText="{Binding $parent[ctrl:InlineRunsChat].((vm:ChatViewModel)DataContext).SearchText}"/>
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+
+                <!-- Meta bubble -->
+                <Border Classes="bubble" Background="{DynamicResource ChatMetaBubbleBg}" BorderBrush="{DynamicResource ChatMetaBubbleBorder}" BorderThickness="1"
+                        HorizontalAlignment="Center" IsVisible="{Binding IsMeta}">
+                  <StackPanel>
+                    <TextBlock Classes="role" Text="{Binding DisplayRole}" HorizontalAlignment="Center"/>
+                    <ItemsControl ItemsSource="{Binding Items}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="m:ChatMessage">
+                          <StackPanel Margin="0,2">
+                            <ctrl:RichTextContent Message="{Binding}" SearchText="{Binding $parent[ctrl:InlineRunsChat].((vm:ChatViewModel)DataContext).SearchText}"/>
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Border>
+              </Panel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Panel>
+  </DockPanel>
+</UserControl>
