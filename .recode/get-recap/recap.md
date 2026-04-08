@@ -288,3 +288,11 @@ dist, coverage, and tsbuildinfo to .gitignore for TypeScript builds.
 - chore: add documentation and rebuild project artifacts
   Author: Mathew Burkitt
 
+
+---
+
+## Commit: 2026-04-08 19:11
+
+- docs: add comprehensive project documentation
+  Author: Mathew Burkitt
+
