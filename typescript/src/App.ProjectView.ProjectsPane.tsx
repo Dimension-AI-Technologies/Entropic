@@ -79,21 +79,21 @@ export function ProjectsPane({
 
   const getEmptyModeSymbol = (mode: EmptyMode): string => {
     switch (mode) {
-      case 'all': return '∀';
-      case 'has_sessions': return '§';
-      case 'has_todos': return '✓';
+      case 'all': return '?';
+      case 'has_sessions': return '';
+      case 'has_todos': return '📋';
       case 'active_only': return '!';
-      default: return '∀';
+      default: return '?';
     }
   };
 
   const getEmptyModeTitle = (mode: EmptyMode): string => {
     switch (mode) {
-      case 'all': return 'Show all projects. Click to cycle • Hold/Right‑click to choose.';
-      case 'has_sessions': return 'Show only projects with sessions. Click to cycle • Hold/Right‑click to choose.';
-      case 'has_todos': return 'Show only projects with todos. Click to cycle • Hold/Right‑click to choose.';
-      case 'active_only': return 'Show only projects with active (incomplete) todos. Click to cycle • Hold/Right‑click to choose.';
-      default: return 'Filter projects. Click to cycle • Hold/Right‑click to choose.';
+      case 'all': return 'Show all projects. Click to cycle  Hold/Right-click to choose.';
+      case 'has_sessions': return 'Show only projects with sessions. Click to cycle  Hold/Right-click to choose.';
+      case 'has_todos': return 'Show only projects with todos. Click to cycle  Hold/Right-click to choose.';
+      case 'active_only': return 'Show only projects with active (incomplete) todos. Click to cycle  Hold/Right-click to choose.';
+      default: return 'Filter projects. Click to cycle  Hold/Right-click to choose.';
     }
   };
 
@@ -152,10 +152,10 @@ export function ProjectsPane({
             }}
             title={
               sortMethod === 0
-                ? 'Sort projects alphabetically by name. Click to cycle • Hold/Right‑click to choose.'
+                ? 'Sort projects alphabetically by name. Click to cycle  Hold/Right-click to choose.'
                 : sortMethod === 1
-                ? 'Sort projects by most recent activity first. Click to cycle • Hold/Right‑click to choose.'
-                : 'Sort projects by total todo count (highest first). Click to cycle • Hold/Right‑click to choose.'
+                ? 'Sort projects by most recent activity first. Click to cycle  Hold/Right-click to choose.'
+                : 'Sort projects by total todo count (highest first). Click to cycle  Hold/Right-click to choose.'
             }
           >
             {getSortSymbol(sortMethod)}

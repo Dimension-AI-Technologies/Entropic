@@ -45,4 +45,3 @@ export interface Project {
   startDate?: number;           // epoch ms
   mostRecentTodoDate?: number;  // epoch ms
 }
-

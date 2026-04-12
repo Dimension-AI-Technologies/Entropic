@@ -180,7 +180,7 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
   return (
     <div data-testid="global-view" className="global-view" style={{ padding: 16, color: 'white', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div style={{ color: '#a2a7ad', fontSize: 12, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <span>{filteredProjects} Projects • {filteredSessions} Sessions • {filteredTodos} ToDos</span>
+        <span>{filteredProjects} Projects  {filteredSessions} Sessions  {filteredTodos} ToDos</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', userSelect: 'none' }} title="Hide sessions with only completed items">
             <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
@@ -196,7 +196,7 @@ export function GlobalView({ spacingMode = 'compact' }: GlobalViewProps) {
               const parts: string[] = [];
               if (typeof diag.per.claude === 'number') parts.push(`Claude: ${diag.per.claude}`);
               if (typeof diag.per.codex === 'number') parts.push(`Codex: ${diag.per.codex}`);
-              return parts.length ? ` (${parts.join(' • ')})` : '';
+              return parts.length ? ` (${parts.join('  ')})` : '';
             })()}
             .
           </span>

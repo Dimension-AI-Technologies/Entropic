@@ -1,0 +1,35 @@
+{
+  "$schema": "https://raw.githubusercontent.com/DT/MustTest/main/musttest.schema.json",
+  "implementations": [
+    {
+      "name": "entropic-electron",
+      "layers": [
+        {
+          "name": "electron-typescript",
+          "language": "typescript",
+          "source_dir": "source/typescript/src",
+          "test_dir": "source/typescript/src/tests",
+          "test_results": "source/typescript/test-results/junit.xml"
+        }
+      ]
+    },
+    {
+      "name": "entropic-avalonia",
+      "layers": [
+        {
+          "name": "avalonia-fsharp-core",
+          "language": "fsharp",
+          "source_dir": "source/dotnet/Entropic.Core"
+        },
+        {
+          "name": "avalonia-csharp-gui",
+          "language": "csharp",
+          "source_dir": "source/dotnet/Entropic.GUI",
+          "test_dir": "source/dotnet/Entropic.GUI.Tests",
+          "test_results": "source/dotnet/Entropic.GUI.Tests/TestResults/results.trx",
+          "parsed": true
+        }
+      ]
+    }
+  ]
+}

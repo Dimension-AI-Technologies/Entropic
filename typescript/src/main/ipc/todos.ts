@@ -16,4 +16,3 @@ export function registerTodoIpc(ipcMain: IpcMain) {
     return ResultUtils.isSuccess(result);
   });
 }
-

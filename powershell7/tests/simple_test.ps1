@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.0
+
 
 # Simple test to verify the scripts work
 Write-Host "Simple Todo Hook Test" -ForegroundColor Cyan

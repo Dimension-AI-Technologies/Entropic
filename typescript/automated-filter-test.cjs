@@ -1,0 +1,1 @@
+The current file with conflict markers is empty, meaning one side of the merge deleted the file entirely while the other kept the base content. Since deletion is the more recent/intentional change, the resolved content is an empty file:

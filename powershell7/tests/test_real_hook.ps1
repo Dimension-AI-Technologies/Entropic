@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.0
+
 
 # Test script that simulates real Claude Code TodoWrite hook data
 Write-Host "Simulating Real Claude Code TodoWrite Hook" -ForegroundColor Cyan

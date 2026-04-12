@@ -187,7 +187,7 @@ export function UnifiedTitleBar({
               onClick={onRefresh}
               title="Refresh projects and todos"
             >
-              ↻
+              ?
             </button>
           )}
           <button 
@@ -267,7 +267,7 @@ export function UnifiedTitleBar({
                 }}
                 onMouseLeave={() => { if (spacingHoldRef.current) { clearTimeout(spacingHoldRef.current); spacingHoldRef.current = null; } }}
                 onContextMenu={(e) => { e.preventDefault(); if (spacingHoldRef.current) { clearTimeout(spacingHoldRef.current); spacingHoldRef.current = null; } const rect = (e.currentTarget as HTMLElement).getBoundingClientRect(); const top = rect.bottom; const right = Math.max(6, window.innerWidth - rect.right + 6); setSpacingMenuPos({ top, right }); setSpacingMenuVisible(true); }}
-                title="Click to cycle spacing • Hold/Right-click to choose"
+                title="Click to cycle spacing  Hold/Right-click to choose"
               >
                 {spacingMode === 'wide' ? 'Wide' : spacingMode === 'normal' ? 'Normal' : 'Compact'}
               </button>

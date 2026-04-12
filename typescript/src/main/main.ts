@@ -42,7 +42,7 @@ const claudeDir = path.join(os.homedir(), '.claude');
 const todosDir = path.join(claudeDir, 'todos');
 const projectsDir = path.join(claudeDir, 'projects');
 const logsDir = path.join(claudeDir, 'logs');
-// Codex provider dirs (for future multi‑provider support)
+// Codex provider dirs (for future multi-provider support)
 const codexDir = path.join(os.homedir(), '.codex');
 const codexTodosDir = path.join(codexDir, 'todos');
 const codexProjectsDir = path.join(codexDir, 'projects');
@@ -191,7 +191,7 @@ app.whenReady().then(() => {
     }
   };
   // Instantiate providers and aggregator
-  // Auto-detect providers — no enabling config; respond to what exists
+  // Auto-detect providers - no enabling config; respond to what exists
   const providers: ProviderPort[] = [];
   providers.push(new ClaudeAdapter({ projectsDir, logsDir, todosDir }));
   try {
@@ -320,7 +320,7 @@ app.whenReady().then(() => {
           cancelId: 2,
           title: 'Project Repair Suggested',
           message: `Detected ${unknown} unanchored todo sessions`,
-          detail: `Per-provider counts:\n• Claude: ${claudeUnknown}` + (codexDiag ? `\n• Codex: ${codexUnknown}` : '') + `\n\nYou can run a dry run to see planned changes, or repair live to write metadata now (applies to all providers).`
+          detail: `Per-provider counts:\n Claude: ${claudeUnknown}` + (codexDiag ? `\n Codex: ${codexUnknown}` : '') + `\n\nYou can run a dry run to see planned changes, or repair live to write metadata now (applies to all providers).`
         });
         try { fsSync.writeFileSync(prefsPath, JSON.stringify({ ...(prefs||{}), repairPromptedOnce: true }, null, 2)); } catch {} // EXEMPTION: optional preferences saving
         if (choice.response === 0) {

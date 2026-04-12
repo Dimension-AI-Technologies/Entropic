@@ -1,8 +1,10 @@
+#Requires -Version 7.0
+
 # Cross-platform launcher for Claude Todo Monitor
 # Works on Windows PowerShell and PowerShell Core (macOS/Linux)
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$typescriptDir = Join-Path $scriptDir "typescript"
+$typescriptDir = Join-Path $scriptDir "source" "typescript"
 
 # Change to typescript directory
 Set-Location $typescriptDir

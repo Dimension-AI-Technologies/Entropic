@@ -1,0 +1,21 @@
+{
+  "implementations": [
+    {
+      "name": "entropic",
+      "layers": [
+        {
+          "language": "fsharp",
+          "source_dir": "source/dotnet/Entropic.Core",
+          "test_dir": "source/dotnet/Entropic.Core.Tests",
+          "test_results": "source/dotnet/Entropic.Core.Tests/TestResults/results.trx"
+        },
+        {
+          "language": "csharp",
+          "source_dir": "source/dotnet/Entropic.GUI",
+          "test_dir": "source/dotnet/Entropic.GUI.Tests",
+          "test_results": "source/dotnet/Entropic.GUI.Tests/TestResults/results.trx"
+        }
+      ]
+    }
+  ]
+}

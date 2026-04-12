@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import { SplashScreen } from './components/SplashScreen';
 import { ProjectView } from './App.ProjectView';
@@ -13,6 +13,7 @@ import { useProviders } from './hooks/useProviders';
 import { useBootSequence } from './hooks/useBootSequence';
 import { useToasts } from './hooks/useToasts';
 import { useViewMode } from './hooks/useViewMode';
+import { setProviderAllow } from './services/DIContainer';
 
 
 function App() {
@@ -46,26 +47,6 @@ function App() {
   if (initError) {
     return <div style={{ color: 'white', padding: '20px' }}>Error initializing app: {String(initError)}</div>;
   }
-
-  // Track boot readiness
-  useEffect(() => {
-    if (!bootReady && !loading && viewModelsInitialized) {
-      setBootReady(true);
-    }
-  }, [bootReady, loading, viewModelsInitialized]);
-
-  useEffect(() => {
-    if (!bootReady || !loading) return;
-    const minimumDuration = 900;
-    const elapsed = Date.now() - bootStartRef.current;
-    const wait = Math.max(0, minimumDuration - elapsed);
-    if (wait === 0) {
-      setLoading(false);
-      return;
-    }
-    const timer = window.setTimeout(() => setLoading(false), wait);
-    return () => window.clearTimeout(timer);
-  }, [bootReady, loading]);
 
   // Apply provider filter to DI and persist, then trigger refresh so UI updates immediately
   useEffect(() => {
@@ -102,8 +83,7 @@ function App() {
             .map((s: any) => s.projectPath || '')
             .filter((p: string) => p && p !== 'Unknown Project')
         );
-        setStatusText(`${uniqueProjects.size} projects • ${activeTodos} active todos`);
-        setViewModelsInitialized(true);
+        setStatusText(`${uniqueProjects.size} projects  ${activeTodos} active todos`);
       } catch {}
     };
     update();
@@ -170,12 +150,10 @@ function App() {
   // Expose toast helper
   useEffect(() => {
     (window as any).__addToast = (text: string) => {
-      const id = Date.now() + Math.random();
-      setToasts((prev) => [...prev, { id, text }]);
-      setTimeout(() => setToasts((prev) => prev.filter(t => t.id !== id)), 2500);
+      addToast(text);
     };
     return () => { try { delete (window as any).__addToast; } catch {} };
-  }, []);
+  }, [addToast]);
   
   useEffect(() => {
     if (isTestEnv) return;

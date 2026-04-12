@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Entropic.GUI.ViewModels"
+             xmlns:ctrl="using:Entropic.GUI.Controls.Chat"
+             x:Class="Entropic.GUI.Controls.Chat.WebViewChat"
+             x:DataType="vm:ChatViewModel">
+
+  <Panel>
+    <!-- Native WebView2 host shown when HTML is available -->
+    <ctrl:NativeWebView2Host Name="WebViewHost"
+                             IsVisible="{Binding HtmlFilePath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+    <!-- Fallback when no HTML file found -->
+    <Border Background="#2a2020" CornerRadius="6" Padding="12" Margin="24"
+            VerticalAlignment="Center" HorizontalAlignment="Center"
+            IsVisible="{Binding HtmlFilePath, Converter={x:Static StringConverters.IsNullOrEmpty}}">
+      <StackPanel Spacing="6">
+        <TextBlock Text="No HTML sibling file found." Foreground="#c88" FontSize="13"/>
+        <TextBlock Foreground="#888" FontSize="12" TextWrapping="Wrap"
+                   FontFamily="Cascadia Mono, Consolas, monospace"
+                   Text="Generate one with:&#x0a;  python get_claude_code_chat.py --format html -o chat.html"/>
+      </StackPanel>
+    </Border>
+  </Panel>
+</UserControl>

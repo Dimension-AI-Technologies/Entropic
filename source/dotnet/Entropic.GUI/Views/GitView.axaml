@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Entropic.GUI.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Entropic.GUI.Views.GitView"
+             x:DataType="vm:GitViewModel">
+
+    <DockPanel Background="#d936393f">
+        <!-- Summary bar -->
+        <Border DockPanel.Dock="Top" Background="#e6292b2f"
+                BorderBrush="#35373b" BorderThickness="0,0,0,1"
+                Padding="12,8">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="REPOSITORIES" Foreground="#8e9297" FontSize="11"
+                           FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <Border Background="#36393f" CornerRadius="10" Padding="8,2" Margin="0,0,16,0">
+                    <TextBlock Text="{Binding TotalRepos}" Foreground="#dcddde" FontSize="12"
+                               FontWeight="Bold"/>
+                </Border>
+                <TextBlock Text="Out of sync:" Foreground="#8e9297" FontSize="12"
+                           VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBlock Text="{Binding OutOfSync}" Foreground="#faa61a" FontSize="12"
+                           FontWeight="Bold" VerticalAlignment="Center"/>
+                <Border Width="1" Background="#35373b" Margin="16,4" />
+                <Button Content="View Commits" Command="{Binding ViewCommitsCommand}"
+                        Padding="10,4" FontSize="12"
+                        Background="#5865f2" Foreground="#ffffff"
+                        BorderThickness="0" CornerRadius="3" Cursor="Hand">
+                    <Button.Transitions>
+                        <Transitions>
+                            <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                        </Transitions>
+                    </Button.Transitions>
+                </Button>
+            </StackPanel>
+        </Border>
+        <DataGrid ItemsSource="{Binding Repos}" AutoGenerateColumns="False" IsReadOnly="True"
+                  SelectedItem="{Binding SelectedRepo}" Foreground="#dcddde">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="NAME" Binding="{Binding Name}" Width="200" />
+                <DataGridTextColumn Header="PATH" Binding="{Binding RelativePath}" Width="*" />
+                <DataGridTextColumn Header="REMOTE" Binding="{Binding RemoteUrl}" Width="300" />
+                <DataGridTextColumn Header="AHEAD" Binding="{Binding Ahead}" Width="90" />
+                <DataGridTextColumn Header="BEHIND" Binding="{Binding Behind}" Width="90" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

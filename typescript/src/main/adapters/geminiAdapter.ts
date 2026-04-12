@@ -149,5 +149,3 @@ async function parseSessionJsonl(file: string): AsyncResult<{ sessionId: string;
     return Ok(null);
   }
 }
-
-

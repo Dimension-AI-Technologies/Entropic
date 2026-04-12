@@ -1,0 +1,290 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Entropic.GUI.ViewModels"
+        xmlns:v="using:Entropic.GUI.Views"
+        xmlns:ctrl="using:Entropic.GUI.Controls"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1400" d:DesignHeight="900"
+        x:Class="Entropic.GUI.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Entropic - Coding Agent &amp; Git Monitor"
+        Width="1400" Height="900"
+        Background="#36393f">
+
+    <NativeMenu.Menu>
+        <NativeMenu>
+            <NativeMenuItem Header="File">
+                <NativeMenu>
+                    <NativeMenuItem Header="Refresh" Command="{Binding RefreshCommand}" Gesture="F5" />
+                    <NativeMenuItemSeparator />
+                    <NativeMenuItem Header="Quit" Command="{Binding CloseCommand}" Gesture="Ctrl+Q" />
+                </NativeMenu>
+            </NativeMenuItem>
+            <NativeMenuItem Header="View">
+                <NativeMenu>
+                    <NativeMenuItem Header="Project View" Command="{Binding SwitchTabCommand}" CommandParameter="0" Gesture="Ctrl+1" />
+                    <NativeMenuItem Header="Global View" Command="{Binding SwitchTabCommand}" CommandParameter="1" Gesture="Ctrl+2" />
+                    <NativeMenuItem Header="Git View" Command="{Binding SwitchTabCommand}" CommandParameter="2" Gesture="Ctrl+3" />
+                    <NativeMenuItem Header="Commit View" Command="{Binding SwitchTabCommand}" CommandParameter="3" Gesture="Ctrl+4" />
+                    <NativeMenuItem Header="Chat View" Command="{Binding SwitchTabCommand}" CommandParameter="4" Gesture="Ctrl+5" />
+                    <NativeMenuItemSeparator />
+                    <NativeMenuItem Header="Compact Spacing" Command="{Binding SetSpacingCommand}" CommandParameter="compact" />
+                    <NativeMenuItem Header="Normal Spacing" Command="{Binding SetSpacingCommand}" CommandParameter="normal" />
+                    <NativeMenuItem Header="Wide Spacing" Command="{Binding SetSpacingCommand}" CommandParameter="wide" />
+                </NativeMenu>
+            </NativeMenuItem>
+            <NativeMenuItem Header="Help">
+                <NativeMenu>
+                    <NativeMenuItem Header="Keyboard Shortcuts" Command="{Binding ToggleHelpCommand}" Gesture="F1" />
+                </NativeMenu>
+            </NativeMenuItem>
+        </NativeMenu>
+    </NativeMenu.Menu>
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel/>
+    </Design.DataContext>
+
+    <Window.Styles>
+        <!-- Pill-shaped view toggle buttons -->
+        <Style Selector="Button.viewToggle">
+            <Setter Property="Background" Value="#2f3136"/>
+            <Setter Property="Foreground" Value="#dcddde"/>
+            <Setter Property="BorderBrush" Value="#36393f"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="3,0"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.viewToggle:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#3a3d42"/>
+            <Setter Property="BorderBrush" Value="#4f545c"/>
+        </Style>
+        <Style Selector="Button.viewToggle.active">
+            <Setter Property="Background" Value="#5865f2"/>
+            <Setter Property="Foreground" Value="#ffffff"/>
+            <Setter Property="BorderBrush" Value="#5865f2"/>
+        </Style>
+        <Style Selector="Button.viewToggle.active /template/ ContentPresenter">
+            <Setter Property="Background" Value="#5865f2"/>
+            <Setter Property="BorderBrush" Value="#5865f2"/>
+        </Style>
+        <!-- Provider filter buttons -->
+        <Style Selector="ToggleButton.providerFilter">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="#35373b"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ToggleButton.providerFilter:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="#5865f2"/>
+            <Setter Property="BorderBrush" Value="#5865f2"/>
+        </Style>
+        <!-- Toolbar icon buttons -->
+        <Style Selector="Button.toolbarIcon">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#b3b3b3"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.15"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.toolbarIcon:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="rgba(255,255,255,0.1)"/>
+            <Setter Property="Foreground" Value="#ffffff"/>
+        </Style>
+        <!-- Spacing mode button -->
+        <Style Selector="Button.spacingBtn">
+            <Setter Property="Background" Value="#36393f"/>
+            <Setter Property="Foreground" Value="#b3b3b3"/>
+            <Setter Property="BorderBrush" Value="#4f545c"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="CornerRadius" Value="3"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+    </Window.Styles>
+
+    <Panel Background="#1a1d21">
+        <!-- Animated boid backdrop (REQ-GUI-012) -->
+        <ctrl:BoidBackdrop />
+
+        <!-- Main content -->
+        <DockPanel>
+            <!-- Status bar (bottom) -->
+            <Border DockPanel.Dock="Bottom" Background="#e6202225"
+                    BorderBrush="#35373b" BorderThickness="0,1,0,0"
+                    Padding="12,6" Height="28">
+                <DockPanel>
+                    <TextBlock Text="{Binding StatusText}" Foreground="#b9bbbe" FontSize="12"
+                               VerticalAlignment="Center" />
+                    <TextBlock DockPanel.Dock="Right" Foreground="#8e9297" FontSize="12"
+                               VerticalAlignment="Center" HorizontalAlignment="Right">
+                        <Run Text="{Binding ActiveTodoCount}" />
+                        <Run Text=" active" />
+                    </TextBlock>
+                </DockPanel>
+            </Border>
+
+            <!-- Unified title/toolbar bar -->
+            <Border DockPanel.Dock="Top" Background="#e6222529"
+                    BorderBrush="#35373b" BorderThickness="0,0,0,1"
+                    Padding="16,8" MinHeight="52">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <!-- Left: Provider filters + refresh -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6"
+                                VerticalAlignment="Center">
+                        <ToggleButton Classes="providerFilter" IsChecked="{Binding ClaudeFilterEnabled}"
+                                      ToolTip.Tip="Claude">
+                            <TextBlock Text="C" FontSize="12" FontWeight="Bold"
+                                       Foreground="#d47f60" HorizontalAlignment="Center"/>
+                        </ToggleButton>
+                        <ToggleButton Classes="providerFilter" IsChecked="{Binding CodexFilterEnabled}"
+                                      ToolTip.Tip="Codex">
+                            <TextBlock Text="X" FontSize="12" FontWeight="Bold"
+                                       Foreground="#7aa2f7" HorizontalAlignment="Center"/>
+                        </ToggleButton>
+                        <ToggleButton Classes="providerFilter" IsChecked="{Binding GeminiFilterEnabled}"
+                                      ToolTip.Tip="Gemini">
+                            <TextBlock Text="G" FontSize="12" FontWeight="Bold"
+                                       Foreground="#9ece6a" HorizontalAlignment="Center"/>
+                        </ToggleButton>
+                        <Border Width="1" Background="#35373b" Margin="6,4" />
+                        <Button Classes="toolbarIcon" Command="{Binding RefreshCommand}"
+                                ToolTip.Tip="Refresh (F5)">
+                            <TextBlock Text="&#x21BB;" FontSize="18"/>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- Center: View toggle buttons -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4">
+                        <Button Classes="viewToggle" Content="Project View"
+                                Command="{Binding SwitchTabCommand}" CommandParameter="0"
+                                Classes.active="{Binding IsProjectTab}" />
+                        <Button Classes="viewToggle" Content="Global View"
+                                Command="{Binding SwitchTabCommand}" CommandParameter="1"
+                                Classes.active="{Binding IsGlobalTab}" />
+                        <Button Classes="viewToggle" Content="Git View"
+                                Command="{Binding SwitchTabCommand}" CommandParameter="2"
+                                Classes.active="{Binding IsGitTab}" />
+                        <Button Classes="viewToggle" Content="Commit View"
+                                Command="{Binding SwitchTabCommand}" CommandParameter="3"
+                                Classes.active="{Binding IsCommitTab}" />
+                        <Button Classes="viewToggle" Content="Chat View"
+                                Command="{Binding SwitchTabCommand}" CommandParameter="4"
+                                Classes.active="{Binding IsChatTab}" />
+                    </StackPanel>
+
+                    <!-- Right: Spacing mode -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"
+                                VerticalAlignment="Center">
+                        <Button Classes="spacingBtn" Content="Compact"
+                                Command="{Binding SetSpacingCommand}" CommandParameter="compact" />
+                        <Button Classes="spacingBtn" Content="Normal"
+                                Command="{Binding SetSpacingCommand}" CommandParameter="normal" />
+                        <Button Classes="spacingBtn" Content="Wide"
+                                Command="{Binding SetSpacingCommand}" CommandParameter="wide" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- View content area -->
+            <Panel>
+                <v:ProjectView DataContext="{Binding Projects}"
+                               IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsProjectTab}" />
+                <v:GlobalView DataContext="{Binding Global}"
+                              IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsGlobalTab}" />
+                <v:GitView DataContext="{Binding Git}"
+                           IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsGitTab}" />
+                <v:CommitView DataContext="{Binding Commits}"
+                              IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsCommitTab}" />
+                <v:ChatView Name="ChatViewControl" DataContext="{Binding Chat}"
+                            IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsChatTab}" />
+            </Panel>
+        </DockPanel>
+
+        <!-- Progress overlay (REQ-GUI-021) -->
+        <Border IsVisible="{Binding Progress.IsVisible}"
+                Background="rgba(0,0,0,0.4)"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="#1f2227" CornerRadius="8" Padding="24,18"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="280" BorderBrush="#3a3d42" BorderThickness="1"
+                    BoxShadow="0 8 24 0 rgba(0,0,0,0.35)">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <ProgressBar IsIndeterminate="True" Width="200" Height="4"
+                                 Foreground="#5865f2" Background="#2f3136" />
+                    <TextBlock Text="{Binding Progress.StatusMessage}"
+                               Foreground="#dcddde" FontSize="13"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Toast overlay (bottom-right like Electron) -->
+        <Border IsVisible="{Binding IsToastVisible}"
+                Background="rgba(20,20,20,0.9)" CornerRadius="6" Padding="12,8"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="0,0,16,44" BorderBrush="rgba(255,255,255,0.1)" BorderThickness="1"
+                BoxShadow="0 6 20 0 rgba(0,0,0,0.3)">
+            <TextBlock Text="{Binding ToastMessage}" Foreground="#eaeaea" FontSize="12" />
+        </Border>
+
+        <!-- Help overlay -->
+        <Border IsVisible="{Binding IsHelpOpen}"
+                Background="rgba(0,0,0,0.35)"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Border Background="#1f2227" CornerRadius="8" Padding="22,18"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="420" BorderBrush="#3a3d42" BorderThickness="1"
+                    BoxShadow="0 12 30 0 rgba(0,0,0,0.4)">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,14">
+                        <TextBlock Text="Keyboard Shortcuts" Foreground="#ffffff" FontSize="15"
+                                   FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Panel HorizontalAlignment="Stretch" />
+                        <Button Content="&#x2715;" Command="{Binding ToggleHelpCommand}"
+                                Background="Transparent" Foreground="#8e9297"
+                                BorderThickness="0" FontSize="14" Padding="4"
+                                VerticalAlignment="Center" Cursor="Hand" />
+                    </StackPanel>
+                    <StackPanel Spacing="4">
+                        <ItemsControl ItemsSource="{Binding Help.KeyboardShortcuts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Foreground="#b9bbbe" FontSize="13" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{Binding Help.Version, StringFormat='Entropic v{0}'}"
+                                   Foreground="#8e9297" Margin="0,10,0,0" FontSize="11" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </Border>
+    </Panel>
+
+</Window>

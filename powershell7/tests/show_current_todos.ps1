@@ -1,4 +1,6 @@
 #!/usr/bin/env pwsh
+#Requires -Version 7.0
+
 
 # Simple script to display current todos from the JSON file
 $TodoDataFile = Join-Path ~ ".claude\logs\current_todos.json"

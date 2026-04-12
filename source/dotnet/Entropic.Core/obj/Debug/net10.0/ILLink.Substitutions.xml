@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<linker>
+  <assembly fullname="Entropic.Core">
+    <resource name="FSharpSignatureData.Entropic.Core" action="remove"></resource>
+    <resource name="FSharpSignatureCompressedData.Entropic.Core" action="remove"></resource>
+    <resource name="FSharpSignatureDataB.Entropic.Core" action="remove"></resource>
+    <resource name="FSharpSignatureCompressedDataB.Entropic.Core" action="remove"></resource>
+    <resource name="FSharpOptimizationData.Entropic.Core" action="remove"></resource>
+    <resource name="FSharpOptimizationCompressedData.Entropic.Core" action="remove"></resource>
+    <resource name="FSharpOptimizationDataB.Entropic.Core" action="remove"></resource>
+    <resource name="FSharpOptimizationCompressedDataB.Entropic.Core" action="remove"></resource>
+    <resource name="FSharpOptimizationInfo.Entropic.Core" action="remove"></resource>
+    <resource name="FSharpSignatureInfo.Entropic.Core" action="remove"></resource>
+  </assembly>
+</linker>
